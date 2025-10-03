@@ -254,3 +254,257 @@ Si alguna ruta o componente aún no existe, crear stubs mínimos solo para que l
 Mantener consistencia con TypeScript y ESLint existentes.
 
 No introducir librerías nuevas fuera de las listadas, salvo justificación en PR.
+
+---
+
+## 📊 ESTADO DE PROGRESO (Actualizado: 2025-10-03)
+
+### ✅ Sprint 0 — Auditoría y Plan [COMPLETADO]
+
+**Fecha completado**: 2025-10-03
+
+**Entregables**:
+- ✅ `docs/testing-strategy.md` - Estrategia completa de testing
+- ✅ Auditoría de estructura del proyecto
+- ✅ Identificación de flujos críticos
+- ✅ Matriz de riesgos
+- ✅ Plan detallado de 6 sprints
+
+**Hallazgos clave**:
+- Proyecto usa Next.js 15.5.2 con App Router
+- Estructura: `app/`, `components/`, `lib/`, `hooks/`
+- Rutas críticas: `/turnos`, `/profesional`, `/pantalla`
+- No hay tests existentes (Jest instalado pero no configurado)
+
+---
+
+### ✅ Sprint 1 — Infra Unit/Component con Vitest [COMPLETADO]
+
+**Fecha completado**: 2025-10-03
+**Branch sugerida**: `feat/testing-vitest-setup`
+
+#### ✅ Tareas completadas
+
+1. **Desinstalación de Jest**
+   - ✅ Removido: `jest`, `@types/jest`, `jest-environment-jsdom`
+   - ✅ Confirmado: Sin conflictos con ESLint
+
+2. **Instalación de dependencias**
+   ```bash
+   npm install --save-dev \
+     vitest@^3.2.4 \
+     @vitest/coverage-v8@^3.2.4 \
+     @vitest/ui@^3.2.4 \
+     @vitejs/plugin-react@^5.0.4 \
+     @testing-library/react@16.3.0 \
+     @testing-library/dom@^10.4.1 \
+     @testing-library/user-event@14.6.1 \
+     @testing-library/jest-dom@6.8.0 \
+     jsdom@^27.0.0 \
+     whatwg-fetch@^3.6.20 \
+     jest-axe@^10.0.0 \
+     axe-core@^4.10.3
+   ```
+
+3. **Archivos de configuración creados**
+
+   **`vitest.config.ts`**:
+   - Environment: jsdom
+   - Globals: true
+   - Setup files: `./tests/setup.ts`
+   - Coverage provider: V8
+   - Reporters: text, html, lcov
+   - Thresholds: 70% líneas, 65% branches
+   - Alias: `@/` → `.`
+
+   **`tests/setup.ts`**:
+   - ✅ Import de `@testing-library/jest-dom`
+   - ✅ Import de `whatwg-fetch`
+   - ✅ Mock de `next/navigation` (useRouter, usePathname, useSearchParams, useParams)
+   - ✅ Mock de `next/headers` (cookies, headers)
+   - ✅ Mock de `@/lib/supabase` (auth, from, channel)
+   - ✅ Mock de Web Speech API (speechSynthesis, SpeechSynthesisUtterance)
+   - ✅ Supresión de warnings de React en tests
+   - ✅ `afterEach(() => vi.clearAllMocks())`
+
+   **`tests/mocks/supabase.ts`**:
+   - ✅ `mockUser`, `mockSession` (datos básicos)
+   - ✅ `createMockSupabaseClient()` - Factory principal
+   - ✅ `createAuthenticatedMock()` - Mock con usuario autenticado por rol
+   - ✅ `createSuccessQueryMock()` - Mock de query exitosa
+   - ✅ `createErrorQueryMock()` - Mock de error de DB
+   - ✅ `createMockRealtimeChannel()` - Mock de canales Realtime
+   - ✅ `simulateRealtimeUpdate()` - Helper para simular eventos real-time
+
+   **`tests/utils/time.ts`**:
+   - ✅ `withFrozenTime()` - Congela tiempo en tests
+   - ✅ `advanceTime()` - Avanza timers en tests
+   - ✅ `nextTick()` - Avanza al siguiente tick
+   - ✅ `createArgentineDate()` - Helper para fechas AR
+   - ✅ `formatTestDate()` - Formato es-AR
+   - ✅ `createDateRange()` - Genera rango de fechas
+
+4. **Scripts NPM agregados**
+   ```json
+   {
+     "test": "vitest",
+     "test:watch": "vitest --watch",
+     "test:coverage": "vitest --coverage",
+     "test:ui": "vitest --ui"
+   }
+   ```
+
+5. **Tests de ejemplo creados**
+
+   **`tests/unit/date-utils.spec.ts`** (8 tests):
+   - ✅ formatDateTime con locale es-AR
+   - ✅ formatTime solo hora
+   - ✅ date-fns con locale español
+   - ✅ withFrozenTime funcionando
+
+   **`tests/components/Button.spec.tsx`** (9 tests):
+   - ✅ Render básico
+   - ✅ Click handler
+   - ✅ Estado disabled
+   - ✅ Variantes (default, destructive, outline, secondary, ghost, link)
+   - ✅ Tamaños (default, sm, lg, icon)
+   - ✅ asChild con Slot
+   - ✅ Props customizadas
+
+#### 📊 Resultados de ejecución
+
+```
+Test Files  2 passed (2)
+Tests       17 passed (17)
+Duration    13.72s
+```
+
+#### 📁 Estructura de archivos creada
+
+```
+turnero-zs/
+├── vitest.config.ts              [NUEVO]
+├── tests/                         [NUEVO]
+│   ├── setup.ts                   [NUEVO]
+│   ├── mocks/
+│   │   └── supabase.ts            [NUEVO]
+│   ├── utils/
+│   │   └── time.ts                [NUEVO]
+│   ├── unit/
+│   │   └── date-utils.spec.ts     [NUEVO]
+│   └── components/
+│       └── Button.spec.tsx        [NUEVO]
+├── package.json                   [MODIFICADO - scripts + deps]
+└── docs/
+    └── testing-strategy.md        [NUEVO - Sprint 0]
+```
+
+#### ✅ Criterios de aceptación verificados
+
+- ✅ `npm run test` ejecuta sin errores
+- ✅ `npm run test:coverage` genera reporte en `coverage/`
+- ✅ Tests de ejemplo pasan (17/17 verde)
+- ✅ TypeScript compila sin errores
+- ✅ Mocks globales funcionando correctamente
+- ✅ No rompe `npm run dev`, `npm run build`, `npm run start`
+
+#### 📝 Notas de implementación
+
+- Se agregó `@testing-library/dom` que no estaba en la lista original pero era peer dependency de `@testing-library/react`
+- Los mocks de Supabase incluyen soporte para Realtime channels (crítico para pantallas públicas)
+- Los mocks de Web Speech API permiten testear funcionalidad TTS sin browser real
+- Se configuraron supresores de warnings para mantener output limpio
+
+---
+
+### 🔜 Sprint 2 — Component Tests UI Clave [PENDIENTE]
+
+**Estado**: No iniciado
+**Branch sugerida**: `feat/testing-components-ui`
+
+#### Tareas pendientes
+
+- [ ] Test de formulario de turno (crear/editar)
+  - [ ] Render inicial (labels, placeholders)
+  - [ ] Validación zod (campos requeridos, formatos)
+  - [ ] Interacción con react-day-picker
+  - [ ] Selección de horario disponible
+  - [ ] Mensajes de error visualizados
+  - [ ] Submit exitoso → callback/navegación mock
+  - [ ] A11y con jest-axe
+- [ ] Test de tabla de turnos
+  - [ ] Render vacío y con datos
+  - [ ] Filtros (fecha/estado/profesional)
+  - [ ] Badges de estado con colores
+  - [ ] Acciones (cancelar, llamar, finalizar)
+- [ ] Test de componentes UI base
+  - [ ] Calendar (navegación, selección)
+  - [ ] Select (opciones, onChange)
+  - [ ] Form (integración RHF + error display)
+- [ ] Documentar en `docs/testing-components.md`
+
+#### Criterios de aceptación Sprint 2
+
+- [ ] 5-8 tests de componentes reales
+- [ ] Cobertura de `components/` >60%
+- [ ] Sin violaciones de a11y en componentes críticos
+- [ ] Docs actualizados con patrones y ejemplos
+
+---
+
+### 🔜 Sprint 3 — Integration Tests [PENDIENTE]
+
+**Estado**: No iniciado
+**Branch sugerida**: `feat/testing-integration`
+
+#### Tareas pendientes
+
+- [ ] Tests de operaciones CRUD con Supabase mock
+- [ ] Tests de validaciones zod server-side
+- [ ] Crear fixtures en `tests/fixtures/`
+- [ ] Documentar en `docs/testing-integration.md`
+
+---
+
+### 🔜 Sprint 4 — E2E con Playwright [PENDIENTE]
+
+**Estado**: No iniciado
+**Branch sugerida**: `feat/testing-e2e-playwright`
+
+---
+
+### 🔜 Sprint 5 — A11y y Performance [PENDIENTE]
+
+**Estado**: No iniciado
+
+---
+
+### 🔜 Sprint 6 — CI/CD y Docs Finales [PENDIENTE]
+
+**Estado**: No iniciado
+
+---
+
+## 🎯 Próximos Pasos Inmediatos
+
+1. **Crear PR de Sprint 1** (feat/testing-vitest-setup):
+   - Título: "feat: configurar infraestructura Vitest para testing"
+   - Descripción: Infraestructura completa + 2 tests de ejemplo (17 tests pasando)
+   - Checklist: Todos los ítems de Sprint 1 marcados
+   - Evidencias: Adjuntar screenshot de `npm run test` exitoso
+
+2. **Iniciar Sprint 2**: Tests de componentes UI críticos
+   - Foco principal: Formulario de turnos con react-hook-form + zod + react-day-picker
+   - Agregar jest-axe a todos los tests de componentes
+
+3. **Mantener documentación actualizada**: Este archivo debe reflejar el estado real
+
+---
+
+## 📚 Documentos de Referencia
+
+- `docs/testing-strategy.md` - Estrategia completa y detallada (Sprint 0)
+- `docs/testing-components.md` - Patrones de component testing (pendiente Sprint 2)
+- `docs/testing-integration.md` - Guía de integration testing (pendiente Sprint 3)
+- `docs/testing-e2e.md` - Guía de E2E con Playwright (pendiente Sprint 4)
+- `TESTING.md` o README.md - Guía rápida para desarrolladores (pendiente Sprint 6)
