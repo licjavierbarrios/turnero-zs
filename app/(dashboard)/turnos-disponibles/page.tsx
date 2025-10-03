@@ -9,7 +9,11 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Calendar, Clock, User, Activity, Building, RefreshCw, TrendingUp, Users, CheckCircle, XCircle } from 'lucide-react'
+import { Calendar, Clock, User, Activity, Building, RefreshCw, TrendingUp, Users, CheckCircle, XCircle, Plus } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 type Institution = {
   id: string
@@ -40,6 +44,13 @@ type SlotWithDetails = GeneratedSlot & {
   room?: Room | null
 }
 
+type Patient = {
+  id: string
+  first_name: string
+  last_name: string
+  dni: string | null
+}
+
 const daysOfWeek = [
   'Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
 ]
@@ -58,8 +69,18 @@ export default function TurnosDisponiblesPage() {
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
+  // Patient assignment dialog state
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState<SlotWithDetails | null>(null)
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [searchPatient, setSearchPatient] = useState('')
+  const [selectedPatient, setSelectedPatient] = useState<string>('')
+  const [appointmentNotes, setAppointmentNotes] = useState('')
+  const [assigning, setAssigning] = useState(false)
+
   useEffect(() => {
     fetchInstitutions()
+    fetchPatients()
   }, [])
 
   useEffect(() => {
@@ -176,13 +197,82 @@ export default function TurnosDisponiblesPage() {
     }
   }
 
+  const fetchPatients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('patient')
+        .select('id, first_name, last_name, dni')
+        .order('last_name', { ascending: true })
+
+      if (error) throw error
+      setPatients(data || [])
+    } catch (error) {
+      console.error('Error fetching patients:', error)
+    }
+  }
+
+  const handleOpenAssignDialog = (slot: SlotWithDetails) => {
+    setSelectedSlot(slot)
+    setSelectedPatient('')
+    setAppointmentNotes('')
+    setSearchPatient('')
+    setIsAssignDialogOpen(true)
+  }
+
+  const handleAssignAppointment = async () => {
+    if (!selectedSlot || !selectedPatient || !selectedInstitution) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar un paciente",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setAssigning(true)
+
+      const { error } = await supabase
+        .from('appointment')
+        .insert({
+          patient_id: selectedPatient,
+          professional_id: selectedSlot.professional_id,
+          service_id: selectedSlot.service_id,
+          room_id: selectedSlot.room_id || null,
+          institution_id: selectedInstitution,
+          scheduled_at: selectedSlot.datetime,
+          status: 'pendiente',
+          notes: appointmentNotes || null
+        })
+
+      if (error) throw error
+
+      toast({
+        title: "Turno asignado",
+        description: "El turno ha sido asignado correctamente al paciente.",
+      })
+
+      setIsAssignDialogOpen(false)
+      generateSlots() // Refresh slots
+    } catch (error) {
+      console.error('Error assigning appointment:', error)
+      toast({
+        title: "Error",
+        description: "Error al asignar el turno. Puede que el horario ya esté ocupado.",
+        variant: "destructive"
+      })
+    } finally {
+      setAssigning(false)
+    }
+  }
+
   const getSelectedDateSlots = () => {
     const slots = availableSlots[selectedDate] || []
-    
+
     if (selectedProfessional) {
       return slots.filter(slot => slot.professional_id === selectedProfessional)
     }
-    
+
     return slots
   }
 
@@ -410,7 +500,7 @@ export default function TurnosDisponiblesPage() {
                               {slot.available ? 'Disponible' : 'Ocupado'}
                             </Badge>
                           </div>
-                          <div className="space-y-1 text-sm">
+                          <div className="space-y-1 text-sm mb-2">
                             <div className="flex items-center space-x-2">
                               <User className="h-3 w-3" />
                               <span>
@@ -429,6 +519,16 @@ export default function TurnosDisponiblesPage() {
                               </div>
                             )}
                           </div>
+                          {slot.available && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleOpenAssignDialog(slot)}
+                              className="w-full"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Asignar Turno
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -484,6 +584,119 @@ export default function TurnosDisponiblesPage() {
           )}
         </>
       )}
+
+      {/* Dialog for assigning appointment */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar Turno</DialogTitle>
+            <DialogDescription>
+              Seleccione el paciente para asignar este turno
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSlot && (
+            <div className="space-y-4">
+              {/* Slot details */}
+              <div className="p-3 bg-blue-50 rounded-lg space-y-2 text-sm">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="font-medium">{formatDate(selectedSlot.datetime.split('T')[0])}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4" />
+                  <span className="font-medium">{formatTime(selectedSlot.datetime)}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <User className="h-4 w-4" />
+                  <span>
+                    {selectedSlot.professional?.first_name} {selectedSlot.professional?.last_name}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Activity className="h-4 w-4" />
+                  <span>{selectedSlot.service?.name}</span>
+                </div>
+                {selectedSlot.room && (
+                  <div className="flex items-center space-x-2">
+                    <Building className="h-4 w-4" />
+                    <span>{selectedSlot.room.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Patient search */}
+              <div className="space-y-2">
+                <Label htmlFor="search-patient">Buscar paciente</Label>
+                <Input
+                  id="search-patient"
+                  placeholder="Buscar por nombre o DNI..."
+                  value={searchPatient}
+                  onChange={(e) => setSearchPatient(e.target.value)}
+                />
+              </div>
+
+              {/* Patient selector */}
+              <div className="space-y-2">
+                <Label htmlFor="patient">Paciente *</Label>
+                <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar paciente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {patients
+                      .filter(patient => {
+                        if (!searchPatient) return true
+                        const search = searchPatient.toLowerCase()
+                        return (
+                          patient.first_name.toLowerCase().includes(search) ||
+                          patient.last_name.toLowerCase().includes(search) ||
+                          patient.dni?.toLowerCase().includes(search)
+                        )
+                      })
+                      .map((patient) => (
+                        <SelectItem key={patient.id} value={patient.id}>
+                          {patient.last_name}, {patient.first_name}
+                          {patient.dni && ` - DNI: ${patient.dni}`}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notas (opcional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Observaciones adicionales..."
+                  value={appointmentNotes}
+                  onChange={(e) => setAppointmentNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAssignDialogOpen(false)}
+                  disabled={assigning}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleAssignAppointment}
+                  disabled={!selectedPatient || assigning}
+                >
+                  {assigning ? 'Asignando...' : 'Asignar Turno'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

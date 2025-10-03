@@ -68,7 +68,7 @@ turnero-zs/
 - **Sprint 0** ✅ - Setup inicial
 - **Sprint 1** ✅ - ABMs base (Zonas, Instituciones, Profesionales, Pacientes, Usuarios)
 - **Sprint 2** ✅ - Consultorios, Servicios, Agendas y plantillas de horarios
-- **Sprint 3** ⏳ - Flujo de atención y pantallas públicas
+- **Sprint 3** ✅ - Flujo de atención y pantallas públicas
 - **Sprint 4** ⏳ - Métricas y reportes
 - **Sprint 5** ⏳ - Hardening y pilotos
 
@@ -121,6 +121,34 @@ turnero-zs/
 - Validación de relaciones entre instituciones
 - Filtrado dinámico por institución del profesional
 - Cálculo en tiempo real de capacidad de agenda
+
+### 🏁 Sprint 3 Completado
+
+**Funcionalidades implementadas:**
+- ✅ **Gestión de Turnos**: Flujo completo de atención con transiciones de estado
+  - Estados: pendiente → esperando → llamado → en_consulta → finalizado/cancelado/ausente
+  - Gestión de eventos de llamado (call_event)
+  - Registro de eventos de asistencia (attendance_event)
+- ✅ **Asignación de Turnos**: Sistema de reserva desde slots disponibles
+  - Búsqueda y selección de pacientes
+  - Visualización de disponibilidad en tiempo real
+  - Asignación directa a horarios generados desde plantillas
+- ✅ **Pantalla Pública**: Display en tiempo real para llamados
+  - Actualización vía Supabase Realtime
+  - Vista por institución
+  - Visualización de cola de espera
+
+**Páginas disponibles:**
+- `/turnos` - Gestión del flujo de atención
+- `/turnos-disponibles` - Asignación de turnos a pacientes
+- `/pantalla` - Selector de instituciones para pantalla pública
+- `/pantalla/[slug]` - Pantalla pública en tiempo real
+
+**Características técnicas:**
+- Máquina de estados para appointments
+- Supabase Realtime channels por institución
+- Generación dinámica de slots desde slot_templates
+- Validación de disponibilidad antes de asignar
 
 ## 🔐 Roles y Permisos
 
