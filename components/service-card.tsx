@@ -1,0 +1,138 @@
+'use client'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { getServiceColors, getServiceIcon } from '@/lib/service-colors'
+import { UserIcon, MapPinIcon, ClockIcon } from 'lucide-react'
+
+export interface ServiceAppointment {
+  id: string
+  patient_first_name: string
+  patient_last_name: string
+  professional_first_name?: string
+  professional_last_name?: string
+  room_name?: string
+  scheduled_at: string
+  status: string
+}
+
+interface ServiceCardProps {
+  serviceName: string
+  appointments: ServiceAppointment[]
+  compact?: boolean
+}
+
+const statusLabels: Record<string, string> = {
+  'esperando': 'Esperando',
+  'llamado': 'Llamado',
+  'en_consulta': 'En consulta'
+}
+
+const statusColors: Record<string, string> = {
+  'esperando': 'bg-blue-100 text-blue-800',
+  'llamado': 'bg-purple-100 text-purple-800 animate-pulse',
+  'en_consulta': 'bg-green-100 text-green-800'
+}
+
+export function ServiceCard({ serviceName, appointments, compact = false }: ServiceCardProps) {
+  const colors = getServiceColors(serviceName)
+  const icon = getServiceIcon(serviceName)
+
+  const currentCall = appointments.find(apt => apt.status === 'llamado')
+  const inConsultation = appointments.filter(apt => apt.status === 'en_consulta')
+  const waiting = appointments.filter(apt => apt.status === 'esperando')
+
+  return (
+    <Card className={`border-2 ${colors.border} ${colors.bg} transition-all hover:shadow-lg`}>
+      <CardHeader className="pb-3">
+        <CardTitle className={`flex items-center gap-2 text-lg ${colors.text}`}>
+          <span className="text-2xl">{icon}</span>
+          <span className="font-bold">{serviceName}</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Llamado Actual */}
+        {currentCall ? (
+          <div className="p-3 bg-white rounded-lg border-2 border-purple-300 shadow-sm">
+            <div className="flex items-center gap-1 mb-2">
+              <Badge className={statusColors['llamado']}>
+                🔔 {statusLabels['llamado']}
+              </Badge>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-gray-900 font-semibold text-lg">
+                <UserIcon className="h-4 w-4" />
+                {currentCall.patient_first_name} {currentCall.patient_last_name}
+              </div>
+              {currentCall.room_name && (
+                <div className="flex items-center gap-2 text-gray-700 text-sm">
+                  <MapPinIcon className="h-3 w-3" />
+                  {currentCall.room_name}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="p-3 bg-white/50 rounded-lg border border-gray-200">
+            <p className="text-gray-500 text-sm text-center">Sin llamados activos</p>
+          </div>
+        )}
+
+        {/* En Consulta */}
+        {inConsultation.length > 0 && !compact && (
+          <div>
+            <p className="text-xs font-semibold text-gray-600 mb-1">EN CONSULTA:</p>
+            <div className="space-y-1">
+              {inConsultation.slice(0, 2).map((apt) => (
+                <div
+                  key={apt.id}
+                  className="flex items-center justify-between text-xs bg-white/70 p-2 rounded"
+                >
+                  <span className="text-gray-700">
+                    {apt.patient_first_name} {apt.patient_last_name}
+                  </span>
+                  {apt.room_name && (
+                    <span className="text-gray-500">{apt.room_name}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Próximos */}
+        {waiting.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-600 mb-1">
+              PRÓXIMOS ({waiting.length}):
+            </p>
+            <div className="space-y-1">
+              {waiting.slice(0, compact ? 2 : 3).map((apt, idx) => (
+                <div
+                  key={apt.id}
+                  className="flex items-center gap-2 text-xs bg-white/70 p-2 rounded"
+                >
+                  <span className="text-gray-500 font-semibold">{idx + 1}.</span>
+                  <span className="text-gray-700 flex-1">
+                    {apt.patient_first_name} {apt.patient_last_name}
+                  </span>
+                </div>
+              ))}
+              {waiting.length > (compact ? 2 : 3) && (
+                <p className="text-xs text-gray-500 text-center mt-1">
+                  +{waiting.length - (compact ? 2 : 3)} más...
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {waiting.length === 0 && inConsultation.length === 0 && !currentCall && (
+          <div className="text-center py-2">
+            <p className="text-xs text-gray-400">No hay pacientes en espera</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

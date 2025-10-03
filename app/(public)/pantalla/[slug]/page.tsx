@@ -16,8 +16,13 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { PublicScreenTTS } from '@/components/public-screen-tts'
 import { TTSControls } from '@/components/tts-controls'
+import { TemplateSelector } from '@/components/template-selector'
+import { GridLayout } from '@/components/layouts/grid-layout'
+import { ListLayout } from '@/components/layouts/list-layout'
+import { CarouselLayout } from '@/components/layouts/carousel-layout'
 import { useSpeech } from '@/hooks/use-speech'
 import { playNotificationSound } from '@/lib/audio-utils'
+import { groupAppointmentsByService } from '@/lib/group-appointments'
 
 interface PublicAppointment {
   id: string
@@ -80,6 +85,9 @@ export default function PantallaPublicaPage({
   const [ttsEnabled, setTtsEnabled] = useState(true)
   const [ttsVolume, setTtsVolume] = useState(0.8)
   const [ttsRate, setTtsRate] = useState(0.9)
+
+  // Template/Layout state
+  const [currentTemplate, setCurrentTemplate] = useState<any>(null)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const channelRef = useRef<any>(null)
