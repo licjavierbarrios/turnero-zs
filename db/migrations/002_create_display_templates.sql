@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.display_template (
 
   -- Filtrado de servicios
   service_filter_type VARCHAR(20) NOT NULL CHECK (service_filter_type IN ('all', 'specific')),
-  service_ids UUID[] DEFAULT '{}' -- Array de IDs de servicios específicos (solo si service_filter_type='specific')
+  service_ids UUID[] DEFAULT '{}', -- Array de IDs de servicios específicos (solo si service_filter_type='specific')
 
   -- Configuración de carrusel
   carousel_interval INTEGER DEFAULT 8, -- Segundos entre rotaciones
