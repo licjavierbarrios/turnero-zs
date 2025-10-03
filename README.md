@@ -70,7 +70,7 @@ turnero-zs/
 - **Sprint 2** ✅ - Consultorios, Servicios, Agendas y plantillas de horarios
 - **Sprint 3** ✅ - Flujo de atención y pantallas públicas
 - **Sprint 4** ✅ - Métricas y reportes
-- **Sprint 5** ⏳ - Hardening y pilotos
+- **Sprint 5** ✅ - Hardening y documentación
 
 ### 🏁 Sprint 1 Completado
 
@@ -177,6 +177,58 @@ turnero-zs/
 - Gráficos interactivos con Recharts
 - Agregación de datos por fecha, profesional y servicio
 - Exportación CSV con encoding UTF-8 BOM
+
+### 🏁 Sprint 5 Completado
+
+**Documentación completa para producción:**
+- ✅ **Guía de Deployment**: Configuración de ambientes, Supabase, Vercel
+  - Setup paso a paso de base de datos
+  - Configuración de variables de entorno
+  - Deploy automático y manual
+  - Troubleshooting común
+- ✅ **Guía del Administrador**: Manual completo para admins
+  - Configuración inicial de zonas e instituciones
+  - Gestión de profesionales, servicios y horarios
+  - Creación de usuarios y asignación de roles
+  - Gestión de reportes y métricas
+  - Mejores prácticas operacionales
+- ✅ **Guía del Usuario**: Manual para personal operativo
+  - Asignación y gestión de turnos
+  - Flujo de atención completo
+  - Operación de pantalla pública
+  - Solución de problemas comunes
+- ✅ **Checklist de Pre-Deployment**: Verificación exhaustiva
+  - 100+ items de verificación
+  - Scripts SQL ejecutados
+  - Funcionalidades testeadas
+  - Performance y seguridad
+  - Plan de contingencia
+
+**Documentos disponibles:**
+- `docs/DEPLOYMENT.md` - Guía técnica de deployment
+- `docs/GUIA-ADMINISTRADOR.md` - Manual para administradores
+- `docs/GUIA-USUARIO.md` - Manual para usuarios finales
+- `docs/CHECKLIST.md` - Checklist pre-producción
+
+**Sistema listo para:**
+- ✅ Deployment en producción
+- ✅ Capacitación de usuarios
+- ✅ Piloto en instituciones reales
+- ✅ Escalamiento multi-zona
+
+## 📚 Documentación
+
+### Para Desarrolladores
+- **README.md** (este archivo): Visión general del proyecto
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Guía completa de deployment
+- **CLAUDE.md**: Guía para Claude Code (asistente IA)
+
+### Para Administradores
+- **[docs/GUIA-ADMINISTRADOR.md](docs/GUIA-ADMINISTRADOR.md)**: Manual completo de administración
+- **[docs/CHECKLIST.md](docs/CHECKLIST.md)**: Checklist de pre-deployment
+
+### Para Usuarios Finales
+- **[docs/GUIA-USUARIO.md](docs/GUIA-USUARIO.md)**: Guía operativa del sistema
 
 ## 🔐 Roles y Permisos
 
