@@ -51,9 +51,10 @@ CREATE POLICY "Solo super admins pueden crear plantillas"
   FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM public.user
-      WHERE user.id = auth.uid()
-      AND user.role = 'super_admin'
+      SELECT 1 FROM membership
+      WHERE user_id = auth.uid()
+      AND role = 'super_admin'
+      AND is_active = true
     )
   );
 
@@ -63,9 +64,10 @@ CREATE POLICY "Solo super admins pueden actualizar plantillas"
   FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1 FROM public.user
-      WHERE user.id = auth.uid()
-      AND user.role = 'super_admin'
+      SELECT 1 FROM membership
+      WHERE user_id = auth.uid()
+      AND role = 'super_admin'
+      AND is_active = true
     )
     AND is_predefined = false
   );
@@ -76,9 +78,10 @@ CREATE POLICY "Solo super admins pueden eliminar plantillas"
   FOR DELETE
   USING (
     EXISTS (
-      SELECT 1 FROM public.user
-      WHERE user.id = auth.uid()
-      AND user.role = 'super_admin'
+      SELECT 1 FROM membership
+      WHERE user_id = auth.uid()
+      AND role = 'super_admin'
+      AND is_active = true
     )
     AND is_predefined = false
   );
