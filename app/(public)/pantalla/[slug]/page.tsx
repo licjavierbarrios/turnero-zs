@@ -17,12 +17,9 @@ import { es } from 'date-fns/locale'
 import { PublicScreenTTS } from '@/components/public-screen-tts'
 import { TTSControls } from '@/components/tts-controls'
 import { TemplateSelector } from '@/components/template-selector'
-import { GridLayout } from '@/components/layouts/grid-layout'
-import { ListLayout } from '@/components/layouts/list-layout'
-import { CarouselLayout } from '@/components/layouts/carousel-layout'
+import { MultiServiceDisplay } from '@/components/multi-service-display'
 import { useSpeech } from '@/hooks/use-speech'
 import { playNotificationSound } from '@/lib/audio-utils'
-import { groupAppointmentsByService } from '@/lib/group-appointments'
 
 interface PublicAppointment {
   id: string
@@ -88,6 +85,28 @@ export default function PantallaPublicaPage({
 
   // Template/Layout state
   const [currentTemplate, setCurrentTemplate] = useState<any>(null)
+
+  // Load template from localStorage on mount
+  useEffect(() => {
+    const savedTemplateId = localStorage.getItem(`pantalla_template_${slug}`)
+    if (savedTemplateId) {
+      // Fetch template by ID
+      supabase
+        .from('display_template')
+        .select('*')
+        .eq('id', savedTemplateId)
+        .single()
+        .then(({ data }) => {
+          if (data) setCurrentTemplate(data)
+        })
+    }
+  }, [slug])
+
+  // Handle template change
+  const handleTemplateChange = (template: any) => {
+    setCurrentTemplate(template)
+    localStorage.setItem(`pantalla_template_${slug}`, template.id)
+  }
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const channelRef = useRef<any>(null)
@@ -375,13 +394,6 @@ export default function PantallaPublicaPage({
     }
   }, [institution, soundEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const waitingAppointments = appointments.filter(apt => apt.status === 'esperando')
-  const inConsultationAppointments = appointments.filter(apt => apt.status === 'en_consulta')
-
-  const getPatientInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-  }
-
   const getAnonymizedName = (firstName: string, lastName: string) => {
     // Show first name and first letter of last name for privacy
     return `${firstName} ${lastName.charAt(0).toUpperCase()}.`
@@ -460,129 +472,19 @@ export default function PantallaPublicaPage({
         </div>
       </header>
 
+      {/* Template Selector Button */}
+      <TemplateSelector
+        currentTemplateId={currentTemplate?.id}
+        onTemplateChange={handleTemplateChange}
+      />
+
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Current Call */}
-          <Card className={`${currentCall ? 'border-purple-300 bg-purple-50' : ''} transition-all duration-500`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <UserIcon className="h-6 w-6" />
-                Paciente Actual
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {currentCall ? (
-                <div className="text-center space-y-4">
-                  <div className="text-4xl font-bold text-purple-900 animate-pulse">
-                    {getAnonymizedName(currentCall.patient_first_name, currentCall.patient_last_name)}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2 text-lg text-gray-700">
-                      <HeartHandshakeIcon className="h-5 w-5" />
-                      <span>
-                        Dr. {currentCall.professional_first_name} {currentCall.professional_last_name}
-                      </span>
-                    </div>
-                    <div className="text-lg text-gray-600">{currentCall.service_name}</div>
-                    {currentCall.room_name && (
-                      <div className="flex items-center justify-center gap-2 text-xl font-semibold text-purple-800">
-                        <MapPinIcon className="h-6 w-6" />
-                        <span>{currentCall.room_name}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-3xl text-purple-700 font-mono font-bold">
-                    {format(new Date(currentCall.scheduled_at), 'HH:mm')}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  <UserIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-xl">No hay paciente siendo llamado</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Waiting Queue */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <ClockIcon className="h-6 w-6" />
-                En Espera ({waitingAppointments.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {waitingAppointments.length > 0 ? (
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {waitingAppointments.slice(0, 10).map((appointment, index) => (
-                    <div key={appointment.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center text-sm font-semibold">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <div className="font-semibold">
-                            {getAnonymizedName(appointment.patient_first_name, appointment.patient_last_name)}
-                          </div>
-                          <div className="text-sm text-gray-600">{appointment.service_name}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-mono">
-                          {format(new Date(appointment.scheduled_at), 'HH:mm')}
-                        </div>
-                        <Badge className={statusColors[appointment.status as keyof typeof statusColors]}>
-                          {statusLabels[appointment.status as keyof typeof statusLabels]}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                  {waitingAppointments.length > 10 && (
-                    <div className="text-center text-gray-500 text-sm">
-                      y {waitingAppointments.length - 10} pacientes más...
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  <ClockIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">No hay pacientes en espera</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* In Consultation */}
-        {inConsultationAppointments.length > 0 && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <HeartHandshakeIcon className="h-5 w-5" />
-                En Consulta ({inConsultationAppointments.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {inConsultationAppointments.map((appointment) => (
-                  <div key={appointment.id} className="p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="font-semibold text-green-900">
-                      {getPatientInitials(appointment.patient_first_name, appointment.patient_last_name)}
-                    </div>
-                    <div className="text-sm text-green-700 mt-1">
-                      Dr. {appointment.professional_first_name} {appointment.professional_last_name}
-                    </div>
-                    {appointment.room_name && (
-                      <div className="text-sm text-green-600 mt-1">{appointment.room_name}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Multi-Service Display with Selected Template */}
+        <MultiServiceDisplay
+          appointments={appointments}
+          template={currentTemplate}
+        />
 
         {/* Footer */}
         <footer className="text-center mt-12 text-gray-500">
