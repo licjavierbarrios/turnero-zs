@@ -67,7 +67,7 @@ turnero-zs/
 
 - **Sprint 0** ✅ - Setup inicial
 - **Sprint 1** ✅ - ABMs base (Zonas, Instituciones, Profesionales, Pacientes, Usuarios)
-- **Sprint 2** 🔄 - Consultorios, Servicios, Agendas y plantillas de horarios
+- **Sprint 2** ✅ - Consultorios, Servicios, Agendas y plantillas de horarios
 - **Sprint 3** ⏳ - Flujo de atención y pantallas públicas
 - **Sprint 4** ⏳ - Métricas y reportes
 - **Sprint 5** ⏳ - Hardening y pilotos
@@ -80,6 +80,7 @@ turnero-zs/
 - ✅ **Gestión de Profesionales**: Especialidades, matrículas y estados
 - ✅ **Gestión de Pacientes**: DNI, edades, validaciones argentinas
 - ✅ **Usuarios y Membresías**: Sistema de roles por institución
+- ✅ **Super Admin**: Sistema de administración global multi-zona
 - ✅ **Infraestructura UI**: 13 componentes shadcn/ui configurados
 
 **Páginas disponibles:**
@@ -88,6 +89,7 @@ turnero-zs/
 - `/profesionales` - Gestión de profesionales
 - `/pacientes` - Gestión de pacientes
 - `/usuarios` - Gestión de usuarios y membresías
+- `/super-admin` - Panel de administración global
 
 **Características técnicas:**
 - TypeScript strict mode
@@ -96,10 +98,34 @@ turnero-zs/
 - Validaciones client/server-side
 - Integración Supabase completa
 - Verificación lint/typecheck
+- RLS policies multi-tenant con soporte super_admin
+
+### 🏁 Sprint 2 Completado
+
+**Funcionalidades implementadas:**
+- ✅ **Gestión de Consultorios**: CRUD con agrupación por institución
+- ✅ **Gestión de Servicios**: Configuración de servicios médicos con duración
+- ✅ **Plantillas de Horarios**: Sistema completo de agendas semanales
+  - Configuración por día de semana
+  - Asignación de profesional, servicio y consultorio
+  - Cálculo automático de turnos disponibles
+  - Gestión de horarios de inicio/fin y duración
+
+**Páginas disponibles:**
+- `/consultorios` - Gestión de consultorios y salas
+- `/servicios` - Gestión de servicios médicos
+- `/horarios` - Gestión de plantillas de horarios
+
+**Características técnicas:**
+- RLS policies para consultorios, servicios y plantillas
+- Validación de relaciones entre instituciones
+- Filtrado dinámico por institución del profesional
+- Cálculo en tiempo real de capacidad de agenda
 
 ## 🔐 Roles y Permisos
 
-- **admin**: Administradores del sistema
+- **super_admin**: Administradores globales (acceso multi-zona)
+- **admin**: Administradores institucionales
 - **administrativo**: Personal administrativo
 - **medico**: Profesionales de la salud
 - **enfermeria**: Personal de enfermería
