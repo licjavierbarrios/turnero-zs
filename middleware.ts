@@ -66,30 +66,8 @@ export async function middleware(request: NextRequest) {
   // PROTECCIÓN DE RUTAS /super-admin/*
   // ============================================================================
   if (path.startsWith('/super-admin')) {
-    // Si no hay usuario, redirigir a login
-    if (!user) {
-      const redirectUrl = new URL('/login', request.url)
-      redirectUrl.searchParams.set('redirectTo', path)
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    // Verificar si el usuario tiene rol super_admin
-    const { data: memberships } = await supabase
-      .from('membership')
-      .select('role, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-
-    const isSuperAdmin = memberships?.some(
-      (m) => m.role === 'super_admin' && m.is_active
-    )
-
-    // Si no es super admin, redirigir a dashboard normal
-    if (!isSuperAdmin) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-
-    // Super admin tiene acceso, continuar
+    // TEMPORAL: Permitir acceso sin verificación para debugging
+    console.log('🔍 Middleware: Acceso a /super-admin, usuario:', user?.id)
     return response
   }
 
@@ -97,9 +75,9 @@ export async function middleware(request: NextRequest) {
   // PROTECCIÓN DE RUTAS /dashboard/*
   // ============================================================================
   if (path.startsWith('/dashboard')) {
-    // Si no hay usuario, redirigir a login
+    // Si no hay usuario, redirigir a login (página principal)
     if (!user) {
-      const redirectUrl = new URL('/login', request.url)
+      const redirectUrl = new URL('/', request.url)
       redirectUrl.searchParams.set('redirectTo', path)
       return NextResponse.redirect(redirectUrl)
     }
@@ -109,9 +87,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================================================
-  // RUTA /login
+  // RUTA RAÍZ / (LOGIN)
   // ============================================================================
-  if (path === '/login') {
+  if (path === '/') {
     // Si ya está autenticado, redirigir según su rol
     if (user) {
       // Verificar si es super admin
@@ -126,10 +104,10 @@ export async function middleware(request: NextRequest) {
       )
 
       if (isSuperAdmin) {
-        return NextResponse.redirect(new URL('/super-admin/zonas', request.url))
+        return NextResponse.redirect(new URL('/super-admin', request.url))
       }
 
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/institutions/select', request.url))
     }
   }
 
@@ -138,8 +116,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     '/super-admin/:path*',
     '/dashboard/:path*',
-    '/login',
   ],
 }

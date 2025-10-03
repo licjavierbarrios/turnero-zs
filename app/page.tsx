@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,24 +25,48 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Demo: Usuarios de prueba
-      const demoUsers = [
-        { email: 'juan.paredes@salud.gov.ar', password: 'demo123', name: 'Dr. Juan Paredes' },
-        { email: 'maria.lopez@salud.gov.ar', password: 'demo123', name: 'Enfermera María López' },
-        { email: 'admin@salud.gov.ar', password: 'admin123', name: 'Administrador Sistema' }
-      ]
+      console.log('🔐 Intentando login con:', email)
 
-      const user = demoUsers.find(u => u.email === email && u.password === password)
+      // Autenticación real con Supabase
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
 
-      if (user) {
-        // Simular autenticación exitosa
-        localStorage.setItem('user', JSON.stringify(user))
-        router.push('/institutions/select')
-      } else {
-        setError('Email o contraseña incorrectos')
+      console.log('📝 Resultado auth:', { data, authError })
+
+      if (authError) throw authError
+
+      if (!data.user) {
+        throw new Error('No se recibió información del usuario')
       }
-    } catch (error) {
-      setError('Error al iniciar sesión. Intenta nuevamente.')
+
+      console.log('✅ Usuario autenticado:', data.user.id, data.user.email)
+
+      // Verificar si es super admin
+      console.log('🔍 Verificando memberships...')
+      const { data: memberships, error: membershipError } = await supabase
+        .from('membership')
+        .select('role, is_active')
+        .eq('user_id', data.user.id)
+        .eq('is_active', true)
+
+      console.log('📋 Memberships:', memberships, membershipError)
+
+      const isSuperAdmin = memberships?.some(m => m.role === 'super_admin')
+      console.log('👑 Es super admin?', isSuperAdmin)
+
+      // Redirigir según rol
+      if (isSuperAdmin) {
+        console.log('🚀 Redirigiendo a /super-admin/zonas')
+        router.push('/super-admin/zonas')
+      } else {
+        console.log('🚀 Redirigiendo a /institutions/select')
+        router.push('/institutions/select')
+      }
+    } catch (error: any) {
+      console.error('❌ Login error:', error)
+      setError(error.message || 'Email o contraseña incorrectos')
     } finally {
       setLoading(false)
     }
@@ -122,25 +147,6 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Demo Info */}
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-blue-900">
-              Usuarios de Demostración
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-blue-800 space-y-2">
-            <div>
-              <strong>Dr. Juan Paredes:</strong> juan.paredes@salud.gov.ar / demo123
-            </div>
-            <div>
-              <strong>Enfermera María López:</strong> maria.lopez@salud.gov.ar / demo123
-            </div>
-            <div>
-              <strong>Administrador:</strong> admin@salud.gov.ar / admin123
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Public Screen Link */}
         <div className="text-center">
