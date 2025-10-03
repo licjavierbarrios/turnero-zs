@@ -24,6 +24,7 @@ CREATE TYPE appointment_status AS ENUM (
 );
 
 CREATE TYPE role_name AS ENUM (
+  'super_admin',
   'admin',
   'administrativo',
   'medico',

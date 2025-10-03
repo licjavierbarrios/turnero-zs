@@ -33,26 +33,130 @@ CREATE TABLE IF NOT EXISTS public.membership (
   UNIQUE(user_id, institution_id, is_active) DEFERRABLE INITIALLY DEFERRED
 );
 
--- 3. CREAR USUARIOS DE DEMO
--- Insertar usuarios en auth.users (esto normalmente lo hace Supabase Auth automáticamente)
--- Para demo, creamos los perfiles directamente
+-- =====================================================
+-- 3. CREAR SUPER ADMIN DEL SISTEMA
+-- =====================================================
 
--- NOTA: En Supabase, primero debes crear estos usuarios desde el Auth panel:
--- juan.paredes@salud.gov.ar (password: demo123)
--- maria.lopez@salud.gov.ar (password: demo123)
--- admin@salud.gov.ar (password: admin123)
+-- IMPORTANTE: Este es el PRIMER USUARIO del sistema
+-- Tiene acceso global para crear zonas, instituciones y asignar administradores
 
--- Después ejecutar estos inserts con los UUIDs reales de los usuarios:
+-- 3.1. Crear usuario Super Admin en Supabase Auth
+-- Ejecutar en el panel de Supabase Auth o vía API:
+-- Email: superadmin@turnero-zs.gob.ar
+-- Password: (generar password seguro, cambiar en primer login)
+
+-- 3.2. Obtener el UUID generado por Supabase Auth
+-- Reemplazar 'SUPER_ADMIN_UUID_HERE' con el UUID real
+
+-- 3.3. Crear perfil del super admin
+DO $$
+DECLARE
+  super_admin_uuid UUID;
+BEGIN
+  -- Obtener el UUID del super admin desde auth.users
+  -- Ajustar el email si se usó otro
+  SELECT id INTO super_admin_uuid
+  FROM auth.users
+  WHERE email = 'superadmin@turnero-zs.gob.ar'
+  LIMIT 1;
+
+  -- Si el usuario existe, crear su perfil
+  IF super_admin_uuid IS NOT NULL THEN
+    INSERT INTO public.user_profile (id, first_name, last_name, document_number, phone)
+    VALUES (
+      super_admin_uuid,
+      'Super',
+      'Administrador',
+      '00000000',
+      '+54 9 11 0000-0000'
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Crear membresía especial de super_admin
+    -- NOTA: Super admin NO tiene institución específica (institution_id NULL no es permitido)
+    -- Por lo tanto, creamos una institución ficticia "Sistema" solo para la membresía
+
+    -- Crear zona "Sistema"
+    INSERT INTO zone (id, name, description)
+    VALUES (
+      '00000000-0000-0000-0000-000000000000',
+      'Sistema',
+      'Zona virtual para administración del sistema'
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Crear institución "Sistema"
+    INSERT INTO institution (id, zone_id, name, type, address)
+    VALUES (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000000',
+      'Administración del Sistema',
+      'caps', -- Tipo ficticio, no se usa realmente
+      'Sistema'
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Crear membresía de super_admin
+    INSERT INTO public.membership (user_id, institution_id, role, is_active)
+    VALUES (
+      super_admin_uuid,
+      '00000000-0000-0000-0000-000000000001',
+      'super_admin',
+      true
+    )
+    ON CONFLICT DO NOTHING;
+
+    RAISE NOTICE 'Super Admin creado exitosamente con UUID: %', super_admin_uuid;
+  ELSE
+    RAISE WARNING 'No se encontró el usuario superadmin@turnero-zs.gob.ar en auth.users';
+    RAISE WARNING 'Primero crea el usuario en Supabase Auth Panel con el email: superadmin@turnero-zs.gob.ar';
+  END IF;
+END $$;
+
+-- =====================================================
+-- 4. INSTRUCCIONES POST-SETUP
+-- =====================================================
+
+-- PASO 1: Crear usuario en Supabase Auth Panel
+--   - Email: superadmin@turnero-zs.gob.ar
+--   - Password: (generar seguro)
+--   - Confirmar email automáticamente
+
+-- PASO 2: Ejecutar este script completo
+--   - Se creará el perfil y membresía del super admin
+
+-- PASO 3: Iniciar sesión como super admin
+--   - Cambiar password en primer login
+--   - Acceder a /super-admin/zonas
+
+-- PASO 4: Configurar el sistema
+--   - Crear zonas sanitarias reales
+--   - Crear instituciones (CAPS, hospitales)
+--   - Asignar administradores a cada institución
+
+-- =====================================================
+-- 5. CREAR USUARIOS DE DEMO (OPCIONAL)
+-- =====================================================
+
+-- NOTA: Solo para desarrollo/testing
+-- En producción, los admins de institución crearán sus propios usuarios
+
+-- Después de crear zonas e instituciones reales, puedes crear usuarios demo:
+-- juan.paredes@salud.gov.ar (admin de una institución)
+-- maria.lopez@salud.gov.ar (administrativo)
+-- etc.
 
 -- INSERT INTO public.user_profile (id, first_name, last_name, document_number, phone) VALUES
 -- ('USER_UUID_JUAN', 'Juan', 'Paredes', '12345678', '+54 9 11 1234-5678'),
--- ('USER_UUID_MARIA', 'María', 'López', '87654321', '+54 9 11 8765-4321'),
--- ('USER_UUID_ADMIN', 'Administrador', 'Sistema', '11111111', '+54 9 11 0000-0000');
+-- ('USER_UUID_MARIA', 'María', 'López', '87654321', '+54 9 11 8765-4321');
 
--- 4. CREAR MEMBRESÍAS DE DEMO
--- Estas se crearán después de tener los UUIDs reales de usuarios e instituciones
+-- INSERT INTO public.membership (user_id, institution_id, role, is_active) VALUES
+-- ('USER_UUID_JUAN', 'REAL_INSTITUTION_UUID', 'admin', true),
+-- ('USER_UUID_MARIA', 'REAL_INSTITUTION_UUID', 'administrativo', true);
 
--- 5. POLÍTICAS RLS PARA AUTENTICACIÓN
+-- =====================================================
+-- 6. POLÍTICAS RLS PARA AUTENTICACIÓN
+-- =====================================================
 
 -- Política para user_profile: usuarios solo pueden ver/editar su propio perfil
 ALTER TABLE public.user_profile ENABLE ROW LEVEL SECURITY;
@@ -63,13 +167,29 @@ CREATE POLICY "Users can view own profile" ON public.user_profile
 CREATE POLICY "Users can update own profile" ON public.user_profile
   FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Admins can view all profiles" ON public.user_profile
+-- Super admin puede ver todos los perfiles
+CREATE POLICY "Super admin can view all profiles" ON public.user_profile
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM membership m
+      WHERE m.user_id = auth.uid()
+      AND m.role = 'super_admin'
+      AND m.is_active = true
+    )
+  );
+
+-- Admins pueden ver perfiles de usuarios de su institución
+CREATE POLICY "Admins can view profiles in their institution" ON public.user_profile
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM membership m
       WHERE m.user_id = auth.uid()
       AND m.role = 'admin'
       AND m.is_active = true
+      AND m.institution_id IN (
+        SELECT institution_id FROM membership
+        WHERE user_id = id
+      )
     )
   );
 
@@ -79,12 +199,25 @@ ALTER TABLE public.membership ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own memberships" ON public.membership
   FOR SELECT USING (auth.uid() = user_id AND is_active = true);
 
-CREATE POLICY "Admins can manage memberships" ON public.membership
+-- Super admin puede gestionar todas las membresías
+CREATE POLICY "Super admin can manage all memberships" ON public.membership
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM membership m
+      WHERE m.user_id = auth.uid()
+      AND m.role = 'super_admin'
+      AND m.is_active = true
+    )
+  );
+
+-- Admins pueden gestionar membresías de su institución
+CREATE POLICY "Admins can manage memberships in their institution" ON public.membership
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM membership m
       WHERE m.user_id = auth.uid()
       AND m.role = 'admin'
+      AND m.institution_id = membership.institution_id
       AND m.is_active = true
     )
   );
