@@ -92,12 +92,46 @@ export default function SuperAdminUsuariosPage() {
     is_active: true
   })
 
+  // Search states
+  const [userSearch, setUserSearch] = useState('')
+  const [selectedZone, setSelectedZone] = useState('')
+  const [zones, setZones] = useState<Array<{ id: string, name: string }>>([])
+  const [filteredInstitutions, setFilteredInstitutions] = useState<Institution[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
-    Promise.all([fetchUsers(), fetchMemberships(), fetchInstitutions()])
+    Promise.all([fetchUsers(), fetchMemberships(), fetchInstitutions(), fetchZones()])
   }, [])
+
+  // Filter users by search
+  useEffect(() => {
+    if (userSearch.trim() === '') {
+      setFilteredUsers(users)
+    } else {
+      const search = userSearch.toLowerCase()
+      setFilteredUsers(
+        users.filter(u =>
+          u.first_name.toLowerCase().includes(search) ||
+          u.last_name.toLowerCase().includes(search) ||
+          u.email.toLowerCase().includes(search)
+        )
+      )
+    }
+  }, [userSearch, users])
+
+  // Filter institutions by zone
+  useEffect(() => {
+    if (selectedZone === '') {
+      setFilteredInstitutions(institutions)
+    } else {
+      setFilteredInstitutions(
+        institutions.filter(i => i.zone_name === selectedZone)
+      )
+    }
+  }, [selectedZone, institutions])
 
   const fetchUsers = async () => {
     try {
@@ -162,7 +196,8 @@ export default function SuperAdminUsuariosPage() {
         .select(`
           id,
           name,
-          zone_name:zone!inner(name)
+          zone_id,
+          zone:zone_id(id, name)
         `)
         .order('name', { ascending: true })
 
@@ -171,12 +206,27 @@ export default function SuperAdminUsuariosPage() {
       const formattedData = data?.map(item => ({
         id: item.id,
         name: item.name,
-        zone_name: item.zone_name?.[0]?.name || 'Sin zona'
+        zone_name: item.zone?.name || 'Sin zona'
       })) || []
 
       setInstitutions(formattedData)
+      setFilteredInstitutions(formattedData)
     } catch (error) {
       console.error('Error fetching institutions:', error)
+    }
+  }
+
+  const fetchZones = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('zone')
+        .select('id, name')
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      setZones(data || [])
+    } catch (error) {
+      console.error('Error fetching zones:', error)
     }
   }
 
@@ -394,6 +444,8 @@ export default function SuperAdminUsuariosPage() {
       role: '',
       is_active: true
     })
+    setUserSearch('')
+    setSelectedZone('')
     setEditingMembership(null)
     setError(null)
   }
@@ -674,6 +726,21 @@ export default function SuperAdminUsuariosPage() {
                       </Alert>
                     )}
 
+                    {/* Paso 1: Buscar Usuario */}
+                    <div className="space-y-2">
+                      <Label htmlFor="user_search">Buscar Usuario *</Label>
+                      <Input
+                        id="user_search"
+                        type="text"
+                        placeholder="Buscar por nombre o email..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Escribe para buscar entre {users.length} usuarios
+                      </p>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="membership_user_id">Usuario *</Label>
                       <Select
@@ -684,30 +751,67 @@ export default function SuperAdminUsuariosPage() {
                           <SelectValue placeholder="Seleccionar usuario" />
                         </SelectTrigger>
                         <SelectContent>
-                          {users.filter(u => u.is_active).map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.first_name} {user.last_name} - {user.email}
+                          {filteredUsers.filter(u => u.is_active).length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              No se encontraron usuarios
+                            </div>
+                          ) : (
+                            filteredUsers.filter(u => u.is_active).map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.first_name} {user.last_name} - {user.email}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Paso 2: Seleccionar Zona */}
+                    <div className="space-y-2">
+                      <Label htmlFor="zone_filter">Zona Sanitaria *</Label>
+                      <Select
+                        value={selectedZone}
+                        onValueChange={(value) => {
+                          setSelectedZone(value)
+                          setMembershipFormData({ ...membershipFormData, institution_id: '' })
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar zona" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {zones.map((zone) => (
+                            <SelectItem key={zone.id} value={zone.name}>
+                              {zone.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
+                    {/* Paso 3: Seleccionar Institución */}
                     <div className="space-y-2">
                       <Label htmlFor="membership_institution_id">Institución *</Label>
                       <Select
                         value={membershipFormData.institution_id}
                         onValueChange={(value) => setMembershipFormData({ ...membershipFormData, institution_id: value })}
+                        disabled={!selectedZone}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar institución" />
+                          <SelectValue placeholder={!selectedZone ? "Primero selecciona una zona" : "Seleccionar institución"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {institutions.map((institution) => (
-                            <SelectItem key={institution.id} value={institution.id}>
-                              {institution.name} - {institution.zone_name}
-                            </SelectItem>
-                          ))}
+                          {filteredInstitutions.length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              No hay instituciones en esta zona
+                            </div>
+                          ) : (
+                            filteredInstitutions.map((institution) => (
+                              <SelectItem key={institution.id} value={institution.id}>
+                                {institution.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -722,7 +826,6 @@ export default function SuperAdminUsuariosPage() {
                           <SelectValue placeholder="Seleccionar rol" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="super_admin">Super Admin (Acceso Global)</SelectItem>
                           <SelectItem value="admin">Administrador</SelectItem>
                           <SelectItem value="administrativo">Administrativo</SelectItem>
                           <SelectItem value="medico">Médico</SelectItem>
@@ -730,6 +833,9 @@ export default function SuperAdminUsuariosPage() {
                           <SelectItem value="pantalla">Pantalla</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Nota: El rol Super Admin se asigna manualmente en la base de datos
+                      </p>
                     </div>
 
                     <div className="flex items-center space-x-2">

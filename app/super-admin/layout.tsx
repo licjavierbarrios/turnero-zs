@@ -134,16 +134,6 @@ export default function SuperAdminLayout({
 
             {/* Action Buttons */}
             <div className="space-y-2">
-              <Link href="/dashboard">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-xs bg-white/10 hover:bg-white/20 text-white border-purple-600"
-                >
-                  <HomeIcon className="h-3 w-3 mr-2" />
-                  Vista Normal
-                </Button>
-              </Link>
               <Button
                 variant="outline"
                 size="sm"
