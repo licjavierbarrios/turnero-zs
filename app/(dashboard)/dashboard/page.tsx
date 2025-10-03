@@ -279,7 +279,7 @@ export default function DashboardPage() {
           <div className="flex space-x-2">
             <Button variant="outline" onClick={handleChangeInstitution}>
               <RefreshCwIcon className="h-4 w-4 mr-2" />
-              Cambiar de Institución
+              Seleccionar Institución
             </Button>
           </div>
         </div>

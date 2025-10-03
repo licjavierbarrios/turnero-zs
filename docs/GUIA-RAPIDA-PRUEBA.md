@@ -174,9 +174,9 @@ Deberías ver:
    - **Password**: `admin123`
 3. Deberías ver el dashboard
 
-### 3.2 Crear una Zona
+### 3.2 Crear una Zona (Como Super Admin)
 
-1. Ir a `/super-admin` o `/zonas`
+1. Ir a `/super-admin/zonas`
 2. Click en **"Nueva Zona"**
 3. Completar:
    - **Nombre**: Zona Norte
@@ -184,9 +184,9 @@ Deberías ver:
 4. Guardar
 5. ✅ Debería aparecer en la lista
 
-### 3.3 Crear una Institución
+### 3.3 Crear una Institución (Como Super Admin)
 
-1. Ir a `/instituciones`
+1. Ir a `/super-admin/instituciones`
 2. Click en **"Nueva Institución"**
 3. Completar:
    - **Nombre**: CAPS San Martín
@@ -197,7 +197,38 @@ Deberías ver:
 4. Guardar
 5. ✅ Debería aparecer en la lista
 
-### 3.4 Crear un Profesional
+### 3.4 Crear un Usuario Admin de Institución (Como Super Admin)
+
+**IMPORTANTE**: El super_admin NO gestiona profesionales. Primero debe crear un admin para la institución.
+
+1. Ir a `/super-admin/usuarios`
+2. En pestaña **"Usuarios"**, click **"Nuevo Usuario"**
+3. Completar:
+   - **Nombre**: María
+   - **Apellido**: López
+   - **Email**: admin.caps@turnero.com
+   - **Password**: admin123
+4. Guardar
+5. En pestaña **"Membresías"**, click **"Nueva Membresía"**
+6. Completar:
+   - **Usuario**: María López
+   - **Institución**: CAPS San Martín
+   - **Rol**: Administrador
+7. Guardar
+8. ✅ Ahora María López puede gestionar CAPS San Martín
+
+### 3.5 Login como Admin de Institución
+
+**IMPORTANTE**: A partir de aquí, las siguientes tareas las hace el **admin de la institución**, NO el super_admin.
+
+1. **Logout** del super_admin
+2. Login con:
+   - **Email**: admin.caps@turnero.com
+   - **Password**: admin123
+3. Seleccionar institución: **CAPS San Martín**
+4. ✅ Deberías ver el dashboard de la institución
+
+### 3.6 Crear un Profesional (Como Admin)
 
 1. Ir a `/profesionales`
 2. Click en **"Nuevo Profesional"**
@@ -206,35 +237,35 @@ Deberías ver:
    - **Apellido**: Pérez
    - **Especialidad**: Medicina General
    - **Matrícula**: 12345
-   - **Institución**: CAPS San Martín
+   - **Institución**: CAPS San Martín (se selecciona automáticamente)
    - **Estado**: Activo
 4. Guardar
 5. ✅ Debería aparecer en la lista
 
-### 3.5 Crear un Servicio
+### 3.7 Crear un Servicio (Como Admin)
 
 1. Ir a `/servicios`
 2. Click en **"Nuevo Servicio"**
 3. Completar:
    - **Nombre**: Medicina General
    - **Duración**: 15 minutos
-   - **Institución**: CAPS San Martín
+   - **Institución**: CAPS San Martín (se selecciona automáticamente)
    - **Estado**: Activo
 4. Guardar
 5. ✅ Debería aparecer en la lista
 
-### 3.6 Crear un Consultorio
+### 3.8 Crear un Consultorio (Como Admin)
 
 1. Ir a `/consultorios`
 2. Click en **"Nuevo Consultorio"**
 3. Completar:
    - **Nombre**: Consultorio 1
-   - **Institución**: CAPS San Martín
+   - **Institución**: CAPS San Martín (se selecciona automáticamente)
    - **Estado**: Activo
 4. Guardar
 5. ✅ Debería aparecer en la lista
 
-### 3.7 Crear una Plantilla de Horarios
+### 3.9 Crear una Plantilla de Horarios (Como Admin)
 
 1. Ir a `/horarios`
 2. Click en **"Nueva Plantilla"**
@@ -249,38 +280,36 @@ Deberías ver:
 5. Guardar
 6. ✅ Debería aparecer en la lista
 
-### 3.8 Crear un Paciente
+### 3.10 Crear un Paciente (Como Admin o Administrativo)
 
 1. Ir a `/pacientes`
 2. Click en **"Nuevo Paciente"**
 3. Completar:
-   - **Nombre**: María
+   - **Nombre**: Pedro
    - **Apellido**: González
    - **DNI**: 12345678
    - **Fecha de Nacimiento**: 01/01/1980
 4. Guardar
 5. ✅ Debería aparecer en la lista
 
-### 3.9 Asignar un Turno
+### 3.11 Asignar un Turno (Como Admin o Administrativo)
 
 1. Ir a `/turnos-disponibles`
-2. Seleccionar **Institución**: CAPS San Martín
-3. Click en **"Regenerar Turnos"** (esperar unos segundos)
-4. Seleccionar **Fecha**: Próximo lunes
-5. Deberías ver slots **verdes (disponibles)**
-6. Click en **"Asignar Turno"** en un slot
-7. En el diálogo:
-   - Buscar: María (o 12345678)
-   - Seleccionar: María González
+2. Seleccionar **Fecha**: Próximo lunes
+3. Deberías ver slots **verdes (disponibles)**
+4. Click en **"Asignar Turno"** en un slot
+5. En el diálogo:
+   - Buscar: Pedro (o 12345678)
+   - Seleccionar: Pedro González
    - Notas: Primera consulta
-8. Click **"Asignar Turno"**
-9. ✅ Confirmación: "Turno asignado correctamente"
-10. El slot debería cambiar a **rojo (ocupado)**
+6. Click **"Asignar Turno"**
+7. ✅ Confirmación: "Turno asignado correctamente"
+8. El slot debería cambiar a **rojo (ocupado)**
 
-### 3.10 Gestionar el Turno
+### 3.12 Gestionar el Turno (Como Admin, Administrativo o Médico)
 
 1. Ir a `/turnos`
-2. Deberías ver el turno de **María González**
+2. Deberías ver el turno de **Pedro González**
 3. Probar el flujo:
    - Click **"Marcar Esperando"** → Estado cambia a ESPERANDO (azul)
    - Click **"Llamar Paciente"** → Estado cambia a LLAMADO (púrpura)
@@ -288,7 +317,7 @@ Deberías ver:
    - Click **"Finalizar"** → Estado cambia a FINALIZADO (gris)
 4. ✅ Todos los cambios deberían funcionar
 
-### 3.11 Probar Pantalla Pública
+### 3.13 Probar Pantalla Pública
 
 1. Ir a `/pantalla`
 2. Click en **"CAPS San Martín"**
@@ -297,11 +326,10 @@ Deberías ver:
 5. Crear un turno y llamarlo desde `/turnos`
 6. ✅ La pantalla debería actualizarse automáticamente (Realtime)
 
-### 3.12 Ver Reportes
+### 3.14 Ver Reportes (Como Admin)
 
 1. Ir a `/reportes`
 2. Seleccionar:
-   - **Institución**: CAPS San Martín
    - **Período**: Hoy
 3. Deberías ver:
    - **Resumen**: Métricas generales
@@ -311,7 +339,7 @@ Deberías ver:
 4. Click en **"Exportar CSV"**
 5. ✅ Se descarga un archivo CSV
 
-### 3.13 Ver Dashboard
+### 3.15 Ver Dashboard (Como Admin)
 
 1. Ir a `/dashboard`
 2. Deberías ver:
@@ -325,23 +353,31 @@ Deberías ver:
 
 Marcar cada item que funcione correctamente:
 
+**Como Super Admin:**
 - [ ] Login con super_admin
-- [ ] Crear zona
-- [ ] Crear institución
-- [ ] Crear profesional
-- [ ] Crear servicio
-- [ ] Crear consultorio
-- [ ] Crear plantilla de horarios
+- [ ] Acceso a `/super-admin`
+- [ ] Crear zona en `/super-admin/zonas`
+- [ ] Crear institución en `/super-admin/instituciones`
+- [ ] Crear usuario en `/super-admin/usuarios`
+- [ ] Asignar membresía de admin en `/super-admin/usuarios`
+
+**Como Admin de Institución:**
+- [ ] Login con admin
+- [ ] Seleccionar institución
+- [ ] Crear profesional en `/profesionales`
+- [ ] Crear servicio en `/servicios`
+- [ ] Crear consultorio en `/consultorios`
+- [ ] Crear plantilla de horarios en `/horarios`
 - [ ] Ver "Turnos calculados" correctamente
-- [ ] Crear paciente
-- [ ] Asignar turno
+- [ ] Crear paciente en `/pacientes`
+- [ ] Asignar turno en `/turnos-disponibles`
 - [ ] Slot cambia de verde a rojo
-- [ ] Gestionar flujo completo (pendiente → finalizado)
-- [ ] Pantalla pública muestra llamados
+- [ ] Gestionar flujo completo (pendiente → finalizado) en `/turnos`
+- [ ] Pantalla pública muestra llamados en `/pantalla/[slug]`
 - [ ] Pantalla pública se actualiza en tiempo real
-- [ ] Reportes muestran datos
+- [ ] Reportes muestran datos en `/reportes`
 - [ ] Exportar CSV funciona
-- [ ] Dashboard muestra datos reales
+- [ ] Dashboard muestra datos reales en `/dashboard`
 
 ## 🆘 Problemas Comunes
 
@@ -386,14 +422,23 @@ WHERE u.email = 'admin@turnero.com';
 
 Si todo funciona, deberías poder:
 
+**Como Super Admin:**
 1. ✅ Login como super_admin
-2. ✅ Crear configuración completa (zona → institución → profesional → servicio → consultorio → plantilla)
-3. ✅ Crear paciente
-4. ✅ Asignar turno desde slots disponibles
-5. ✅ Gestionar flujo de atención (pendiente → esperando → llamado → en consulta → finalizado)
-6. ✅ Ver actualización en tiempo real en pantalla pública
-7. ✅ Ver reportes con datos reales
-8. ✅ Exportar datos a CSV
+2. ✅ Crear zona sanitaria
+3. ✅ Crear institución en esa zona
+4. ✅ Crear usuario admin para la institución
+5. ✅ Asignar membresía de admin al usuario
+
+**Como Admin de Institución:**
+6. ✅ Login como admin
+7. ✅ Crear profesional, servicio, consultorio
+8. ✅ Crear plantilla de horarios
+9. ✅ Crear paciente
+10. ✅ Asignar turno desde slots disponibles
+11. ✅ Gestionar flujo de atención (pendiente → esperando → llamado → en consulta → finalizado)
+12. ✅ Ver actualización en tiempo real en pantalla pública
+13. ✅ Ver reportes con datos reales
+14. ✅ Exportar datos a CSV
 
 ## 📝 Próximos Pasos
 
