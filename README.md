@@ -1,0 +1,147 @@
+# Turnero ZS
+
+Sistema multi-zona de gestión de turnos para centros de salud argentinos (CAPS/hospitales).
+
+## 🎯 Objetivos
+
+- ↓ 25-40% tiempo de espera en 3 meses
+- ↓ 10-20% ausentismo
+- ≥85% ocupación de agendas
+- ≥95% registro completo de eventos
+
+## 🛠️ Stack Tecnológico
+
+- **Frontend**: Next.js 15.5.2 + App Router, Tailwind CSS 4, shadcn/ui 3
+- **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage)
+- **Seguridad**: Row Level Security (RLS) basada en membership y roles
+- **Real-time**: Canales Supabase por institución
+
+## 🏗️ Arquitectura
+
+```
+turnero-zs/
+├── app/
+│   ├── (dashboard)/
+│   │   ├── turnos/           # Gestión de turnos
+│   │   └── profesional/      # Horarios profesionales
+│   └── (public)/
+│       └── pantalla/[id]/    # Pantallas públicas
+├── components/
+│   └── ui/                   # shadcn/ui components
+├── lib/
+│   ├── supabase.ts          # Cliente Supabase
+│   └── utils.ts             # Utilidades
+└── db/
+    ├── schema.sql           # Esquema de base de datos
+    ├── policies.sql         # Políticas RLS
+    └── seed.sql             # Datos semilla
+```
+
+## 🚀 Inicio Rápido
+
+1. **Clonar y configurar**:
+   ```bash
+   git clone <repo-url>
+   cd turnero-zs
+   npm install
+   ```
+
+2. **Configurar variables de entorno**:
+   ```bash
+   cp .env.local.example .env.local
+   # Editar .env.local con tus credenciales de Supabase
+   ```
+
+3. **Configurar base de datos**:
+   - Crear proyecto en Supabase
+   - Ejecutar `db/schema.sql`
+   - Ejecutar `db/policies.sql`
+   - Ejecutar `db/seed.sql` (datos de prueba)
+
+4. **Ejecutar en desarrollo**:
+   ```bash
+   npm run dev
+   ```
+
+## 📋 Roadmap por Sprints
+
+- **Sprint 0** ✅ - Setup inicial
+- **Sprint 1** ✅ - ABMs base (Zonas, Instituciones, Profesionales, Pacientes, Usuarios)
+- **Sprint 2** 🔄 - Consultorios, Servicios, Agendas y plantillas de horarios
+- **Sprint 3** ⏳ - Flujo de atención y pantallas públicas
+- **Sprint 4** ⏳ - Métricas y reportes
+- **Sprint 5** ⏳ - Hardening y pilotos
+
+### 🏁 Sprint 1 Completado
+
+**Funcionalidades implementadas:**
+- ✅ **Gestión de Zonas**: CRUD completo para organización territorial
+- ✅ **Gestión de Instituciones**: CAPS y hospitales con tipos y relaciones
+- ✅ **Gestión de Profesionales**: Especialidades, matrículas y estados
+- ✅ **Gestión de Pacientes**: DNI, edades, validaciones argentinas
+- ✅ **Usuarios y Membresías**: Sistema de roles por institución
+- ✅ **Infraestructura UI**: 13 componentes shadcn/ui configurados
+
+**Páginas disponibles:**
+- `/zonas` - Gestión de zonas
+- `/instituciones` - Gestión de instituciones
+- `/profesionales` - Gestión de profesionales
+- `/pacientes` - Gestión de pacientes
+- `/usuarios` - Gestión de usuarios y membresías
+
+**Características técnicas:**
+- TypeScript strict mode
+- Interfaz responsive con Tailwind CSS 4
+- Notificaciones toast
+- Validaciones client/server-side
+- Integración Supabase completa
+- Verificación lint/typecheck
+
+## 🔐 Roles y Permisos
+
+- **admin**: Administradores del sistema
+- **administrativo**: Personal administrativo
+- **medico**: Profesionales de la salud
+- **enfermeria**: Personal de enfermería
+- **pantalla**: Operadores de pantallas públicas
+
+## 🏥 Tipos de Institución
+
+- **caps**: Centros de Atención Primaria
+- **hospital_seccional**: Hospitales Seccionales
+- **hospital_distrital**: Hospitales Distritales
+- **hospital_regional**: Hospitales Regionales
+
+## 📊 Estados de Turnos
+
+```
+pendiente → esperando → llamado → en_consulta → finalizado
+                                              ↘ cancelado
+                                              ↘ ausente
+```
+
+## 🔧 Scripts Disponibles
+
+```bash
+npm run dev         # Servidor de desarrollo
+npm run build       # Build de producción
+npm run start       # Servidor de producción
+npm run lint        # Linting con ESLint
+npm run typecheck   # Verificación de tipos TypeScript
+```
+
+## 📝 Convenciones
+
+- Textos en español (contexto sanitario argentino)
+- Componentes con shadcn/ui
+- Estados en tiempo real vía Supabase channels
+- RLS estricto para multi-tenancy
+- Logging completo de eventos de atención
+
+## 🤝 Contribución
+
+Este proyecto sigue el flujo de desarrollo por sprints definido en `docs/sprints.md`.
+
+## 📄 Licencia
+
+Proyecto interno para el sistema de salud argentino.

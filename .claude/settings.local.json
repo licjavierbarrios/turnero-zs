@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "Bash(npx:*)",
+      "mcp__playwright__browser_press_key"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "playwright",
+    "shadcn",
+    "serena",
+    "filesystem",
+    "mcp-docker-gateway"
+  ]
+}
