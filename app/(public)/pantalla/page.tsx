@@ -3,39 +3,66 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { MapPinIcon } from 'lucide-react'
 
-interface Institution {
+interface Zone {
   id: string
   name: string
-  type: string
-  slug: string
+  institution_count: number
 }
 
 export default function PantallaSelectionPage() {
-  const [institutions, setInstitutions] = useState<Institution[]>([])
+  const [zones, setZones] = useState<Zone[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchInstitutions() {
+    async function fetchZones() {
       try {
-        const { data, error } = await supabase
+        // Obtener todas las instituciones agrupadas por zona
+        const { data: institutions, error: instError } = await supabase
           .from('institution')
-          .select('id, name, type, slug')
-          .order('name')
+          .select('zone_id, zone:zone_id(id, name)')
 
-        if (error) throw error
+        if (instError) throw instError
 
-        setInstitutions(data || [])
+        // Agrupar por zona y contar
+        const zoneMap = new Map<string, { id: string; name: string; count: number }>()
+
+        institutions?.forEach((inst: any) => {
+          if (inst.zone) {
+            const zoneId = inst.zone.id
+            if (zoneMap.has(zoneId)) {
+              zoneMap.get(zoneId)!.count++
+            } else {
+              zoneMap.set(zoneId, {
+                id: inst.zone.id,
+                name: inst.zone.name,
+                count: 1
+              })
+            }
+          }
+        })
+
+        // Convertir a array y ordenar por nombre
+        const zonesArray = Array.from(zoneMap.values())
+          .map(z => ({
+            id: z.id,
+            name: z.name,
+            institution_count: z.count
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+
+        setZones(zonesArray)
       } catch (err) {
-        setError('Error al cargar las instituciones')
+        setError('Error al cargar las zonas sanitarias')
         console.error(err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchInstitutions()
+    fetchZones()
   }, [])
 
   if (loading) {
@@ -43,7 +70,7 @@ export default function PantallaSelectionPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando instituciones...</p>
+          <p className="mt-4 text-gray-600">Cargando zonas sanitarias...</p>
         </div>
       </div>
     )
@@ -67,20 +94,20 @@ export default function PantallaSelectionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Pantalla Pública
+            Pantalla Pública - Selección de Zona
           </h1>
           <p className="text-gray-600">
-            Seleccione la institución para mostrar la pantalla pública
+            Seleccione la zona sanitaria para ver sus instituciones
           </p>
         </div>
 
-        {institutions.length === 0 ? (
+        {zones.length === 0 ? (
           <div className="text-center">
-            <p className="text-gray-500 mb-4">No hay instituciones disponibles</p>
+            <p className="text-gray-500 mb-4">No hay zonas con instituciones disponibles</p>
             <Link
               href="/"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
@@ -89,19 +116,27 @@ export default function PantallaSelectionPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {institutions.map((institution) => (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {zones.map((zone) => (
               <Link
-                key={institution.id}
-                href={`/pantalla/${institution.slug}`}
-                className="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 hover:border-blue-300"
+                key={zone.id}
+                href={`/pantalla/zona/${zone.id}`}
+                className="block p-6 bg-white rounded-lg shadow-md hover:shadow-xl transition-all border-2 border-gray-200 hover:border-blue-400"
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {institution.name}
-                </h3>
-                <p className="text-sm text-gray-500 capitalize">
-                  {institution.type.replace('_', ' ')}
-                </p>
+                <div className="flex items-start mb-3">
+                  <MapPinIcon className="h-6 w-6 text-blue-600 mr-3 mt-1" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {zone.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {zone.institution_count} {zone.institution_count === 1 ? 'institución' : 'instituciones'}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 text-sm text-blue-600 font-medium">
+                  Ver instituciones →
+                </div>
               </Link>
             ))}
           </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { supabase } from '@/lib/supabase'
 import {
   CalendarIcon,
   ClockIcon,
@@ -57,10 +58,26 @@ export default function DashboardLayout({
     setInstitutionContext(JSON.parse(contextData))
   }, [router])
 
-  const handleLogout = () => {
-    localStorage.removeItem('user')
-    localStorage.removeItem('institution_context')
-    router.push('/')
+  const handleLogout = async () => {
+    try {
+      // Cerrar sesión en Supabase
+      await supabase.auth.signOut()
+
+      // Limpiar localStorage
+      localStorage.removeItem('user')
+      localStorage.removeItem('institution_context')
+
+      // Redirigir a la página de inicio
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error)
+      // Aún así intentar limpiar y redirigir
+      localStorage.removeItem('user')
+      localStorage.removeItem('institution_context')
+      router.push('/')
+      router.refresh()
+    }
   }
 
   const getRoleLabel = (role: string) => {

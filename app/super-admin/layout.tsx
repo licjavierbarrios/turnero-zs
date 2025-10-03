@@ -14,6 +14,7 @@ import {
   ShieldCheckIcon,
   BarChart3Icon
 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 const navigation = [
   { name: 'Dashboard', href: '/super-admin', icon: HomeIcon },
@@ -48,10 +49,24 @@ export default function SuperAdminLayout({
     setLoading(false)
   }, [router])
 
-  const handleLogout = () => {
-    // TODO: Implementar logout con Supabase
-    localStorage.clear()
-    router.push('/')
+  const handleLogout = async () => {
+    try {
+      // Cerrar sesión en Supabase
+      await supabase.auth.signOut()
+
+      // Limpiar localStorage
+      localStorage.clear()
+
+      // Redirigir a la página de inicio
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error)
+      // Aún así intentar limpiar y redirigir
+      localStorage.clear()
+      router.push('/')
+      router.refresh()
+    }
   }
 
   if (loading) {

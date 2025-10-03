@@ -93,7 +93,7 @@ export function TTSControls({
                 max={1}
                 step={0.1}
                 value={[volume]}
-                onValueChange={([value]) => onVolumeChange(value)}
+                onValueChange={([value]: number[]) => onVolumeChange(value)}
                 disabled={!enabled}
                 className="w-full"
               />
@@ -115,7 +115,7 @@ export function TTSControls({
                 max={1.5}
                 step={0.1}
                 value={[rate]}
-                onValueChange={([value]) => onRateChange(value)}
+                onValueChange={([value]: number[]) => onRateChange(value)}
                 disabled={!enabled}
                 className="w-full"
               />

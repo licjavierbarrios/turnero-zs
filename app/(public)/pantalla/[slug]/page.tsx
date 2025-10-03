@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, use } from 'react'
+import { useState, useEffect, useRef, use, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,10 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { PublicScreenTTS } from '@/components/public-screen-tts'
+import { TTSControls } from '@/components/tts-controls'
+import { useSpeech } from '@/hooks/use-speech'
+import { playNotificationSound } from '@/lib/audio-utils'
 
 interface PublicAppointment {
   id: string
@@ -72,8 +76,51 @@ export default function PantallaPublicaPage({
   const [loading, setLoading] = useState(true)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting')
 
+  // TTS states
+  const [ttsEnabled, setTtsEnabled] = useState(true)
+  const [ttsVolume, setTtsVolume] = useState(0.8)
+  const [ttsRate, setTtsRate] = useState(0.9)
+
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const channelRef = useRef<any>(null)
+
+  // TTS hook
+  const { speak } = useSpeech({
+    lang: 'es-AR',
+    rate: ttsRate,
+    volume: ttsVolume,
+    enabled: ttsEnabled
+  })
+
+  // Test TTS function
+  const handleTestTTS = () => {
+    playNotificationSound(ttsVolume)
+    setTimeout(() => {
+      speak('María González, consultorio 3')
+    }, 500)
+  }
+
+  // Transform data for PublicScreenTTS component
+  // Creates compatible structure from lastCallEvent
+  // Using useMemo to prevent infinite re-renders
+  const callEvents = useMemo(() => {
+    if (!lastCallEvent || !currentCall || !currentCall.room_name) return []
+
+    return [{
+      id: lastCallEvent.id,
+      appointment_id: lastCallEvent.appointment_id,
+      created_at: lastCallEvent.called_at,
+      appointment: {
+        patient: {
+          first_name: currentCall.patient_first_name,
+          last_name: currentCall.patient_last_name
+        },
+        room: {
+          name: currentCall.room_name
+        }
+      }
+    }]
+  }, [lastCallEvent, currentCall])
 
   // Update current time every second
   useEffect(() => {
@@ -569,6 +616,23 @@ export default function PantallaPublicaPage({
           </p>
         </footer>
       </main>
+
+      {/* TTS Components */}
+      <PublicScreenTTS
+        callEvents={callEvents}
+        enabled={ttsEnabled}
+        volume={ttsVolume}
+        rate={ttsRate}
+      />
+      <TTSControls
+        enabled={ttsEnabled}
+        volume={ttsVolume}
+        rate={ttsRate}
+        onEnabledChange={setTtsEnabled}
+        onVolumeChange={setTtsVolume}
+        onRateChange={setTtsRate}
+        onTest={handleTestTTS}
+      />
     </div>
   )
 }
