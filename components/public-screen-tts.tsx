@@ -16,6 +16,9 @@ interface CallEvent {
     room?: {
       name: string
     }
+    service?: {
+      name: string
+    }
   }
 }
 
@@ -24,6 +27,7 @@ interface PublicScreenTTSProps {
   enabled?: boolean
   volume?: number
   rate?: number
+  includeServiceName?: boolean // Para layouts multi-servicio
 }
 
 /**
@@ -34,7 +38,8 @@ export function PublicScreenTTS({
   callEvents,
   enabled = true,
   volume = 1.0,
-  rate = 0.9
+  rate = 0.9,
+  includeServiceName = false
 }: PublicScreenTTSProps) {
   const { speak, supported } = useSpeech({
     lang: 'es-AR',
@@ -55,17 +60,19 @@ export function PublicScreenTTS({
     if (latestCall && !previousCallsRef.current.has(latestCall.id)) {
       const patient = latestCall.appointment?.patient
       const room = latestCall.appointment?.room
+      const service = latestCall.appointment?.service
 
       if (patient && room) {
         const patientName = `${patient.first_name} ${patient.last_name}`
         const roomName = room.name
+        const serviceName = includeServiceName && service ? service.name : undefined
 
         // Reproducir sonido de notificación
         playNotificationSound(volume)
 
         // Esperar un poco después del sonido antes de hablar
         setTimeout(() => {
-          const callText = generateCallText(patientName, roomName)
+          const callText = generateCallText(patientName, roomName, serviceName)
           speak(callText)
         }, 500)
 

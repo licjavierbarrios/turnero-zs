@@ -60,11 +60,17 @@ export function playNotificationSound(volume: number = 0.5): void {
  *
  * @param patientName - Nombre completo del paciente
  * @param roomName - Nombre del consultorio
+ * @param serviceName - Nombre del servicio (opcional, para layouts multi-servicio)
  * @returns Texto formateado para TTS
  */
-export function generateCallText(patientName: string, roomName: string): string {
+export function generateCallText(patientName: string, roomName: string, serviceName?: string): string {
   // Limpiar el nombre del consultorio de números al inicio
   const cleanRoomName = roomName.replace(/^consultorio\s*/i, '').trim()
+
+  // Si hay servicio, incluirlo en el anuncio
+  if (serviceName) {
+    return `${serviceName}: ${patientName}, ${cleanRoomName}`
+  }
 
   return `${patientName}, consultorio ${cleanRoomName}`
 }

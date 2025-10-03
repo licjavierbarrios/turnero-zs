@@ -144,10 +144,19 @@ export default function PantallaPublicaPage({
         },
         room: {
           name: currentCall.room_name
+        },
+        service: {
+          name: currentCall.service_name
         }
       }
     }]
   }, [lastCallEvent, currentCall])
+
+  // Determinar si hay múltiples servicios activos
+  const hasMultipleServices = useMemo(() => {
+    const services = new Set(appointments.map(apt => apt.service_name))
+    return services.size > 1
+  }, [appointments])
 
   // Update current time every second
   useEffect(() => {
@@ -503,6 +512,7 @@ export default function PantallaPublicaPage({
         enabled={ttsEnabled}
         volume={ttsVolume}
         rate={ttsRate}
+        includeServiceName={hasMultipleServices}
       />
       <TTSControls
         enabled={ttsEnabled}
