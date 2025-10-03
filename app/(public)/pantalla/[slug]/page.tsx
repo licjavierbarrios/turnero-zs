@@ -32,6 +32,7 @@ interface Institution {
   id: string
   name: string
   type: string
+  slug: string
   zone?: {
     name: string
   }
@@ -186,6 +187,7 @@ export default function PantallaPublicaPage({
           id: data.id,
           name: data.name,
           type: data.type,
+          slug: data.slug,
           zone: Array.isArray(data.zone) ? data.zone[0] : data.zone
         }
 
@@ -290,7 +292,7 @@ export default function PantallaPublicaPage({
           table: 'appointment',
           filter: `institution_id=eq.${institution.id}`
         },
-        (payload) => {
+        (payload: any) => {
           console.log('🔄 Appointment change received:', payload)
           console.log('Event type:', payload.eventType)
           console.log('Old status:', payload.old?.status)
@@ -304,7 +306,7 @@ export default function PantallaPublicaPage({
             if (soundEnabled && audioRef.current) {
               setTimeout(async () => {
                 try {
-                  await audioRef.current.play()
+                  await audioRef.current?.play()
                   console.log('✅ Audio played')
                 } catch (error) {
                   console.error('❌ Audio failed:', error)
