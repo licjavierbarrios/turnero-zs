@@ -68,7 +68,6 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
 
   const speak = useCallback((text: string) => {
     if (!supported || !enabled) {
-      console.log('TTS deshabilitado o no soportado')
       return
     }
 

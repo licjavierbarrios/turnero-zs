@@ -147,17 +147,9 @@ export default function PantallaPublicaPage({
       // Create HTML Audio element for notifications
       const playNotification = async () => {
         try {
-          console.log('🔔 Attempting to play notification sound...')
-
           const audio = createBeepSound()
-
-          // Ensure the audio can play
           await audio.play()
-
-          console.log('🔔 Audio notification played successfully')
         } catch (error) {
-          console.error('❌ Error playing audio notification:', error)
-
           // Fallback: Try a simple beep
           try {
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -173,10 +165,8 @@ export default function PantallaPublicaPage({
 
             oscillator.start()
             oscillator.stop(audioContext.currentTime + 0.5)
-
-            console.log('🔔 Fallback audio played')
           } catch (fallbackError) {
-            console.error('❌ Fallback audio also failed:', fallbackError)
+            console.error('Error playing audio:', fallbackError)
           }
         }
       }
@@ -187,14 +177,12 @@ export default function PantallaPublicaPage({
       let audioInitialized = false
       const initializeAudio = () => {
         if (!audioInitialized) {
-          console.log('🎵 Initializing audio on first interaction...')
           const testAudio = createBeepSound()
           testAudio.volume = 0.01 // Very quiet test
           testAudio.play().then(() => {
-            console.log('🎵 Audio initialized successfully')
             audioInitialized = true
           }).catch(() => {
-            console.log('🎵 Audio initialization failed, will try on demand')
+            // Audio initialization failed, will try on demand
           })
         }
       }
@@ -250,7 +238,6 @@ export default function PantallaPublicaPage({
   // Fetch appointments data
   const fetchAppointments = async () => {
     if (!institution?.id) {
-      console.log('⏳ Institution not loaded yet, skipping fetchAppointments')
       return
     }
 
@@ -259,9 +246,6 @@ export default function PantallaPublicaPage({
       const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString()
       const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString()
 
-      console.log('🔍 Fetching appointments for institution:', institution.id)
-      console.log('🔍 Institution slug:', institution.slug)
-      console.log('🔍 Date range:', startOfDay, 'to', endOfDay)
 
       const { data, error } = await supabase
         .from('appointment')
@@ -290,8 +274,6 @@ export default function PantallaPublicaPage({
         .in('status', ['pendiente', 'esperando', 'llamado', 'en_consulta'])
         .order('scheduled_at', { ascending: true })
 
-      console.log('🔍 Raw data from supabase:', data)
-      console.log('🔍 Error from supabase:', error)
 
       if (error) throw error
 
@@ -311,8 +293,6 @@ export default function PantallaPublicaPage({
 
       // Find current call (most recent 'llamado' status)
       const currentCalledAppointment = formattedAppointments.find(apt => apt.status === 'llamado')
-      console.log('🎯 Current called appointment:', currentCalledAppointment)
-      console.log('📋 All appointments:', formattedAppointments.length)
       setCurrentCall(currentCalledAppointment || null)
 
       setLoading(false)
@@ -340,21 +320,15 @@ export default function PantallaPublicaPage({
           filter: `institution_id=eq.${institution.id}`
         },
         (payload: any) => {
-          console.log('🔄 Appointment change received:', payload)
-          console.log('Event type:', payload.eventType)
-          console.log('Old status:', payload.old?.status)
-          console.log('New status:', payload.new?.status)
 
           // If an appointment status changed to 'llamado', play notification sound
           if (payload.eventType === 'UPDATE' &&
               payload.new?.status === 'llamado' &&
               payload.old?.status !== 'llamado') {
-            console.log('🔔 Patient called - playing notification sound')
             if (soundEnabled && audioRef.current) {
               setTimeout(async () => {
                 try {
                   await audioRef.current?.play()
-                  console.log('✅ Audio played')
                 } catch (error) {
                   console.error('❌ Audio failed:', error)
                 }
@@ -363,7 +337,6 @@ export default function PantallaPublicaPage({
           }
 
           // Refresh appointments data
-          console.log('🔄 Refreshing appointments data...')
           setTimeout(() => {
             fetchAppointments()
           }, 100)
@@ -378,12 +351,10 @@ export default function PantallaPublicaPage({
           filter: `appointment_id=in.(${appointments.map(apt => apt.id).join(',')})`
         },
         (payload) => {
-          console.log('Call event received:', payload)
           setLastCallEvent(payload.new as CallEvent)
         }
       )
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status)
         setConnectionStatus(status === 'SUBSCRIBED' ? 'connected' : 'connecting')
       })
 
@@ -465,7 +436,6 @@ export default function PantallaPublicaPage({
                     if (audioRef.current && soundEnabled) {
                       try {
                         await audioRef.current.play()
-                        console.log('🔊 Audio habilitado para uso automático')
                       } catch (error) {
                         console.error('❌ Error:', error)
                       }
