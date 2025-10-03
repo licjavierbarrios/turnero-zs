@@ -38,45 +38,23 @@ interface DashboardStats {
   }>
 }
 
+import { supabase } from '@/lib/supabase'
+import { startOfDay, endOfDay } from 'date-fns'
+
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [institutionContext, setInstitutionContext] = useState<any>(null)
-  const [stats] = useState<DashboardStats>({
-    todayAppointments: 12,
-    pendingAppointments: 3,
-    completedAppointments: 8,
-    totalPatients: 145,
-    totalProfessionals: 8,
-    totalServices: 5,
-    recentAppointments: [
-      {
-        id: '1',
-        patient_name: 'María González',
-        professional_name: 'Dr. Juan Pérez',
-        service_name: 'Medicina General',
-        scheduled_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        status: 'finalizado'
-      },
-      {
-        id: '2',
-        patient_name: 'Carlos Rodriguez',
-        professional_name: 'Dra. Ana López',
-        service_name: 'Cardiología',
-        scheduled_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-        status: 'pendiente'
-      },
-      {
-        id: '3',
-        patient_name: 'Laura Martínez',
-        professional_name: 'Dr. Luis García',
-        service_name: 'Pediatría',
-        scheduled_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        status: 'esperando'
-      }
-    ]
+  const [stats, setStats] = useState<DashboardStats>({
+    todayAppointments: 0,
+    pendingAppointments: 0,
+    completedAppointments: 0,
+    totalPatients: 0,
+    totalProfessionals: 0,
+    totalServices: 0,
+    recentAppointments: []
   })
-  const [loading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Verificar autenticación y contexto institucional
@@ -88,9 +66,107 @@ export default function DashboardPage() {
       return
     }
 
-    setUser(JSON.parse(userData))
-    setInstitutionContext(JSON.parse(contextData))
-  }, [router])
+    const parsedUser = JSON.parse(userData)
+    const parsedContext = JSON.parse(contextData)
+
+    setUser(parsedUser)
+    setInstitutionContext(parsedContext)
+
+    // Fetch stats
+    fetchDashboardStats(parsedContext.institution_id)
+  }, [router]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchDashboardStats = async (institutionId: string) => {
+    try {
+      setLoading(true)
+      const now = new Date()
+      const todayStart = startOfDay(now)
+      const todayEnd = endOfDay(now)
+
+      // Fetch today's appointments
+      const { data: todayAppointments, error: appointmentsError } = await supabase
+        .from('appointment')
+        .select('id, status')
+        .eq('institution_id', institutionId)
+        .gte('scheduled_at', todayStart.toISOString())
+        .lte('scheduled_at', todayEnd.toISOString())
+
+      if (appointmentsError) throw appointmentsError
+
+      // Fetch recent appointments with details
+      const { data: recentAppointments, error: recentError } = await supabase
+        .from('appointment')
+        .select(`
+          id,
+          scheduled_at,
+          status,
+          patient:patient_id (first_name, last_name),
+          professional:professional_id (first_name, last_name),
+          service:service_id (name)
+        `)
+        .eq('institution_id', institutionId)
+        .order('scheduled_at', { ascending: false })
+        .limit(5)
+
+      if (recentError) throw recentError
+
+      // Fetch total patients
+      const { count: patientsCount, error: patientsError } = await supabase
+        .from('patient')
+        .select('id', { count: 'exact', head: true })
+
+      if (patientsError) throw patientsError
+
+      // Fetch total professionals in institution
+      const { count: professionalsCount, error: professionalsError } = await supabase
+        .from('professional')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('is_active', true)
+
+      if (professionalsError) throw professionalsError
+
+      // Fetch total services in institution
+      const { count: servicesCount, error: servicesError } = await supabase
+        .from('service')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('is_active', true)
+
+      if (servicesError) throw servicesError
+
+      // Calculate stats
+      const todayTotal = todayAppointments?.length || 0
+      const todayPending = todayAppointments?.filter(apt =>
+        apt.status === 'pendiente' || apt.status === 'esperando' || apt.status === 'llamado' || apt.status === 'en_consulta'
+      ).length || 0
+      const todayCompleted = todayAppointments?.filter(apt => apt.status === 'finalizado').length || 0
+
+      // Format recent appointments
+      const formattedRecent = recentAppointments?.map(apt => ({
+        id: apt.id,
+        patient_name: apt.patient ? `${(apt.patient as any).first_name} ${(apt.patient as any).last_name}` : 'N/A',
+        professional_name: apt.professional ? `${(apt.professional as any).first_name} ${(apt.professional as any).last_name}` : 'N/A',
+        service_name: apt.service ? (apt.service as any).name : 'N/A',
+        scheduled_at: apt.scheduled_at,
+        status: apt.status
+      })) || []
+
+      setStats({
+        todayAppointments: todayTotal,
+        pendingAppointments: todayPending,
+        completedAppointments: todayCompleted,
+        totalPatients: patientsCount || 0,
+        totalProfessionals: professionalsCount || 0,
+        totalServices: servicesCount || 0,
+        recentAppointments: formattedRecent
+      })
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleChangeInstitution = () => {
     router.push('/institutions/select')

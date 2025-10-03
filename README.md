@@ -69,7 +69,7 @@ turnero-zs/
 - **Sprint 1** ✅ - ABMs base (Zonas, Instituciones, Profesionales, Pacientes, Usuarios)
 - **Sprint 2** ✅ - Consultorios, Servicios, Agendas y plantillas de horarios
 - **Sprint 3** ✅ - Flujo de atención y pantallas públicas
-- **Sprint 4** ⏳ - Métricas y reportes
+- **Sprint 4** ✅ - Métricas y reportes
 - **Sprint 5** ⏳ - Hardening y pilotos
 
 ### 🏁 Sprint 1 Completado
@@ -149,6 +149,34 @@ turnero-zs/
 - Supabase Realtime channels por institución
 - Generación dinámica de slots desde slot_templates
 - Validación de disponibilidad antes de asignar
+
+### 🏁 Sprint 4 Completado
+
+**Funcionalidades implementadas:**
+- ✅ **Dashboard Institucional**: Resumen ejecutivo en tiempo real
+  - Estadísticas del día: turnos totales, pendientes y completados
+  - Totales de pacientes, profesionales y servicios activos
+  - Últimos 5 turnos programados
+  - Accesos rápidos a funciones principales
+- ✅ **Reportes y Métricas Completas**: Sistema de análisis avanzado
+  - **Métricas de Ocupación**: Tasa de ocupación de agendas
+  - **Métricas de Tiempo**: Tiempo de espera y duración de consultas
+  - **Métricas de Ausentismo**: Cancelaciones y ausencias
+  - **Reportes por Profesional**: Rendimiento individual con estadísticas
+  - **Reportes por Servicio**: Análisis de servicios médicos
+  - **Tendencias Temporales**: Gráficos de evolución en el tiempo
+- ✅ **Exportación de Datos**: Exportar a CSV para análisis externo
+- ✅ **Filtros Avanzados**: Por institución, período (hoy, ayer, semana, mes, personalizado)
+
+**Páginas disponibles:**
+- `/dashboard` - Dashboard ejecutivo con datos reales
+- `/reportes` - Sistema completo de métricas y reportes
+
+**Características técnicas:**
+- Cálculo de métricas basadas en call_event y attendance_event
+- Gráficos interactivos con Recharts
+- Agregación de datos por fecha, profesional y servicio
+- Exportación CSV con encoding UTF-8 BOM
 
 ## 🔐 Roles y Permisos
 
