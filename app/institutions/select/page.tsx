@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,96 +33,87 @@ export default function InstitutionSelectPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Verificar si el usuario está autenticado
-    const userData = localStorage.getItem('user')
-    if (!userData) {
-      router.push('/')
-      return
-    }
-
-    const parsedUser = JSON.parse(userData)
-    setUser(parsedUser)
-
-    // Cargar instituciones del usuario (datos de demo)
-    loadUserInstitutions(parsedUser.email)
+    loadUserData()
   }, [router])
 
-  const loadUserInstitutions = (email: string) => {
-    // Demo: Diferentes usuarios tienen diferentes instituciones
-    const institutionsByUser: { [key: string]: Institution[] } = {
-      'juan.paredes@salud.gov.ar': [
-        {
-          id: '1',
-          name: 'CAPS San Lorenzo',
-          type: 'caps',
-          zone_name: 'Zona Norte',
-          address: 'Av. San Martín 1234, San Lorenzo',
-          user_role: 'medico'
-        },
-        {
-          id: '2',
-          name: 'Hospital Distrital Norte',
-          type: 'hospital_distrital',
-          zone_name: 'Zona Norte',
-          address: 'Ruta Provincial 15 Km 12',
-          user_role: 'medico'
-        },
-        {
-          id: '3',
-          name: 'CAPS Villa Nueva',
-          type: 'caps',
-          zone_name: 'Zona Centro',
-          address: 'Calle Principal 567, Villa Nueva',
-          user_role: 'medico'
-        }
-      ],
-      'maria.lopez@salud.gov.ar': [
-        {
-          id: '1',
-          name: 'CAPS San Lorenzo',
-          type: 'caps',
-          zone_name: 'Zona Norte',
-          address: 'Av. San Martín 1234, San Lorenzo',
-          user_role: 'enfermeria'
-        }
-      ],
-      'admin@salud.gov.ar': [
-        {
-          id: '1',
-          name: 'CAPS San Lorenzo',
-          type: 'caps',
-          zone_name: 'Zona Norte',
-          address: 'Av. San Martín 1234, San Lorenzo',
-          user_role: 'admin'
-        },
-        {
-          id: '2',
-          name: 'Hospital Distrital Norte',
-          type: 'hospital_distrital',
-          zone_name: 'Zona Norte',
-          address: 'Ruta Provincial 15 Km 12',
-          user_role: 'admin'
-        },
-        {
-          id: '4',
-          name: 'Hospital Regional Centro',
-          type: 'hospital_regional',
-          zone_name: 'Zona Centro',
-          address: 'Av. Libertador 890, Ciudad Capital',
-          user_role: 'admin'
-        }
-      ]
+  const loadUserData = async () => {
+    try {
+      // Verificar sesión de Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !authUser) {
+        router.push('/')
+        return
+      }
+
+      // Obtener datos del usuario
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      if (userError) {
+        router.push('/')
+        return
+      }
+
+      setUser(userData)
+
+      // Cargar instituciones del usuario desde sus membresías
+      await loadUserInstitutions(authUser.id)
+    } catch (error) {
+      console.error('Error en loadUserData:', error)
+      router.push('/')
     }
+  }
 
-    const userInstitutions = institutionsByUser[email] || []
-    setInstitutions(userInstitutions)
-    setLoading(false)
+  const loadUserInstitutions = async (userId: string) => {
+    try {
+      // Obtener membresías activas del usuario
+      const { data: memberships, error: membershipError } = await supabase
+        .from('membership')
+        .select(`
+          id,
+          role,
+          is_active,
+          institution:institution_id (
+            id,
+            name,
+            type,
+            address,
+            zone:zone_id (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('is_active', true)
 
-    // Si solo tiene una institución, redirigir automáticamente
-    if (userInstitutions.length === 1) {
-      setTimeout(() => {
-        selectInstitution(userInstitutions[0])
-      }, 1000)
+      if (membershipError) {
+        console.error('Error al cargar membresías:', membershipError)
+        setLoading(false)
+        return
+      }
+
+      // Transformar a formato Institution
+      const userInstitutions: Institution[] = memberships
+        .filter(m => m.institution) // Solo membresías con institución válida
+        .map(m => ({
+          id: m.institution.id,
+          name: m.institution.name,
+          type: m.institution.type,
+          zone_name: m.institution.zone?.name || 'Sin zona',
+          address: m.institution.address || 'Sin dirección',
+          user_role: m.role
+        }))
+
+      setInstitutions(userInstitutions)
+      setLoading(false)
+    } catch (error) {
+      console.error('Error en loadUserInstitutions:', error)
+      setLoading(false)
     }
   }
 
@@ -139,8 +131,8 @@ export default function InstitutionSelectPage() {
     router.push('/dashboard')
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('user')
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     localStorage.removeItem('institution_context')
     router.push('/')
   }
@@ -228,7 +220,7 @@ export default function InstitutionSelectPage() {
               Seleccionar Institución
             </h1>
             <p className="text-gray-600 mt-1">
-              Bienvenido, {user?.name}. Selecciona la institución donde deseas trabajar.
+              Bienvenido, {user?.first_name} {user?.last_name}. Selecciona la institución donde deseas trabajar.
             </p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
@@ -249,37 +241,6 @@ export default function InstitutionSelectPage() {
               </div>
             </CardContent>
           </Card>
-        ) : institutions.length === 1 ? (
-          <div className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                Redirigiendo automáticamente a tu institución asignada...
-              </AlertDescription>
-            </Alert>
-            <Card className="border-2 border-blue-200 bg-blue-50">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="text-blue-600">
-                    {getInstitutionIcon(institutions[0].type)}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {institutions[0].name}
-                    </h3>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <Badge className={getRoleColor(institutions[0].user_role)}>
-                        <UserIcon className="h-3 w-3 mr-1" />
-                        {getRoleLabel(institutions[0].user_role)}
-                      </Badge>
-                      <span className="text-sm text-gray-600">
-                        {getInstitutionTypeLabel(institutions[0].type)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {institutions.map((institution) => (

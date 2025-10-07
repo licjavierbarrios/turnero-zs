@@ -57,24 +57,51 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar autenticación y contexto institucional
-    const userData = localStorage.getItem('user')
-    const contextData = localStorage.getItem('institution_context')
-
-    if (!userData || !contextData) {
-      router.push('/')
-      return
-    }
-
-    const parsedUser = JSON.parse(userData)
-    const parsedContext = JSON.parse(contextData)
-
-    setUser(parsedUser)
-    setInstitutionContext(parsedContext)
-
-    // Fetch stats
-    fetchDashboardStats(parsedContext.institution_id)
+    loadDashboard()
   }, [router]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadDashboard = async () => {
+    try {
+      // Verificar sesión de Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !authUser) {
+        router.push('/')
+        return
+      }
+
+      // Obtener datos del usuario
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      if (userError) {
+        router.push('/')
+        return
+      }
+
+      setUser(userData)
+
+      // Verificar contexto institucional
+      const contextData = localStorage.getItem('institution_context')
+
+      if (!contextData) {
+        router.push('/institutions/select')
+        return
+      }
+
+      const parsedContext = JSON.parse(contextData)
+      setInstitutionContext(parsedContext)
+
+      // Fetch stats
+      await fetchDashboardStats(parsedContext.institution_id)
+    } catch (error) {
+      console.error('Error en loadDashboard:', error)
+      router.push('/')
+    }
+  }
 
   const fetchDashboardStats = async (institutionId: string) => {
     try {
@@ -252,7 +279,7 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
                 <p className="text-gray-600">
-                  Bienvenido, {user.name}
+                  Bienvenido, {user.first_name} {user.last_name}
                 </p>
               </div>
             </div>

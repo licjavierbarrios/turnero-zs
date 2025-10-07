@@ -25,15 +25,11 @@ export default function LoginPage() {
     setError('')
 
     try {
-      console.log('🔐 Intentando login con:', email)
-
       // Autenticación real con Supabase
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       })
-
-      console.log('📝 Resultado auth:', { data, authError })
 
       if (authError) throw authError
 
@@ -41,31 +37,23 @@ export default function LoginPage() {
         throw new Error('No se recibió información del usuario')
       }
 
-      console.log('✅ Usuario autenticado:', data.user.id, data.user.email)
-
       // Verificar si es super admin
-      console.log('🔍 Verificando memberships...')
       const { data: memberships, error: membershipError } = await supabase
         .from('membership')
         .select('role, is_active')
         .eq('user_id', data.user.id)
         .eq('is_active', true)
 
-      console.log('📋 Memberships:', memberships, membershipError)
-
       const isSuperAdmin = memberships?.some(m => m.role === 'super_admin')
-      console.log('👑 Es super admin?', isSuperAdmin)
 
       // Redirigir según rol
       if (isSuperAdmin) {
-        console.log('🚀 Redirigiendo a /super-admin/zonas')
         router.push('/super-admin/zonas')
       } else {
-        console.log('🚀 Redirigiendo a /institutions/select')
         router.push('/institutions/select')
       }
     } catch (error: any) {
-      console.error('❌ Login error:', error)
+      console.error('Login error:', error)
       setError(error.message || 'Email o contraseña incorrectos')
     } finally {
       setLoading(false)

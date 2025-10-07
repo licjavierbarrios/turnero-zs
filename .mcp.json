@@ -9,16 +9,6 @@
         "run"
       ]
     },
-    "playwright": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "@playwright/mcp@latest"
-      ],
-      "env": {}
-    },
     "shadcn": {
       "command": "npx",
       "args": [

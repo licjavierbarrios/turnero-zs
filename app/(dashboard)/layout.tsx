@@ -45,18 +45,48 @@ export default function DashboardLayout({
   const [institutionContext, setInstitutionContext] = useState<any>(null)
 
   useEffect(() => {
-    // Verificar autenticación y contexto institucional
-    const userData = localStorage.getItem('user')
-    const contextData = localStorage.getItem('institution_context')
-
-    if (!userData || !contextData) {
-      router.push('/')
-      return
-    }
-
-    setUser(JSON.parse(userData))
-    setInstitutionContext(JSON.parse(contextData))
+    loadLayoutData()
   }, [router])
+
+  const loadLayoutData = async () => {
+    try {
+      // Verificar sesión de Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !authUser) {
+        router.push('/')
+        return
+      }
+
+      // Obtener datos del usuario
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      if (userError) {
+        router.push('/')
+        return
+      }
+
+      setUser(userData)
+
+      // Verificar contexto institucional
+      const contextData = localStorage.getItem('institution_context')
+
+      if (!contextData) {
+        router.push('/institutions/select')
+        return
+      }
+
+      const parsedContext = JSON.parse(contextData)
+      setInstitutionContext(parsedContext)
+    } catch (error) {
+      console.error('Error en loadLayoutData:', error)
+      router.push('/')
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -64,19 +94,15 @@ export default function DashboardLayout({
       await supabase.auth.signOut()
 
       // Limpiar localStorage
-      localStorage.removeItem('user')
       localStorage.removeItem('institution_context')
 
       // Redirigir a la página de inicio
       router.push('/')
-      router.refresh()
     } catch (error) {
       console.error('Error al cerrar sesión:', error)
       // Aún así intentar limpiar y redirigir
-      localStorage.removeItem('user')
       localStorage.removeItem('institution_context')
       router.push('/')
-      router.refresh()
     }
   }
 
@@ -178,7 +204,7 @@ export default function DashboardLayout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-700 truncate">
-                  {user.name}
+                  {user.first_name} {user.last_name}
                 </p>
                 <Badge className={`text-xs ${getRoleColor(institutionContext.user_role)}`}>
                   <ShieldIcon className="h-3 w-3 mr-1" />
