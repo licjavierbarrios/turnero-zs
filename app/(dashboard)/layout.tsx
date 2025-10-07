@@ -24,7 +24,6 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Turnos', href: '/turnos', icon: ClockIcon },
   { name: 'Agenda', href: '/agenda', icon: CalendarIcon },
-  { name: 'Pacientes', href: '/pacientes', icon: UserIcon },
   { name: 'Profesionales', href: '/profesionales', icon: UsersIcon },
   { name: 'Servicios', href: '/servicios', icon: HeartHandshakeIcon },
   { name: 'Consultorios', href: '/consultorios', icon: MapPinIcon },

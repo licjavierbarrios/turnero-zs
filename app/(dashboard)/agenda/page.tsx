@@ -80,18 +80,48 @@ export default function AgendaPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    // Verificar autenticación y contexto institucional
-    const userData = localStorage.getItem('user')
-    const contextData = localStorage.getItem('institution_context')
-
-    if (!userData || !contextData) {
-      router.push('/')
-      return
-    }
-
-    setUser(JSON.parse(userData))
-    setInstitutionContext(JSON.parse(contextData))
+    loadAuthData()
   }, [router])
+
+  const loadAuthData = async () => {
+    try {
+      // Verificar sesión de Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !authUser) {
+        router.push('/')
+        return
+      }
+
+      // Obtener datos del usuario
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      if (userError) {
+        router.push('/')
+        return
+      }
+
+      setUser(userData)
+
+      // Verificar contexto institucional
+      const contextData = localStorage.getItem('institution_context')
+
+      if (!contextData) {
+        router.push('/institutions/select')
+        return
+      }
+
+      const parsedContext = JSON.parse(contextData)
+      setInstitutionContext(parsedContext)
+    } catch (error) {
+      console.error('Error loading auth data:', error)
+      router.push('/')
+    }
+  }
 
   useEffect(() => {
     if (institutionContext?.institution_id) {

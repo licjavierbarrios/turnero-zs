@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, User, Shield, Building2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Edit, Trash2, User, Shield, Building2, Eye, EyeOff, Activity } from 'lucide-react'
+import { UserServicesTab } from '@/components/UserServicesTab'
 
 type User = {
   id: string
@@ -46,6 +47,30 @@ type Institution = {
   zone_name: string
 }
 
+type Service = {
+  id: string
+  name: string
+  institution_id: string
+  institution_name?: string
+  zone_name?: string
+}
+
+type UserService = {
+  id: string
+  user_id: string
+  service_id: string
+  institution_id: string
+  is_active: boolean
+  created_at: string
+  user?: User
+  service?: Service
+  institution?: {
+    id: string
+    name: string
+    zone_name: string
+  }
+}
+
 const roleLabels = {
   super_admin: 'Super Admin',
   admin: 'Administrador',
@@ -77,8 +102,10 @@ export default function SuperAdminUsuariosPage() {
   const [users, setUsers] = useState<User[]>([])
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [institutions, setInstitutions] = useState<Institution[]>([])
+  const [services, setServices] = useState<Service[]>([])
+  const [userServices, setUserServices] = useState<UserService[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'users' | 'memberships'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'memberships' | 'services'>('users')
 
   // User form state
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
@@ -719,6 +746,17 @@ export default function SuperAdminUsuariosPage() {
         >
           <Shield className="inline mr-2 h-4 w-4" />
           Membresías
+        </button>
+        <button
+          onClick={() => setActiveTab('services')}
+          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
+            activeTab === 'services'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Activity className="inline mr-2 h-4 w-4" />
+          Servicios
         </button>
       </div>
 
@@ -1527,6 +1565,15 @@ export default function SuperAdminUsuariosPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Services Tab */}
+      {activeTab === 'services' && (
+        <UserServicesTab
+          users={users}
+          zones={zones}
+          institutions={institutions}
+        />
       )}
     </div>
   )
