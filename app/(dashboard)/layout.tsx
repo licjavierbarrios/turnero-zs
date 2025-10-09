@@ -17,10 +17,20 @@ import {
   HomeIcon,
   LogOutIcon,
   BuildingIcon,
-  ShieldIcon
+  ShieldIcon,
+  SettingsIcon,
+  MonitorIcon
 } from 'lucide-react'
 
-const navigation = [
+type NavigationItem = {
+  name: string
+  href: string
+  icon: any
+  roles?: string[]
+  external?: boolean
+}
+
+const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Turnos', href: '/turnos', icon: ClockIcon },
   { name: 'Agenda', href: '/agenda', icon: CalendarIcon },
@@ -28,6 +38,8 @@ const navigation = [
   { name: 'Servicios', href: '/servicios', icon: HeartHandshakeIcon },
   { name: 'Consultorios', href: '/consultorios', icon: MapPinIcon },
   { name: 'Reportes', href: '/reportes', icon: BarChart3Icon },
+  { name: 'Pantalla Pública', href: '/pantalla', icon: MonitorIcon, roles: ['admin', 'pantalla', 'super_admin'], external: true },
+  { name: 'Administración', href: '/admin', icon: SettingsIcon, roles: ['admin', 'super_admin'] },
 ]
 
 function classNames(...classes: string[]) {
@@ -163,7 +175,29 @@ export default function DashboardLayout({
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1">
             {navigation.map((item) => {
+              // Filtrar por roles si la opción tiene roles definidos
+              if (item.roles && !item.roles.includes(institutionContext?.user_role)) {
+                return null
+              }
+
               const IconComponent = item.icon
+
+              // Si es un enlace externo (pantalla pública)
+              if (item.external) {
+                return (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                  >
+                    <IconComponent className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" />
+                    {item.name}
+                  </a>
+                )
+              }
+
               return (
                 <Link
                   key={item.name}

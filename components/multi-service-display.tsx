@@ -25,6 +25,8 @@ interface PublicAppointment {
   room_name?: string
   scheduled_at: string
   status: string
+  display_name?: string // Nombre ya procesado según privacidad
+  effective_privacy_level?: string // Nivel de privacidad resuelto
 }
 
 interface MultiServiceDisplayProps {

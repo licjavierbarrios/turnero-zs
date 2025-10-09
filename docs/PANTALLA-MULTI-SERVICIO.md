@@ -384,6 +384,23 @@ Enfermería:  /pantalla/caps-evita/servicio/[enfermeria-id]
 - ✅ Inclusión de nombre de servicio cuando corresponde
 - ✅ Testing manual exitoso
 
+### ✅ Fase 5: Sistema de Autenticación (ENERO 2025 - COMPLETADO)
+- ✅ Tabla `display_devices` para gestión de pantallas
+- ✅ Autenticación obligatoria con Supabase Auth
+- ✅ Login automático con redirección inteligente
+- ✅ Logout en pantalla pública (botón rojo)
+- ✅ RLS policies específicas para display_devices
+- ✅ Heartbeat automático con `last_seen_at`
+- ✅ Slug de institución para URLs amigables
+
+### ✅ Fase 6: Sistema de Privacidad (ENERO 2025 - COMPLETADO)
+- ✅ Enum `privacy_level` con 3 niveles
+- ✅ Jerarquía de privacidad (appointment > service > institution)
+- ✅ Vista `daily_queue_display` con privacidad pre-resuelta
+- ✅ Funciones SQL `resolve_privacy_level()` y `get_display_name()`
+- ✅ Componentes `PrivacyBadge` y `PrivacySelector`
+- ✅ Integración completa en pantallas públicas
+
 ### ⏳ Pendiente (Opcional)
 - ⏳ Panel super admin para crear plantillas personalizadas
 - ⏳ Filtrado por servicios específicos en plantillas custom
@@ -453,25 +470,49 @@ Enfermería:  /pantalla/caps-evita/servicio/[enfermeria-id]
 
 ## 🎓 Guía de Uso
 
-### Para Empleados
+### Para Empleados (Actualizado Enero 2025)
 
-1. Abrir `/pantalla/caps-b-evita` (o el slug de su institución)
-2. Click en botón "Cambiar Vista" (esquina superior derecha)
-3. Seleccionar plantilla deseada:
+**Requisito previo:** La pantalla debe tener un usuario creado y autenticado (ver `GUIA-ADMINISTRADOR.md`)
+
+#### Login Inicial
+1. Abrir el sistema en la TV/Monitor dedicado
+2. Ingresar con las credenciales del usuario de pantalla
+3. El sistema detecta automáticamente que es una pantalla y redirige a `/pantalla/[slug]`
+
+#### Cambiar Vista
+1. Una vez autenticado, click en botón "Cambiar Vista" (esquina superior derecha)
+2. Seleccionar plantilla deseada:
    - **Vista Completa** → Sala de espera con muchos servicios
    - **Grilla Compacta** → Pantallas pequeñas
    - **Lista Vertical** → Pantallas altas/verticales
    - **Carrusel** → Rotación automática
-4. Click "Aplicar Vista"
-5. ¡Listo! La selección se guarda automáticamente
+3. Click "Aplicar Vista"
+4. ¡Listo! La selección se guarda automáticamente
 
-### Para Super Admins (Futuro)
+#### Logout
+1. Click en el botón de logout (rojo, esquina superior derecha)
+2. La pantalla cierra sesión y redirige a la página de login
+3. Útil para mantenimiento o reconfiguración
 
-Panel de administración para:
+### Para Super Admins (Actualizado Enero 2025)
+
+#### Gestión de Pantallas
+- Crear usuarios de pantalla en `/super-admin/usuarios`
+- Asignar rol "pantalla" y membresía de institución
+- Crear dispositivo en pestaña "Servicios" del usuario
+- Configurar slug de institución en `/admin/configuracion`
+
+#### Configuración de Privacidad
+- Establecer nivel de privacidad institucional por defecto
+- Configurar privacidad por servicio
+- Ajustar privacidad individual por turno (badge interactivo)
+
+#### Panel de Administración (Futuro)
 - Crear plantillas personalizadas
 - Filtrar servicios específicos
 - Configurar intervalos de carrusel
 - Asignar plantillas por defecto
+- Ver estado de conectividad de pantallas (heartbeat)
 
 ## 🐛 Troubleshooting
 
@@ -483,6 +524,18 @@ Panel de administración para:
 
 **Problema:** Carrusel no rota automáticamente
 - **Solución:** Verificar que carousel_interval esté configurado en la plantilla
+
+**Problema:** No puedo acceder a la pantalla sin login
+- **Solución:** Desde Enero 2025, las pantallas requieren autenticación obligatoria. Crear usuario de pantalla siguiendo `GUIA-ADMINISTRADOR.md`
+
+**Problema:** El sistema me redirige al dashboard en vez de la pantalla
+- **Solución:** Verificar que el usuario tenga un registro en la tabla `display_devices` asociado a la institución correcta
+
+**Problema:** No aparece el botón de logout
+- **Solución:** Verificar que estés usando la versión actualizada de `/pantalla/[slug]/page.tsx` (Enero 2025+)
+
+**Problema:** Los nombres de pacientes no respetan la privacidad
+- **Solución:** Configurar nivel de privacidad en institución, servicio o turno. Verificar que la vista `daily_queue_display` esté creada con las migraciones 013 y 014
 
 ## 📝 Notas Finales
 

@@ -150,22 +150,118 @@ Pendiente → Esperando → Llamado → En Consulta → Finalizado
             Cancelado   Ausente
 ```
 
-## 🖥️ Pantalla Pública
+## 🖥️ Sistema de Pantallas Públicas
 
-### Configurar Pantalla
+### Configuración Inicial de Pantalla (Desde Enero 2025)
 
-1. Ir a `/pantalla`
-2. Seleccionar la institución
-3. La URL generada es: `/pantalla/[slug-institucion]`
-4. Abrir esta URL en una TV/Monitor dedicado
-5. La pantalla se actualiza automáticamente en tiempo real
+Las pantallas públicas ahora requieren autenticación y están asociadas a usuarios específicos.
+
+#### 1. Crear Usuario de Pantalla
+
+1. Ir a `/super-admin/usuarios`
+2. Click en "Nuevo Usuario"
+3. Completar:
+   - **Email**: Usar formato `pantalla@[nombre-institucion].com` (ej: `pantalla@evita.com`)
+   - **Nombre**: Ej. "Pantalla Principal"
+   - **Apellido**: Nombre de la institución
+   - **Password**: Contraseña segura (se usará para login)
+   - **Activo**: Marcado
+4. Guardar
+
+**IMPORTANTE**: Verificar que el email sea válido con dominio completo (.com, .gov.ar, etc.)
+
+#### 2. Asignar Rol "Pantalla"
+
+1. En la pestaña **Membresías** del usuario creado
+2. Click en "Agregar Membresía"
+3. Seleccionar:
+   - **Institución**: La institución donde estará la pantalla
+   - **Rol**: `pantalla`
+4. Guardar
+
+#### 3. Crear Dispositivo de Pantalla
+
+1. En la pestaña **Servicios** del usuario
+2. O ir a `/admin/pantallas` (si existe)
+3. Click en "Crear Display Device"
+4. Completar:
+   - **Nombre**: Ej. "Pantalla Principal - CAPS Evita"
+   - **Institución**: Seleccionar automáticamente
+   - **Tipo**: General (para todas las colas) o Específico de Servicio
+   - **Activo**: Marcado
+5. Guardar
+
+#### 4. Login en la Pantalla
+
+1. Abrir el sistema en la TV/Monitor dedicado
+2. El sistema redirige automáticamente a `/` (login)
+3. Ingresar credenciales del usuario de pantalla
+4. El sistema detecta que es una pantalla y redirige automáticamente a `/pantalla/[slug]`
+
+### Gestión de Pantallas
+
+#### URL Pública Amigable
+
+La URL de la pantalla ahora usa el **slug de la institución**:
+- Formato: `/pantalla/[slug]`
+- Ejemplo: `/pantalla/caps-evita`
+- El slug se configura en la configuración de la institución
+
+#### Editar Slug de Institución
+
+1. Ir a `/admin/configuracion`
+2. En la pestaña **Institución**
+3. Editar el campo **Slug**
+4. Formato: solo minúsculas, números y guiones (ej: `caps-evita`)
+5. Debe ser único en todo el sistema
+6. Guardar
+
+#### Logout de Pantalla
+
+Las pantallas ahora tienen un botón de **Logout** (rojo, esquina superior derecha):
+- Click en el ícono de logout
+- Se cierra la sesión y redirige a la página de login
+- Útil para mantenimiento o cambio de configuración
+
+#### Monitoreo de Pantallas
+
+El sistema registra automáticamente:
+- **last_seen_at**: Última vez que la pantalla estuvo activa (heartbeat)
+- **is_active**: Estado de la pantalla
+- Los administradores pueden ver el estado de conectividad
 
 ### Qué Muestra la Pantalla
 
-- Turnos que están siendo llamados
-- Cola de espera
-- Consultorio al que deben dirigirse
-- Actualización automática vía Supabase Realtime
+- **Turnos llamados**: Pacientes siendo llamados ahora (estado "llamado")
+- **Cola de espera**: Pacientes esperando (estado "esperando")
+- **Información del turno**:
+  - Nombre del paciente (respetando nivel de privacidad)
+  - Número de turno
+  - Servicio
+  - Consultorio
+- **Actualización en tiempo real**: Vía Supabase Realtime
+- **Síntesis de voz (TTS)**: Anuncio automático cuando se llama un paciente
+
+### Sistema de Privacidad en Pantallas
+
+Las pantallas respetan el **nivel de privacidad** configurado:
+
+| Nivel | Qué Muestra | Ejemplo |
+|-------|-------------|---------|
+| **public_full_name** | Nombre completo | "Juan Pérez" |
+| **public_initials** | Iniciales | "J.P." |
+| **private_ticket_only** | Solo número de turno | "Turno 001" |
+
+La privacidad se configura en 3 niveles jerárquicos:
+1. **Turno** (appointment) - Prioridad máxima
+2. **Servicio** (service)
+3. **Institución** (institution) - Valor por defecto
+
+Para configurar privacidad:
+1. Ir a `/admin/configuracion`
+2. Seleccionar nivel de privacidad institucional
+3. O configurar por servicio en `/servicios`
+4. O por turno individual en `/turnos` (badge interactivo)
 
 ## 👥 Gestión de Usuarios
 

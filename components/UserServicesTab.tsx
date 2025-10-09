@@ -398,7 +398,7 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
                 Nueva Asignación
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-lg max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>
                   {editingUserService ? 'Editar Asignación' : 'Nueva Asignación de Servicio'}
@@ -410,7 +410,8 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
                   }
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="overflow-y-auto max-h-[calc(90vh-120px)] px-1">
+                <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
@@ -541,7 +542,7 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
                   <Label htmlFor="is_active">Asignación activa</Label>
                 </div>
 
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-2 pt-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -554,6 +555,7 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
                   </Button>
                 </div>
               </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'Turnero ZS - Sistema de Gestión de Turnos',

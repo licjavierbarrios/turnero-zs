@@ -840,8 +840,13 @@ export default function SuperAdminUsuariosPage() {
                         value={userFormData.email}
                         onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
                         placeholder="email@ejemplo.com"
+                        pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                        title="Ingrese un email válido (ej: usuario@dominio.com)"
                         required
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Debe ser un email válido con dominio completo (ej: usuario@ejemplo.com)
+                      </p>
                     </div>
 
                     <div className="space-y-2">

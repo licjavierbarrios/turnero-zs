@@ -62,9 +62,12 @@ export function PublicScreenTTS({
       const room = latestCall.appointment?.room
       const service = latestCall.appointment?.service
 
-      if (patient && room) {
-        const patientName = `${patient.first_name} ${patient.last_name}`
-        const roomName = room.name
+      if (patient) {
+        // Usar display_name si está disponible (ya procesado con privacidad)
+        // Sino, construir el nombre completo
+        const displayName = (latestCall.appointment as any).display_name ||
+          `${patient.first_name} ${patient.last_name}`
+        const roomName = room?.name
         const serviceName = includeServiceName && service ? service.name : undefined
 
         // Reproducir sonido de notificación
@@ -72,7 +75,7 @@ export function PublicScreenTTS({
 
         // Esperar un poco después del sonido antes de hablar
         setTimeout(() => {
-          const callText = generateCallText(patientName, roomName, serviceName)
+          const callText = generateCallText(displayName, roomName, serviceName)
           speak(callText)
         }, 500)
 

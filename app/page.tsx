@@ -37,6 +37,29 @@ export default function LoginPage() {
         throw new Error('No se recibió información del usuario')
       }
 
+      // Verificar si es un display_device (pantalla)
+      const { data: displayDevice, error: displayError } = await supabase
+        .from('display_devices')
+        .select(`
+          id,
+          institution_id,
+          institution:institution_id (
+            id,
+            slug
+          )
+        `)
+        .eq('user_id', data.user.id)
+        .eq('is_active', true)
+        .single()
+
+      // Si es un display_device, redirigir a la pantalla
+      if (displayDevice && !displayError) {
+        const institution = displayDevice.institution as any
+        const slug = institution.slug || institution.id
+        router.push(`/pantalla/${slug}`)
+        return
+      }
+
       // Verificar si es super admin
       const { data: memberships, error: membershipError } = await supabase
         .from('membership')

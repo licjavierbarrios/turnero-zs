@@ -57,20 +57,71 @@ export function playNotificationSound(volume: number = 0.5): void {
 
 /**
  * Genera el texto a leer en voz para un llamado de paciente
+ * NOTA: Esta función ahora está deprecada. Usar getTTSText de privacy-utils.ts
+ * y construir el texto manualmente para tener control total sobre la privacidad.
  *
- * @param patientName - Nombre completo del paciente
- * @param roomName - Nombre del consultorio
+ * @deprecated Use getTTSText from privacy-utils.ts instead
+ * @param patientName - Nombre a mostrar (ya procesado según privacidad)
+ * @param roomName - Nombre del consultorio (opcional)
  * @param serviceName - Nombre del servicio (opcional, para layouts multi-servicio)
+ * @param orderNumber - Número de turno (opcional, para sistemas sin consultorio)
  * @returns Texto formateado para TTS
  */
-export function generateCallText(patientName: string, roomName: string, serviceName?: string): string {
-  // Limpiar el nombre del consultorio de números al inicio
-  const cleanRoomName = roomName.replace(/^consultorio\s*/i, '').trim()
+export function generateCallText(
+  patientName: string,
+  roomName?: string,
+  serviceName?: string,
+  orderNumber?: number
+): string {
+  // Si hay consultorio, usar el formato original
+  if (roomName) {
+    const cleanRoomName = roomName.replace(/^consultorio\s*/i, '').trim()
 
-  // Si hay servicio, incluirlo en el anuncio
-  if (serviceName) {
-    return `${serviceName}: ${patientName}, ${cleanRoomName}`
+    if (serviceName) {
+      return `${serviceName}: ${patientName}, ${cleanRoomName}`
+    }
+
+    return `${patientName}, consultorio ${cleanRoomName}`
   }
 
-  return `${patientName}, consultorio ${cleanRoomName}`
+  // Si no hay consultorio pero hay servicio: "[NOMBRE] a [SERVICIO]"
+  if (serviceName) {
+    return `${patientName} a ${serviceName}`
+  }
+
+  // Caso por defecto: solo nombre
+  return patientName
+}
+
+/**
+ * Genera el texto completo para TTS considerando privacidad, consultorio y servicio
+ *
+ * @param displayName - Nombre ya procesado según nivel de privacidad
+ * @param roomName - Nombre del consultorio (opcional)
+ * @param serviceName - Nombre del servicio (opcional)
+ * @returns Texto completo para lectura por voz
+ */
+export function generateTTSText(
+  displayName: string,
+  roomName?: string,
+  serviceName?: string
+): string {
+  // Con consultorio
+  if (roomName) {
+    const cleanRoomName = roomName.replace(/^consultorio\s*/i, '').trim()
+
+    if (serviceName) {
+      return `${serviceName}: ${displayName}, consultorio ${cleanRoomName}`
+    }
+
+    return `${displayName}, consultorio ${cleanRoomName}`
+  }
+
+  // Sin consultorio pero con servicio
+  if (serviceName) {
+    return `${displayName} a ${serviceName}`
+  }
+
+  // Solo nombre
+  return displayName
 }

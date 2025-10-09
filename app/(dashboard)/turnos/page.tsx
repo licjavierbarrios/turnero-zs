@@ -462,6 +462,9 @@ export default function QueuePage() {
                       <p className="text-sm text-gray-600">
                         DNI: {item.patient_dni} • {item.service_name}
                       </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Cargado: {format(new Date(item.created_at), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+                      </p>
                     </div>
                   </div>
 

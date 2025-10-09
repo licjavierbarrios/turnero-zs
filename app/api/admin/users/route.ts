@@ -33,7 +33,6 @@ export async function POST(request: Request) {
         email,
         first_name,
         last_name,
-        password_hash: '', // Manejado por Supabase Auth
         is_active
       })
       .select()

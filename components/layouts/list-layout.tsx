@@ -55,7 +55,7 @@ export function ListLayout({ services }: ListLayoutProps) {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-gray-900 font-bold text-xl">
                         <UserIcon className="h-5 w-5" />
-                        {currentCall.patient_first_name} {currentCall.patient_last_name}
+                        {currentCall.display_name || `${currentCall.patient_first_name} ${currentCall.patient_last_name}`}
                       </div>
                       {currentCall.room_name && (
                         <div className="flex items-center gap-2 text-gray-700">
@@ -89,7 +89,7 @@ export function ListLayout({ services }: ListLayoutProps) {
                             {idx + 1}
                           </span>
                           <span className="text-gray-900 font-medium">
-                            {apt.patient_first_name} {apt.patient_last_name}
+                            {apt.display_name || `${apt.patient_first_name} ${apt.patient_last_name}`}
                           </span>
                         </div>
                       ))}
