@@ -7,12 +7,12 @@ import { UserIcon, MapPinIcon, ClockIcon } from 'lucide-react'
 
 export interface ServiceAppointment {
   id: string
-  patient_first_name: string
-  patient_last_name: string
+  patient_name: string // Nombre completo del paciente (daily_queue structure)
+  order_number: number // Número de orden en la cola
   professional_first_name?: string
   professional_last_name?: string
   room_name?: string
-  scheduled_at: string
+  scheduled_at?: string // Opcional ya que daily_queue usa order_number
   status: string
 }
 
@@ -23,14 +23,18 @@ interface ServiceCardProps {
 }
 
 const statusLabels: Record<string, string> = {
-  'esperando': 'Esperando',
+  'pendiente': 'Pendiente',
+  'disponible': 'Disponible',
   'llamado': 'Llamado',
+  'atendido': 'Atendido',
   'en_consulta': 'En consulta'
 }
 
 const statusColors: Record<string, string> = {
-  'esperando': 'bg-blue-100 text-blue-800',
+  'pendiente': 'bg-gray-100 text-gray-800',
+  'disponible': 'bg-blue-100 text-blue-800',
   'llamado': 'bg-purple-100 text-purple-800 animate-pulse',
+  'atendido': 'bg-green-100 text-green-800',
   'en_consulta': 'bg-green-100 text-green-800'
 }
 
@@ -40,7 +44,7 @@ export function ServiceCard({ serviceName, appointments, compact = false }: Serv
 
   const currentCall = appointments.find(apt => apt.status === 'llamado')
   const inConsultation = appointments.filter(apt => apt.status === 'en_consulta')
-  const waiting = appointments.filter(apt => apt.status === 'esperando')
+  const waiting = appointments.filter(apt => apt.status === 'disponible')
 
   return (
     <Card className={`border-2 ${colors.border} ${colors.bg} transition-all hover:shadow-lg`}>
@@ -62,7 +66,10 @@ export function ServiceCard({ serviceName, appointments, compact = false }: Serv
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-gray-900 font-semibold text-lg">
                 <UserIcon className="h-4 w-4" />
-                {currentCall.patient_first_name} {currentCall.patient_last_name}
+                {currentCall.patient_name}
+              </div>
+              <div className="text-gray-600 text-sm">
+                Nº {String(currentCall.order_number).padStart(3, '0')}
               </div>
               {currentCall.room_name && (
                 <div className="flex items-center gap-2 text-gray-700 text-sm">
@@ -89,7 +96,7 @@ export function ServiceCard({ serviceName, appointments, compact = false }: Serv
                   className="flex items-center justify-between text-xs bg-white/70 p-2 rounded"
                 >
                   <span className="text-gray-700">
-                    {apt.patient_first_name} {apt.patient_last_name}
+                    {apt.patient_name}
                   </span>
                   {apt.room_name && (
                     <span className="text-gray-500">{apt.room_name}</span>
@@ -107,14 +114,16 @@ export function ServiceCard({ serviceName, appointments, compact = false }: Serv
               PRÓXIMOS ({waiting.length}):
             </p>
             <div className="space-y-1">
-              {waiting.slice(0, compact ? 2 : 3).map((apt, idx) => (
+              {waiting.slice(0, compact ? 2 : 3).map((apt) => (
                 <div
                   key={apt.id}
                   className="flex items-center gap-2 text-xs bg-white/70 p-2 rounded"
                 >
-                  <span className="text-gray-500 font-semibold">{idx + 1}.</span>
+                  <span className="text-gray-500 font-semibold">
+                    {String(apt.order_number).padStart(3, '0')}
+                  </span>
                   <span className="text-gray-700 flex-1">
-                    {apt.patient_first_name} {apt.patient_last_name}
+                    {apt.patient_name}
                   </span>
                 </div>
               ))}

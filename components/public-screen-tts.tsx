@@ -66,15 +66,22 @@ export function PublicScreenTTS({
         const patientName = `${patient.first_name} ${patient.last_name}`
         const roomName = room.name
         const serviceName = includeServiceName && service ? service.name : undefined
+        const callText = generateCallText(patientName, roomName, serviceName)
 
         // Reproducir sonido de notificación
         playNotificationSound(volume)
 
-        // Esperar un poco después del sonido antes de hablar
+        // PRIMER LLAMADO: Esperar más tiempo después del dingdong
+        // Dingdong dura ~2 segundos + 1 segundo de pausa = 3 segundos
         setTimeout(() => {
-          const callText = generateCallText(patientName, roomName, serviceName)
           speak(callText)
-        }, 500)
+        }, 3000)
+
+        // SEGUNDO LLAMADO: Esperar que termine el primero + pausa + repetir
+        // Primer llamado ~3s + pausa 2s = 5 segundos después del primero
+        setTimeout(() => {
+          speak(callText)
+        }, 8000)
 
         // Marcar este llamado como anunciado
         previousCallsRef.current.add(latestCall.id)
@@ -86,7 +93,7 @@ export function PublicScreenTTS({
       const callsArray = Array.from(previousCallsRef.current)
       previousCallsRef.current = new Set(callsArray.slice(-10))
     }
-  }, [callEvents, speak, supported, enabled, volume])
+  }, [callEvents, speak, supported, enabled, volume, includeServiceName])
 
   // No renderiza nada, solo maneja el audio
   return null

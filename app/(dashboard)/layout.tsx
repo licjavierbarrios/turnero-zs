@@ -17,7 +17,8 @@ import {
   HomeIcon,
   LogOutIcon,
   BuildingIcon,
-  ShieldIcon
+  ShieldIcon,
+  SettingsIcon
 } from 'lucide-react'
 
 const navigation = [
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Servicios', href: '/servicios', icon: HeartHandshakeIcon },
   { name: 'Consultorios', href: '/consultorios', icon: MapPinIcon },
   { name: 'Reportes', href: '/reportes', icon: BarChart3Icon },
+  { name: 'Configuración', href: '/configuracion', icon: SettingsIcon },
 ]
 
 function classNames(...classes: string[]) {
@@ -155,9 +157,11 @@ export default function DashboardLayout({
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">
-              Turnero ZS
-            </h1>
+            <img
+              src="/images/logo.png"
+              alt="Turnero ZS"
+              className="h-10 w-auto"
+            />
           </div>
 
           {/* Navigation */}

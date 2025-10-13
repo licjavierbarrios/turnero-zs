@@ -108,6 +108,34 @@ export default function PantallaPublicaPage({
     localStorage.setItem(`pantalla_template_${slug}`, template.id)
   }
 
+  // Load TTS configuration from institution settings
+  useEffect(() => {
+    const loadTTSConfig = async () => {
+      if (!institution?.id) return
+
+      try {
+        const { data, error } = await supabase
+          .from('institution')
+          .select('tts_enabled, tts_volume, tts_rate')
+          .eq('id', institution.id)
+          .single()
+
+        if (error) throw error
+
+        if (data) {
+          setTtsEnabled(data.tts_enabled ?? true)
+          setTtsVolume(data.tts_volume ?? 0.8)
+          setTtsRate(data.tts_rate ?? 0.9)
+        }
+      } catch (error) {
+        console.error('Error al cargar configuración TTS:', error)
+        // Mantener valores por defecto si hay error
+      }
+    }
+
+    loadTTSConfig()
+  }, [institution?.id])
+
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const channelRef = useRef<any>(null)
 
@@ -448,13 +476,20 @@ export default function PantallaPublicaPage({
       <header className="bg-white shadow-md">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-blue-900">
-                {institution?.name || 'Centro de Salud'}
-              </h1>
-              {institution?.zone && (
-                <p className="text-blue-700 mt-1">{institution.zone.name}</p>
-              )}
+            <div className="flex items-center gap-4">
+              <img
+                src="/images/logo.png"
+                alt="Logo"
+                className="h-12 w-auto"
+              />
+              <div>
+                <h1 className="text-3xl font-bold text-blue-900">
+                  {institution?.name || 'Centro de Salud'}
+                </h1>
+                {institution?.zone && (
+                  <p className="text-blue-700 mt-1">{institution.zone.name}</p>
+                )}
+              </div>
             </div>
             <div className="text-right">
               <div className="text-2xl font-mono text-blue-900">
@@ -537,15 +572,7 @@ export default function PantallaPublicaPage({
         rate={ttsRate}
         includeServiceName={hasMultipleServices}
       />
-      <TTSControls
-        enabled={ttsEnabled}
-        volume={ttsVolume}
-        rate={ttsRate}
-        onEnabledChange={setTtsEnabled}
-        onVolumeChange={setTtsVolume}
-        onRateChange={setTtsRate}
-        onTest={handleTestTTS}
-      />
+      <TTSControls onTest={handleTestTTS} />
     </div>
   )
 }

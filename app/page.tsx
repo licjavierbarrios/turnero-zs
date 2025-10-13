@@ -6,10 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
-import Link from 'next/link'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -62,27 +60,44 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
+      {/* Tarjeta visual elevada */}
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-10 border border-gray-100">
+        {/* Logo como avatar circular */}
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 p-1 shadow-lg">
+              <div className="w-full h-full rounded-full bg-white p-3 flex items-center justify-center">
+                <img
+                  src="/images/logo.png"
+                  alt="Turnero ZS"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Turnero ZS
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm">
             Sistema de Gestión de Turnos para Centros de Salud
           </p>
         </div>
 
         {/* Login Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Iniciar Sesión</CardTitle>
-            <CardDescription>
+        <div className="space-y-6">
+          {/* Form Header */}
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900">Iniciar Sesión</h2>
+            <p className="text-sm text-gray-500 mt-1">
               Ingresa tus credenciales para acceder al sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -131,12 +146,11 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+          </form>
+        </div>
 
-
-        <div className="text-center text-sm text-gray-500">
+        {/* Footer */}
+        <div className="text-center text-xs text-gray-400 mt-8 pt-6 border-t border-gray-100">
           <p>Versión 0.1.0 - Sistema de Turnos Zonales</p>
         </div>
       </div>

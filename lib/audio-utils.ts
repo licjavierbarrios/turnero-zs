@@ -1,57 +1,71 @@
+// Global AudioContext instance (created after user interaction)
+let globalAudioContext: AudioContext | null = null
+
+// Precargar el audio de notificación
+let notificationAudio: HTMLAudioElement | null = null
+
 /**
- * Reproduce un sonido de notificación tipo "ding" usando Web Audio API
+ * Inicializa el AudioContext global y precarga el audio (debe llamarse después de interacción del usuario)
+ */
+export function initAudioContext(): void {
+  if (typeof window === 'undefined') return
+
+  // Inicializar AudioContext si no existe
+  if (!globalAudioContext) {
+    try {
+      globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+
+      // Asegurar que el contexto esté en estado 'running'
+      if (globalAudioContext.state === 'suspended') {
+        globalAudioContext.resume()
+      }
+    } catch (error) {
+      console.warn('No se pudo inicializar AudioContext:', error)
+    }
+  }
+
+  // Precargar el audio de notificación
+  if (!notificationAudio) {
+    notificationAudio = new Audio('/sounds/dingdong.mp3')
+    notificationAudio.preload = 'auto'
+  }
+}
+
+/**
+ * Reproduce un sonido de notificación usando el archivo dingdong.mp3
  *
  * @param volume - Volumen del sonido (0.0 a 1.0)
  */
 export function playNotificationSound(volume: number = 0.5): void {
   if (typeof window === 'undefined') return
 
+  // Si no hay audio precargado, intentar inicializar
+  if (!notificationAudio) {
+    initAudioContext()
+  }
+
+  // Si aún no hay audio, salir silenciosamente
+  if (!notificationAudio) {
+    return
+  }
+
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    // Clonar el audio para poder reproducirlo múltiples veces simultáneamente
+    const audio = notificationAudio.cloneNode(true) as HTMLAudioElement
+    audio.volume = Math.max(0, Math.min(1, volume)) // Asegurar que esté entre 0 y 1
 
-    // Crear oscilador para el primer tono (más alto)
-    const oscillator1 = audioContext.createOscillator()
-    const gainNode1 = audioContext.createGain()
-
-    oscillator1.connect(gainNode1)
-    gainNode1.connect(audioContext.destination)
-
-    // Configurar el primer tono (E6 - 1318.51 Hz)
-    oscillator1.frequency.value = 1318.51
-    oscillator1.type = 'sine'
-
-    // Envelope para el primer tono
-    gainNode1.gain.setValueAtTime(0, audioContext.currentTime)
-    gainNode1.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01)
-    gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
-
-    oscillator1.start(audioContext.currentTime)
-    oscillator1.stop(audioContext.currentTime + 0.3)
-
-    // Crear oscilador para el segundo tono (más bajo) después de una pausa
-    setTimeout(() => {
-      const oscillator2 = audioContext.createOscillator()
-      const gainNode2 = audioContext.createGain()
-
-      oscillator2.connect(gainNode2)
-      gainNode2.connect(audioContext.destination)
-
-      // Configurar el segundo tono (C6 - 1046.50 Hz)
-      oscillator2.frequency.value = 1046.50
-      oscillator2.type = 'sine'
-
-      // Envelope para el segundo tono
-      const currentTime = audioContext.currentTime
-      gainNode2.gain.setValueAtTime(0, currentTime)
-      gainNode2.gain.linearRampToValueAtTime(volume, currentTime + 0.01)
-      gainNode2.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.3)
-
-      oscillator2.start(currentTime)
-      oscillator2.stop(currentTime + 0.3)
-    }, 150) // Pequeña pausa entre tonos
-
+    // Reproducir el audio
+    audio.play().catch((error) => {
+      // Silenciar errores de autoplay
+      if (error.name !== 'NotAllowedError') {
+        console.warn('Error reproduciendo sonido:', error)
+      }
+    })
   } catch (error) {
-    console.error('Error reproduciendo sonido de notificación:', error)
+    // Silenciar errores
+    if (error instanceof Error && !error.message.includes('allowed')) {
+      console.warn('Error reproduciendo sonido:', error)
+    }
   }
 }
 
@@ -59,18 +73,23 @@ export function playNotificationSound(volume: number = 0.5): void {
  * Genera el texto a leer en voz para un llamado de paciente
  *
  * @param patientName - Nombre completo del paciente
- * @param roomName - Nombre del consultorio
- * @param serviceName - Nombre del servicio (opcional, para layouts multi-servicio)
+ * @param roomName - Nombre del consultorio (puede estar vacío en sistema daily_queue)
+ * @param serviceName - Nombre del servicio (se usa como destino principal en daily_queue)
  * @returns Texto formateado para TTS
  */
 export function generateCallText(patientName: string, roomName: string, serviceName?: string): string {
-  // Limpiar el nombre del consultorio de números al inicio
-  const cleanRoomName = roomName.replace(/^consultorio\s*/i, '').trim()
-
-  // Si hay servicio, incluirlo en el anuncio
+  // En el sistema daily_queue, el servicio es el destino principal (ej: "ENFERMERÍA")
+  // Si hay servicio, usarlo como destino en lugar del consultorio
   if (serviceName) {
-    return `${serviceName}: ${patientName}, ${cleanRoomName}`
+    return `${patientName} a ${serviceName}`
   }
 
-  return `${patientName}, consultorio ${cleanRoomName}`
+  // Fallback: Si no hay servicio pero hay room, usar consultorio
+  if (roomName) {
+    const cleanRoomName = roomName.replace(/^consultorio\s*/i, '').trim()
+    return `${patientName}, consultorio ${cleanRoomName}`
+  }
+
+  // Si no hay ni servicio ni room, solo el nombre
+  return patientName
 }

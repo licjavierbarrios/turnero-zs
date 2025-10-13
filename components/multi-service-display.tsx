@@ -23,6 +23,8 @@ interface PublicAppointment {
   status: string
   called_at?: string
   queue_date: string
+  room_name?: string
+  scheduled_at?: string
 }
 
 interface MultiServiceDisplayProps {

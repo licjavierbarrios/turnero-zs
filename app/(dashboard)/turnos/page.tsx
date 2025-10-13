@@ -81,6 +81,7 @@ export default function QueuePage() {
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('ALL') // Filtro por servicio
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [callingId, setCallingId] = useState<string | null>(null) // ID del item que está siendo llamado
 
   // Form state
   const [patientName, setPatientName] = useState('')
@@ -89,6 +90,38 @@ export default function QueuePage() {
 
   useEffect(() => {
     fetchData()
+  }, [])
+
+  // Realtime subscription for daily_queue changes
+  useEffect(() => {
+    const contextData = localStorage.getItem('institution_context')
+    if (!contextData) return
+
+    const context = JSON.parse(contextData)
+
+    // Subscribe to daily_queue changes for this institution
+    const channel = supabase
+      .channel(`daily_queue_${context.institution_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_queue',
+          filter: `institution_id=eq.${context.institution_id}`
+        },
+        (payload) => {
+          console.log('Daily queue change:', payload)
+          // Refresh data when any change occurs
+          fetchData()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   // Filtrar cola por servicio seleccionado
@@ -268,6 +301,9 @@ export default function QueuePage() {
       } else if (newStatus === 'llamado') {
         updates.called_at = new Date().toISOString()
         updates.called_by = userId
+
+        // Activar estado "llamando" en el botón
+        setCallingId(id)
       } else if (newStatus === 'atendido') {
         updates.attended_at = new Date().toISOString()
       }
@@ -280,9 +316,20 @@ export default function QueuePage() {
       if (error) throw error
 
       fetchData()
+
+      // Si se está llamando, esperar el tiempo de los dos anuncios TTS
+      // Dingdong: ~2s
+      // Primer llamado: 3s delay + 3s TTS = 6s
+      // Segundo llamado: 8s delay + 3s TTS = 11s total
+      if (newStatus === 'llamado') {
+        setTimeout(() => {
+          setCallingId(null)
+        }, 11000) // 11 segundos para ambos llamados completos
+      }
     } catch (error) {
       console.error('Error al actualizar estado:', error)
       alert('Error al actualizar estado')
+      setCallingId(null) // Resetear estado si hay error
     }
   }
 
@@ -486,8 +533,15 @@ export default function QueuePage() {
                         <Button
                           onClick={() => updateStatus(item.id, 'llamado')}
                           className="bg-yellow-600 hover:bg-yellow-700"
+                          disabled={callingId === item.id}
                         >
-                          Llamar
+                          {callingId === item.id ? (
+                            <>
+                              <span className="animate-pulse">🔔</span> Llamando...
+                            </>
+                          ) : (
+                            'Llamar'
+                          )}
                         </Button>
                       )}
 
