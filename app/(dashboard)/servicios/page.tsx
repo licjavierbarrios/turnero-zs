@@ -43,6 +43,7 @@ export default function ServiciosPage() {
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
+  const [currentInstitutionId, setCurrentInstitutionId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     institution_id: '',
@@ -54,12 +55,29 @@ export default function ServiciosPage() {
   const { toast } = useToast()
 
   useEffect(() => {
+    // Get current institution from localStorage
+    const contextData = localStorage.getItem('institution_context')
+    if (contextData) {
+      const context = JSON.parse(contextData)
+      setCurrentInstitutionId(context.institution_id)
+      setFormData(prev => ({ ...prev, institution_id: context.institution_id }))
+    }
+
     Promise.all([fetchServices(), fetchInstitutions()])
   }, [])
 
   const fetchServices = async () => {
     try {
       setLoading(true)
+
+      // Get current institution from localStorage
+      const contextData = localStorage.getItem('institution_context')
+      if (!contextData) {
+        setError('No se encontró el contexto de la institución')
+        return
+      }
+      const context = JSON.parse(contextData)
+
       const { data, error } = await supabase
         .from('service')
         .select(`
@@ -70,11 +88,11 @@ export default function ServiciosPage() {
             zone_name:zone!inner(name)
           )
         `)
-        .order('institution_id', { ascending: true })
+        .eq('institution_id', context.institution_id)
         .order('name', { ascending: true })
 
       if (error) throw error
-      
+
       const formattedData = data?.map(item => ({
         ...item,
         institution: item.institution ? {
@@ -83,7 +101,7 @@ export default function ServiciosPage() {
           zone_name: item.institution.zone_name?.[0]?.name || 'Sin zona'
         } : undefined
       })) || []
-      
+
       setServices(formattedData)
     } catch (error) {
       console.error('Error fetching services:', error)
@@ -95,6 +113,13 @@ export default function ServiciosPage() {
 
   const fetchInstitutions = async () => {
     try {
+      // Get current institution from localStorage
+      const contextData = localStorage.getItem('institution_context')
+      if (!contextData) {
+        return
+      }
+      const context = JSON.parse(contextData)
+
       const { data, error } = await supabase
         .from('institution')
         .select(`
@@ -102,17 +127,18 @@ export default function ServiciosPage() {
           name,
           zone_name:zone!inner(name)
         `)
-        .order('name', { ascending: true })
+        .eq('id', context.institution_id)
+        .single()
 
       if (error) throw error
-      
-      const formattedData = data?.map(item => ({
-        id: item.id,
-        name: item.name,
-        zone_name: item.zone_name?.[0]?.name || 'Sin zona'
-      })) || []
-      
-      setInstitutions(formattedData)
+
+      const formattedData = {
+        id: data.id,
+        name: data.name,
+        zone_name: data.zone_name?.[0]?.name || 'Sin zona'
+      }
+
+      setInstitutions([formattedData])
     } catch (error) {
       console.error('Error fetching institutions:', error)
     }
@@ -123,9 +149,15 @@ export default function ServiciosPage() {
     setError(null)
 
     try {
+      // Validar que tenemos institution_id
+      if (!formData.institution_id) {
+        setError('No se ha establecido la institución')
+        return
+      }
+
       if (editingService) {
         // Update existing service
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('service')
           .update({
             name: formData.name,
@@ -136,16 +168,22 @@ export default function ServiciosPage() {
             updated_at: new Date().toISOString()
           })
           .eq('id', editingService.id)
+          .select()
 
-        if (error) throw error
-        
+        if (error) {
+          console.error('Update error:', error)
+          throw error
+        }
+
+        console.log('Service updated successfully:', data)
+
         toast({
           title: "Servicio actualizado",
           description: "El servicio se ha actualizado correctamente.",
         })
       } else {
         // Create new service
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('service')
           .insert({
             name: formData.name,
@@ -154,9 +192,15 @@ export default function ServiciosPage() {
             duration_minutes: formData.duration_minutes,
             is_active: formData.is_active
           })
+          .select()
 
-        if (error) throw error
-        
+        if (error) {
+          console.error('Insert error:', error)
+          throw error
+        }
+
+        console.log('Service created successfully:', data)
+
         toast({
           title: "Servicio creado",
           description: "El servicio se ha creado correctamente.",
@@ -166,10 +210,16 @@ export default function ServiciosPage() {
       setIsDialogOpen(false)
       setEditingService(null)
       resetForm()
-      fetchServices()
-    } catch (error) {
+      await fetchServices()
+    } catch (error: any) {
       console.error('Error saving service:', error)
-      setError(`Error al ${editingService ? 'actualizar' : 'crear'} el servicio`)
+      const errorMsg = error.message || `Error al ${editingService ? 'actualizar' : 'crear'} el servicio`
+      setError(errorMsg)
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      })
     }
   }
 
@@ -235,9 +285,12 @@ export default function ServiciosPage() {
   }
 
   const resetForm = () => {
-    setFormData({ 
+    const contextData = localStorage.getItem('institution_context')
+    const institutionId = contextData ? JSON.parse(contextData).institution_id : ''
+
+    setFormData({
       name: '',
-      institution_id: '',
+      institution_id: institutionId,
       description: '',
       duration_minutes: 30,
       is_active: true
@@ -322,21 +375,13 @@ export default function ServiciosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="service_institution_id">Institución *</Label>
-                <Select 
-                  value={formData.institution_id} 
-                  onValueChange={(value) => setFormData({ ...formData, institution_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar institución" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {institutions.map((institution) => (
-                      <SelectItem key={institution.id} value={institution.id}>
-                        {institution.name} - {institution.zone_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="service_institution_id"
+                  type="text"
+                  value={institutions[0]?.name ? `${institutions[0].name} - ${institutions[0].zone_name}` : 'Cargando...'}
+                  disabled
+                  className="bg-gray-100"
+                />
               </div>
 
               <div className="space-y-2">

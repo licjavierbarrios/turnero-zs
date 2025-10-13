@@ -83,7 +83,10 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
     utterance.onstart = () => setSpeaking(true)
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = (event) => {
-      console.error('Error en TTS:', event)
+      // Silenciar error "not-allowed" que es común cuando TTS no fue iniciado por usuario
+      if (event.error !== 'not-allowed') {
+        console.error('Error en TTS:', event)
+      }
       setSpeaking(false)
     }
 

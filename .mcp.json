@@ -3,22 +3,15 @@
     "mcp-docker-gateway": {
       "type": "stdio",
       "command": "docker",
-      "args": [
-        "mcp",
-        "gateway",
-        "run"
-      ]
+      "args": ["mcp", "gateway", "run"]
     },
     "shadcn": {
       "command": "npx",
-      "args": [
-        "shadcn@latest",
-        "mcp"
-      ]
+      "args": ["shadcn@latest", "mcp"]
     },
     "serena": {
       "type": "stdio",
-      "command": "C:\\Users\\Casa\\.local\\bin\\uvx.exe",
+      "command": "C:\\Users\\Sistemas\\.local\\bin\\uvx.exe",
       "args": [
         "--from",
         "git+https://github.com/oraios/serena",
@@ -33,12 +26,7 @@
     "filesystem": {
       "type": "stdio",
       "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-filesystem"
-      ],
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem"],
       "env": {
         "HOME": "E:\\PROGRAMACION\\turnero-zs"
       }

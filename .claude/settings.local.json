@@ -10,10 +10,10 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "playwright",
+    "mcp-docker-gateway",
     "shadcn",
     "serena",
     "filesystem",
-    "mcp-docker-gateway"
+    "supabase"
   ]
 }

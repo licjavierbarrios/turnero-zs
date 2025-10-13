@@ -128,7 +128,15 @@ export default function InstitutionSelectPage() {
     }
 
     localStorage.setItem('institution_context', JSON.stringify(institutionContext))
-    router.push('/dashboard')
+
+    // Redirigir según el rol del usuario
+    if (institution.user_role === 'pantalla') {
+      // Usuarios con rol pantalla van directamente a la pantalla pública
+      router.push(`/pantalla/${institution.id}`)
+    } else {
+      // Otros roles van al dashboard
+      router.push('/dashboard')
+    }
   }
 
   const handleLogout = async () => {

@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: SISTEMA ACTIVO vs FUTURO
+
+**ANTES DE HACER CUALQUIER CAMBIO, LEE ESTO:**
+
+🟢 **SISTEMA ACTIVO**: El proyecto usa la tabla `daily_queue` para gestión de turnos del día.
+🔴 **SISTEMA FUTURO**: La tabla `appointment` existe pero NO está en uso (implementación futura).
+
+**📖 Lee `IMPLEMENTACION-ACTUAL.md` para detalles completos ANTES de trabajar con turnos/colas/pantalla pública.**
+
 ## Project Overview
 
 **Turnero ZS** is a multi-zone appointment and queue management system for Argentine healthcare centers (CAPS/hospitals). It provides appointment scheduling, patient queue management, and real-time public displays to improve patient flow and reduce wait times.
@@ -18,7 +27,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Core Domain Entities
 - **Zones** → **Institutions** → **Rooms/Services/Professionals**
 - **Patients, Users, Memberships** with role-based access
-- **Appointments** with state transitions (pendiente → esperando → llamado → en_consulta → finalizado)
+- **⚠️ Daily Queue (ACTIVO)**: Cola diaria con estados (pendiente → disponible → llamado → atendido)
+- **⚠️ Appointments (FUTURO)**: Turnos programados - NO IMPLEMENTADO AÚN
 - **Call Events & Attendance Events** for complete traceability
 
 ### User Roles
@@ -68,9 +78,13 @@ The MVP excludes patient mobile apps, HSI integration, and emergency/bed managem
 
 ## Key Implementation Notes
 
+- ⚠️ **SIEMPRE usa `daily_queue` para turnos del día, NO `appointment`**
+- ⚠️ **Estados correctos**: pendiente → disponible → llamado → atendido (NO esperando/en_consulta)
+- ⚠️ **Estructura de paciente**: `patient_name` (string completo), NO `patient_first_name/last_name`
+- ⚠️ **Número de orden**: `order_number` (001, 002, 003...), muéstralo en pantalla
 - Use Spanish for user-facing text and database content (Argentine healthcare context)
-- Implement real-time updates via Supabase channels for public displays
+- Implement real-time updates via Supabase channels for public displays (table: `daily_queue`)
 - Ensure proper RLS policies for multi-institutional access
-- Follow the appointment state machine: pendiente → esperando → llamado → en_consulta → finalizado/cancelado/ausente
 - Consider accessibility requirements for public displays
 - Plan for concurrent slot booking scenarios
+- **Si ves código usando `appointment`, MÁRCALO como TODO: IMPLEMENTACIÓN FUTURA**

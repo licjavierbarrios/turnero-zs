@@ -23,15 +23,12 @@ import { playNotificationSound } from '@/lib/audio-utils'
 
 interface PublicAppointment {
   id: string
-  patient_first_name: string
-  patient_last_name: string
-  professional_first_name: string
-  professional_last_name: string
+  order_number: number
+  patient_name: string
   service_name: string
-  room_name?: string
-  scheduled_at: string
   status: string
-  call_number?: number
+  called_at?: string
+  queue_date: string
 }
 
 interface Institution {
@@ -52,15 +49,17 @@ interface CallEvent {
 }
 
 const statusColors = {
-  'esperando': 'bg-blue-100 text-blue-800',
+  'pendiente': 'bg-gray-100 text-gray-800',
+  'disponible': 'bg-blue-100 text-blue-800',
   'llamado': 'bg-purple-100 text-purple-800 animate-pulse',
-  'en_consulta': 'bg-green-100 text-green-800'
+  'atendido': 'bg-green-100 text-green-800'
 }
 
 const statusLabels = {
-  'esperando': 'Esperando',
+  'pendiente': 'Pendiente',
+  'disponible': 'Disponible',
   'llamado': 'Llamado',
-  'en_consulta': 'En consulta'
+  'atendido': 'Atendido'
 }
 
 export default function PantallaPublicaPage({
@@ -77,6 +76,7 @@ export default function PantallaPublicaPage({
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting')
+  const [showAudioPrompt, setShowAudioPrompt] = useState(true)
 
   // TTS states
   const [ttsEnabled, setTtsEnabled] = useState(true)
@@ -119,6 +119,26 @@ export default function PantallaPublicaPage({
     enabled: ttsEnabled
   })
 
+  // Activate audio (user interaction required)
+  const handleActivateAudio = () => {
+    // Play a silent audio to unlock audio context
+    playNotificationSound(0.01)
+    setTimeout(() => {
+      speak('Sistema de audio activado')
+    }, 300)
+    setShowAudioPrompt(false)
+    // Save preference
+    localStorage.setItem(`pantalla_audio_activated_${slug}`, 'true')
+  }
+
+  // Check if audio was already activated
+  useEffect(() => {
+    const wasActivated = localStorage.getItem(`pantalla_audio_activated_${slug}`)
+    if (wasActivated === 'true') {
+      setShowAudioPrompt(false)
+    }
+  }, [slug])
+
   // Test TTS function
   const handleTestTTS = () => {
     playNotificationSound(ttsVolume)
@@ -128,29 +148,34 @@ export default function PantallaPublicaPage({
   }
 
   // Transform data for PublicScreenTTS component
-  // Creates compatible structure from lastCallEvent
+  // Creates compatible structure from daily_queue data
   // Using useMemo to prevent infinite re-renders
   const callEvents = useMemo(() => {
-    if (!lastCallEvent || !currentCall || !currentCall.room_name) return []
+    if (!currentCall) return []
+
+    // Split patient name into first and last name
+    const nameParts = currentCall.patient_name.split(' ')
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || ''
 
     return [{
-      id: lastCallEvent.id,
-      appointment_id: lastCallEvent.appointment_id,
-      created_at: lastCallEvent.called_at,
+      id: currentCall.id,
+      appointment_id: currentCall.id,
+      created_at: currentCall.called_at || new Date().toISOString(),
       appointment: {
         patient: {
-          first_name: currentCall.patient_first_name,
-          last_name: currentCall.patient_last_name
+          first_name: firstName,
+          last_name: lastName
         },
         room: {
-          name: currentCall.room_name
+          name: '' // daily_queue doesn't have room
         },
         service: {
           name: currentCall.service_name
         }
       }
     }]
-  }, [lastCallEvent, currentCall])
+  }, [currentCall])
 
   // Determinar si hay múltiples servicios activos
   const hasMultipleServices = useMemo(() => {
@@ -248,7 +273,7 @@ export default function PantallaPublicaPage({
               name
             )
           `)
-          .eq('slug', slug)
+          .or(`slug.eq.${slug},id.eq.${slug}`)
           .single()
 
         if (error) throw error
@@ -278,51 +303,34 @@ export default function PantallaPublicaPage({
     }
 
     try {
-      const today = new Date()
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString()
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString()
-
-
       const { data, error } = await supabase
-        .from('appointment')
+        .from('daily_queue')
         .select(`
           id,
-          scheduled_at,
+          order_number,
+          patient_name,
           status,
-          patient:patient_id (
-            first_name,
-            last_name
-          ),
-          professional:professional_id (
-            first_name,
-            last_name
-          ),
+          called_at,
+          queue_date,
           service:service_id (
-            name
-          ),
-          room:room_id (
             name
           )
         `)
         .eq('institution_id', institution.id)
-        .gte('scheduled_at', startOfDay)
-        .lte('scheduled_at', endOfDay)
-        .in('status', ['pendiente', 'esperando', 'llamado', 'en_consulta'])
-        .order('scheduled_at', { ascending: true })
-
+        .eq('queue_date', new Date().toISOString().split('T')[0])
+        .in('status', ['disponible', 'llamado', 'atendido'])
+        .order('order_number', { ascending: true })
 
       if (error) throw error
 
-      const formattedAppointments: PublicAppointment[] = data?.map((apt: any) => ({
-        id: apt.id,
-        patient_first_name: apt.patient?.first_name || '',
-        patient_last_name: apt.patient?.last_name || '',
-        professional_first_name: apt.professional?.first_name || '',
-        professional_last_name: apt.professional?.last_name || '',
-        service_name: apt.service?.name || '',
-        room_name: apt.room?.name,
-        scheduled_at: apt.scheduled_at,
-        status: apt.status
+      const formattedAppointments: PublicAppointment[] = data?.map((item: any) => ({
+        id: item.id,
+        order_number: item.order_number,
+        patient_name: item.patient_name,
+        service_name: item.service?.name || '',
+        status: item.status,
+        called_at: item.called_at,
+        queue_date: item.queue_date
       })) || []
 
       setAppointments(formattedAppointments)
@@ -344,7 +352,7 @@ export default function PantallaPublicaPage({
 
     fetchAppointments()
 
-    // Subscribe to changes in appointments table
+    // Subscribe to changes in daily_queue table
     const channel = supabase
       .channel(`public-display-${institution.id}`)
       .on(
@@ -352,12 +360,12 @@ export default function PantallaPublicaPage({
         {
           event: '*',
           schema: 'public',
-          table: 'appointment',
+          table: 'daily_queue',
           filter: `institution_id=eq.${institution.id}`
         },
         (payload: any) => {
 
-          // If an appointment status changed to 'llamado', play notification sound
+          // If status changed to 'llamado', play notification sound
           if (payload.eventType === 'UPDATE' &&
               payload.new?.status === 'llamado' &&
               payload.old?.status !== 'llamado') {
@@ -372,22 +380,10 @@ export default function PantallaPublicaPage({
             }
           }
 
-          // Refresh appointments data
+          // Refresh queue data
           setTimeout(() => {
             fetchAppointments()
           }, 100)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'call_event',
-          filter: `appointment_id=in.(${appointments.map(apt => apt.id).join(',')})`
-        },
-        (payload) => {
-          setLastCallEvent(payload.new as CallEvent)
         }
       )
       .subscribe((status) => {
@@ -421,6 +417,33 @@ export default function PantallaPublicaPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100">
+      {/* Audio Activation Prompt */}
+      {showAudioPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-in fade-in zoom-in duration-300">
+            <div className="mb-6">
+              <Volume2Icon className="h-20 w-20 text-blue-600 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">
+                Activar Audio
+              </h2>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                Para escuchar los anuncios de llamados, haz clic en el botón de abajo.
+              </p>
+              <p className="text-gray-500 text-sm mt-3">
+                Solo necesitas hacer esto una vez.
+              </p>
+            </div>
+            <button
+              onClick={handleActivateAudio}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xl font-semibold py-4 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+            >
+              <Volume2Icon className="inline-block h-6 w-6 mr-3" />
+              Activar Audio y Comenzar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white shadow-md">
         <div className="container mx-auto px-6 py-4">

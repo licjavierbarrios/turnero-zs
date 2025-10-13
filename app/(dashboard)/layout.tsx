@@ -237,14 +237,6 @@ export default function DashboardLayout({
               <h2 className="text-lg font-semibold text-gray-900">
                 Sistema de Turnos
               </h2>
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/pantalla"
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Ver Pantalla Pública
-                </Link>
-              </div>
             </div>
           </div>
         </header>

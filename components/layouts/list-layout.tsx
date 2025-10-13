@@ -6,15 +6,17 @@ import { Badge } from '@/components/ui/badge'
 import { UserIcon, MapPinIcon } from 'lucide-react'
 
 const statusLabels: Record<string, string> = {
-  'esperando': 'Esperando',
+  'pendiente': 'Pendiente',
+  'disponible': 'Disponible',
   'llamado': 'Llamado',
-  'en_consulta': 'En consulta'
+  'atendido': 'Atendido'
 }
 
 const statusColors: Record<string, string> = {
-  'esperando': 'bg-blue-100 text-blue-800',
+  'pendiente': 'bg-gray-100 text-gray-800',
+  'disponible': 'bg-blue-100 text-blue-800',
   'llamado': 'bg-purple-100 text-purple-800 animate-pulse',
-  'en_consulta': 'bg-green-100 text-green-800'
+  'atendido': 'bg-green-100 text-green-800'
 }
 
 interface ListLayoutProps {
@@ -28,7 +30,7 @@ export function ListLayout({ services }: ListLayoutProps) {
         const colors = getServiceColors(service.serviceName)
         const icon = getServiceIcon(service.serviceName)
         const currentCall = service.appointments.find(apt => apt.status === 'llamado')
-        const waiting = service.appointments.filter(apt => apt.status === 'esperando')
+        const waiting = service.appointments.filter(apt => apt.status === 'disponible')
 
         return (
           <div
@@ -55,14 +57,11 @@ export function ListLayout({ services }: ListLayoutProps) {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-gray-900 font-bold text-xl">
                         <UserIcon className="h-5 w-5" />
-                        {currentCall.patient_first_name} {currentCall.patient_last_name}
+                        {currentCall.patient_name}
                       </div>
-                      {currentCall.room_name && (
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <MapPinIcon className="h-4 w-4" />
-                          <span className="text-lg">{currentCall.room_name}</span>
-                        </div>
-                      )}
+                      <div className="text-gray-600 text-lg">
+                        Nº {String(currentCall.order_number).padStart(3, '0')}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -85,11 +84,11 @@ export function ListLayout({ services }: ListLayoutProps) {
                           key={apt.id}
                           className="flex items-center gap-3 bg-white p-2 rounded"
                         >
-                          <span className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full">
-                            {idx + 1}
+                          <span className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white text-sm font-bold rounded-full">
+                            {String(apt.order_number).padStart(3, '0')}
                           </span>
                           <span className="text-gray-900 font-medium">
-                            {apt.patient_first_name} {apt.patient_last_name}
+                            {apt.patient_name}
                           </span>
                         </div>
                       ))}

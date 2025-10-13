@@ -136,16 +136,6 @@ export default function LoginPage() {
         </Card>
 
 
-        {/* Public Screen Link */}
-        <div className="text-center">
-          <Link
-            href="/pantalla"
-            className="text-sm text-blue-600 hover:text-blue-800 underline"
-          >
-            Ver Pantalla Pública
-          </Link>
-        </div>
-
         <div className="text-center text-sm text-gray-500">
           <p>Versión 0.1.0 - Sistema de Turnos Zonales</p>
         </div>

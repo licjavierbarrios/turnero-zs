@@ -17,14 +17,12 @@ interface DisplayTemplate {
 
 interface PublicAppointment {
   id: string
-  patient_first_name: string
-  patient_last_name: string
-  professional_first_name?: string
-  professional_last_name?: string
+  order_number: number
+  patient_name: string
   service_name: string
-  room_name?: string
-  scheduled_at: string
   status: string
+  called_at?: string
+  queue_date: string
 }
 
 interface MultiServiceDisplayProps {
