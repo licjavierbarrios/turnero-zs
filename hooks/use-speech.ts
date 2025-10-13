@@ -19,6 +19,7 @@ interface UseSpeechReturn {
   enabled: boolean
   rate: number
   volume: number
+  voicesLoaded: boolean
 }
 
 /**
@@ -45,6 +46,7 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
   const [enabled, setEnabled] = useState(initialEnabled)
   const [rate, setRate] = useState(initialRate)
   const [volume, setVolume] = useState(initialVolume)
+  const [voicesLoaded, setVoicesLoaded] = useState(false)
 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
@@ -52,6 +54,19 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       setSupported(true)
+
+      // Cargar voces disponibles
+      const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices()
+        if (voices.length > 0) {
+          setVoicesLoaded(true)
+          console.log(`TTS: ${voices.length} voces cargadas`)
+        }
+      }
+
+      // Las voces se cargan de forma asíncrona en algunos navegadores
+      loadVoices()
+      window.speechSynthesis.onvoiceschanged = loadVoices
     } else {
       console.warn('Web Speech API no está soportada en este navegador')
     }
@@ -68,27 +83,74 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
 
   const speak = useCallback((text: string) => {
     if (!supported || !enabled) {
+      console.warn('TTS no soportado o deshabilitado')
       return
     }
 
-    // Cancelar cualquier speech anterior
-    window.speechSynthesis.cancel()
-
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = lang
-    utterance.rate = rate
-    utterance.pitch = pitch
-    utterance.volume = volume
-
-    utterance.onstart = () => setSpeaking(true)
-    utterance.onend = () => setSpeaking(false)
-    utterance.onerror = (event) => {
-      console.error('Error en TTS:', event)
-      setSpeaking(false)
+    if (!text || text.trim().length === 0) {
+      console.warn('TTS: Texto vacío')
+      return
     }
 
-    utteranceRef.current = utterance
-    window.speechSynthesis.speak(utterance)
+    // Verificar que las voces estén cargadas
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length === 0) {
+      console.warn('TTS: Aún no hay voces cargadas. Reintentando en 100ms...')
+      setTimeout(() => speak(text), 100)
+      return
+    }
+
+    try {
+      // Cancelar cualquier speech anterior
+      window.speechSynthesis.cancel()
+
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = lang
+      utterance.rate = rate
+      utterance.pitch = pitch
+      utterance.volume = volume
+
+      // Intentar seleccionar una voz en español
+      const spanishVoice = voices.find(voice =>
+        voice.lang.startsWith('es-') || voice.lang === 'es'
+      )
+      if (spanishVoice) {
+        utterance.voice = spanishVoice
+        console.log(`TTS: Usando voz "${spanishVoice.name}" (${spanishVoice.lang})`)
+      }
+
+      utterance.onstart = () => {
+        console.log('TTS: Reproduciendo:', text)
+        setSpeaking(true)
+      }
+
+      utterance.onend = () => {
+        console.log('TTS: Finalizado')
+        setSpeaking(false)
+      }
+
+      utterance.onerror = (event) => {
+        console.error('Error en TTS:', {
+          error: event.error,
+          message: event.error === 'canceled'
+            ? 'Speech cancelado (puede ser normal si se llama múltiples veces)'
+            : event.error === 'not-allowed'
+            ? 'Permiso denegado por el navegador'
+            : event.error === 'network'
+            ? 'Error de red'
+            : event.error,
+          charIndex: event.charIndex,
+          elapsedTime: event.elapsedTime
+        })
+        setSpeaking(false)
+      }
+
+      utteranceRef.current = utterance
+      window.speechSynthesis.speak(utterance)
+    } catch (error) {
+      console.error('Excepción en TTS:', error)
+      setSpeaking(false)
+    }
   }, [supported, enabled, lang, rate, pitch, volume])
 
   const cancel = useCallback(() => {
@@ -108,6 +170,7 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
     setVolume,
     enabled,
     rate,
-    volume
+    volume,
+    voicesLoaded
   }
 }

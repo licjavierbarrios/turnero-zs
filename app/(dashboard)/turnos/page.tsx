@@ -208,12 +208,36 @@ export default function QueuePage() {
     e.preventDefault()
 
     try {
+      // Validación de datos requeridos
+      if (!patientName.trim()) {
+        alert('El nombre del paciente es requerido')
+        return
+      }
+
+      if (!patientDni.trim()) {
+        alert('El DNI del paciente es requerido')
+        return
+      }
+
+      if (!selectedService) {
+        alert('Debe seleccionar un servicio')
+        return
+      }
+
       const contextData = localStorage.getItem('institution_context')
-      if (!contextData) return
+      if (!contextData) {
+        alert('No hay contexto institucional configurado')
+        return
+      }
       const context = JSON.parse(contextData)
 
       const { data: authData } = await supabase.auth.getUser()
       const userId = authData.user?.id
+
+      if (!userId) {
+        alert('No hay usuario autenticado')
+        return
+      }
 
       const today = new Date().toISOString().split('T')[0]
 
@@ -228,8 +252,8 @@ export default function QueuePage() {
         .from('daily_queue')
         .insert({
           order_number: nextNumber,
-          patient_name: patientName,
-          patient_dni: patientDni,
+          patient_name: patientName.trim(),
+          patient_dni: patientDni.trim(),
           service_id: selectedService,
           institution_id: context.institution_id,
           queue_date: today,
