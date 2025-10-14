@@ -570,7 +570,7 @@ export default function PantallaPublicaPage({
         enabled={ttsEnabled}
         volume={ttsVolume}
         rate={ttsRate}
-        includeServiceName={hasMultipleServices}
+        includeServiceName={true}
       />
       <TTSControls onTest={handleTestTTS} />
     </div>

@@ -72,9 +72,24 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================================================
-  // PROTECCIÓN DE RUTAS /dashboard/*
+  // PROTECCIÓN DE RUTAS DEL DASHBOARD
   // ============================================================================
-  if (path.startsWith('/dashboard')) {
+  // Rutas del dashboard (con o sin prefijo /dashboard)
+  const dashboardRoutes = [
+    '/dashboard',
+    '/turnos',
+    '/agenda',
+    '/asignaciones',
+    '/profesionales',
+    '/servicios',
+    '/consultorios',
+    '/reportes',
+    '/configuracion',
+  ]
+
+  const isDashboardRoute = dashboardRoutes.some(route => path.startsWith(route))
+
+  if (isDashboardRoute) {
     // Si no hay usuario, redirigir a login (página principal)
     if (!user) {
       const redirectUrl = new URL('/', request.url)
@@ -119,5 +134,13 @@ export const config = {
     '/',
     '/super-admin/:path*',
     '/dashboard/:path*',
+    '/turnos/:path*',
+    '/agenda/:path*',
+    '/asignaciones/:path*',
+    '/profesionales/:path*',
+    '/servicios/:path*',
+    '/consultorios/:path*',
+    '/reportes/:path*',
+    '/configuracion/:path*',
   ],
 }

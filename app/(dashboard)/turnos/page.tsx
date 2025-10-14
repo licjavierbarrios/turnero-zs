@@ -52,8 +52,7 @@ interface ProfessionalAssignment {
   professional_id: string
   room_id: string
   professional_name: string
-  service_id: string
-  service_name: string
+  speciality: string | null
   room_name: string
 }
 
@@ -226,11 +225,7 @@ export default function QueuePage() {
             id,
             first_name,
             last_name,
-            service_id,
-            service:service_id (
-              id,
-              name
-            )
+            speciality
           ),
           room:room_id (
             id,
@@ -240,20 +235,30 @@ export default function QueuePage() {
         .eq('institution_id', context.institution_id)
         .eq('assignment_date', today)
 
-      if (assignmentsError) throw assignmentsError
+      if (assignmentsError) {
+        console.error('Error al cargar asignaciones:', {
+          message: assignmentsError.message,
+          details: assignmentsError.details,
+          hint: assignmentsError.hint,
+          code: assignmentsError.code
+        })
+        throw assignmentsError
+      }
 
       // Transformar asignaciones
       const transformedAssignments: ProfessionalAssignment[] = (assignmentsData || [])
         .filter(a => a.professional && a.room)
-        .map(a => ({
-          id: a.id,
-          professional_id: a.professional_id,
-          room_id: a.room_id,
-          professional_name: `${(a.professional as any).first_name} ${(a.professional as any).last_name}`,
-          service_id: (a.professional as any).service_id,
-          service_name: (a.professional as any).service?.name || 'Sin servicio',
-          room_name: (a.room as any).name
-        }))
+        .map(a => {
+          const prof = a.professional as any
+          return {
+            id: a.id,
+            professional_id: a.professional_id,
+            room_id: a.room_id,
+            professional_name: `${prof.first_name} ${prof.last_name}`,
+            speciality: prof.speciality,
+            room_name: (a.room as any).name
+          }
+        })
 
       setProfessionalAssignments(transformedAssignments)
 
@@ -270,8 +275,10 @@ export default function QueuePage() {
       const professionalOptions: AttentionOption[] = transformedAssignments.map(a => ({
         id: `professional-${a.professional_id}`,
         type: 'professional',
-        label: `${a.professional_name} - ${a.service_name} (${a.room_name})`,
-        service_id: a.service_id,
+        label: a.speciality
+          ? `${a.professional_name} - ${a.speciality} (${a.room_name})`
+          : `${a.professional_name} (${a.room_name})`,
+        service_id: '', // Los profesionales no tienen service_id
         professional_id: a.professional_id,
         room_id: a.room_id
       }))
@@ -362,11 +369,15 @@ export default function QueuePage() {
           order_number: nextNumber,
           patient_name: patientName,
           patient_dni: patientDni,
-          service_id: option.service_id,
           institution_id: context.institution_id,
           queue_date: today,
           status: 'pendiente',
           created_by: userId
+        }
+
+        // Si es un servicio, agregar service_id
+        if (option.type === 'service') {
+          queueEntry.service_id = option.service_id
         }
 
         // Si es un profesional, agregar professional_id y room_id
