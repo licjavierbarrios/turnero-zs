@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,25 @@ interface Service {
   name: string
 }
 
+interface ProfessionalAssignment {
+  id: string
+  professional_id: string
+  room_id: string
+  professional_name: string
+  service_id: string
+  service_name: string
+  room_name: string
+}
+
+interface AttentionOption {
+  id: string
+  type: 'service' | 'professional'
+  label: string
+  service_id: string
+  professional_id: string | null
+  room_id: string | null
+}
+
 const statusConfig = {
   pendiente: {
     label: 'Pendiente',
@@ -79,6 +99,8 @@ export default function QueuePage() {
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [filteredQueue, setFilteredQueue] = useState<QueueItem[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [professionalAssignments, setProfessionalAssignments] = useState<ProfessionalAssignment[]>([])
+  const [attentionOptions, setAttentionOptions] = useState<AttentionOption[]>([])
   const [userServices, setUserServices] = useState<Service[]>([]) // Servicios asignados al usuario
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('ALL') // Filtro por servicio
   const [loading, setLoading] = useState(true)
@@ -88,7 +110,7 @@ export default function QueuePage() {
   // Form state
   const [patientName, setPatientName] = useState('')
   const [patientDni, setPatientDni] = useState('')
-  const [selectedService, setSelectedService] = useState('')
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
 
   useEffect(() => {
     fetchData()
@@ -179,6 +201,9 @@ export default function QueuePage() {
 
       setUserServices(assignedServices)
 
+      // Obtener fecha del día actual
+      const today = new Date().toISOString().split('T')[0]
+
       // Obtener todos los servicios de la institución (para el formulario de carga)
       const { data: servicesData, error: servicesError } = await supabase
         .from('service')
@@ -190,9 +215,70 @@ export default function QueuePage() {
       if (servicesError) throw servicesError
       setServices(servicesData || [])
 
-      // Obtener cola del día actual
-      const today = new Date().toISOString().split('T')[0]
+      // Obtener asignaciones de profesionales del día actual
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('daily_professional_assignment')
+        .select(`
+          id,
+          professional_id,
+          room_id,
+          professional:professional_id (
+            id,
+            first_name,
+            last_name,
+            service_id,
+            service:service_id (
+              id,
+              name
+            )
+          ),
+          room:room_id (
+            id,
+            name
+          )
+        `)
+        .eq('institution_id', context.institution_id)
+        .eq('assignment_date', today)
 
+      if (assignmentsError) throw assignmentsError
+
+      // Transformar asignaciones
+      const transformedAssignments: ProfessionalAssignment[] = (assignmentsData || [])
+        .filter(a => a.professional && a.room)
+        .map(a => ({
+          id: a.id,
+          professional_id: a.professional_id,
+          room_id: a.room_id,
+          professional_name: `${(a.professional as any).first_name} ${(a.professional as any).last_name}`,
+          service_id: (a.professional as any).service_id,
+          service_name: (a.professional as any).service?.name || 'Sin servicio',
+          room_name: (a.room as any).name
+        }))
+
+      setProfessionalAssignments(transformedAssignments)
+
+      // Combinar servicios y profesionales en opciones de atención
+      const serviceOptions: AttentionOption[] = servicesData.map(s => ({
+        id: `service-${s.id}`,
+        type: 'service',
+        label: s.name,
+        service_id: s.id,
+        professional_id: null,
+        room_id: null
+      }))
+
+      const professionalOptions: AttentionOption[] = transformedAssignments.map(a => ({
+        id: `professional-${a.professional_id}`,
+        type: 'professional',
+        label: `${a.professional_name} - ${a.service_name} (${a.room_name})`,
+        service_id: a.service_id,
+        professional_id: a.professional_id,
+        room_id: a.room_id
+      }))
+
+      setAttentionOptions([...serviceOptions, ...professionalOptions])
+
+      // Obtener cola del día actual
       const { data: queueData, error: queueError } = await supabase
         .from('daily_queue')
         .select(`
@@ -242,6 +328,11 @@ export default function QueuePage() {
   const handleAddPatient = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (selectedOptions.length === 0) {
+      alert('Por favor selecciona al menos un servicio o profesional')
+      return
+    }
+
     try {
       const contextData = localStorage.getItem('institution_context')
       if (!contextData) return
@@ -252,32 +343,49 @@ export default function QueuePage() {
 
       const today = new Date().toISOString().split('T')[0]
 
-      // Obtener siguiente número de orden
-      const { data: nextNumber } = await supabase
-        .rpc('get_next_order_number', {
-          p_institution_id: context.institution_id,
-          p_date: today
-        })
+      // Crear una entrada en la cola por cada opción seleccionada
+      for (let i = 0; i < selectedOptions.length; i++) {
+        const optionId = selectedOptions[i]
+        const option = attentionOptions.find(o => o.id === optionId)
 
-      const { error } = await supabase
-        .from('daily_queue')
-        .insert({
+        if (!option) continue
+
+        // Obtener siguiente número de orden
+        const { data: nextNumber } = await supabase
+          .rpc('get_next_order_number', {
+            p_institution_id: context.institution_id,
+            p_date: today
+          })
+
+        // Preparar datos del registro
+        const queueEntry: any = {
           order_number: nextNumber,
           patient_name: patientName,
           patient_dni: patientDni,
-          service_id: selectedService,
+          service_id: option.service_id,
           institution_id: context.institution_id,
           queue_date: today,
           status: 'pendiente',
           created_by: userId
-        })
+        }
 
-      if (error) throw error
+        // Si es un profesional, agregar professional_id y room_id
+        if (option.type === 'professional') {
+          queueEntry.professional_id = option.professional_id
+          queueEntry.room_id = option.room_id
+        }
+
+        const { error } = await supabase
+          .from('daily_queue')
+          .insert(queueEntry)
+
+        if (error) throw error
+      }
 
       // Limpiar formulario y cerrar dialog
       setPatientName('')
       setPatientDni('')
-      setSelectedService('')
+      setSelectedOptions([])
       setIsDialogOpen(false)
 
       // Recargar cola
@@ -402,20 +510,85 @@ export default function QueuePage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="service">Servicio/Especialidad *</Label>
-                  <Select value={selectedService} onValueChange={setSelectedService} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar servicio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label>Servicios y Profesionales *</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Selecciona todos los servicios/profesionales que el paciente necesita
+                  </p>
+                  <div className="border rounded-md p-4 max-h-80 overflow-y-auto space-y-3">
+                    {attentionOptions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No hay servicios o profesionales disponibles
+                      </p>
+                    ) : (
+                      <>
+                        {/* Servicios */}
+                        {attentionOptions.filter(o => o.type === 'service').length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-700">Servicios</h4>
+                            {attentionOptions
+                              .filter(o => o.type === 'service')
+                              .map((option) => (
+                                <div key={option.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={option.id}
+                                    checked={selectedOptions.includes(option.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedOptions([...selectedOptions, option.id])
+                                      } else {
+                                        setSelectedOptions(selectedOptions.filter(id => id !== option.id))
+                                      }
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor={option.id}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                  >
+                                    {option.label}
+                                  </label>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+
+                        {/* Profesionales */}
+                        {attentionOptions.filter(o => o.type === 'professional').length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-700">Profesionales Asignados Hoy</h4>
+                            {attentionOptions
+                              .filter(o => o.type === 'professional')
+                              .map((option) => (
+                                <div key={option.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={option.id}
+                                    checked={selectedOptions.includes(option.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedOptions([...selectedOptions, option.id])
+                                      } else {
+                                        setSelectedOptions(selectedOptions.filter(id => id !== option.id))
+                                      }
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor={option.id}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                  >
+                                    {option.label}
+                                  </label>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {selectedOptions.length > 0 && (
+                    <p className="text-sm text-blue-600 font-medium">
+                      {selectedOptions.length} seleccionado{selectedOptions.length > 1 ? 's' : ''}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">

@@ -33,7 +33,7 @@ const navigation = [
     name: 'Turnos',
     href: '/turnos',
     icon: ClockIcon,
-    roles: ['admin', 'administrativo'] // Solo admin y administrativo gestionan turnos
+    roles: ['admin', 'administrativo', 'medico', 'enfermeria'] // Admin, administrativo, médicos y enfermería
   },
   {
     name: 'Agenda',

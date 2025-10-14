@@ -10,7 +10,7 @@ export type UserRole = 'admin' | 'administrativo' | 'medico' | 'enfermeria' | 'p
  */
 export const routePermissions: Record<string, UserRole[]> = {
   '/dashboard': ['admin', 'administrativo', 'medico', 'enfermeria'],
-  '/turnos': ['admin', 'administrativo'],
+  '/turnos': ['admin', 'administrativo', 'medico', 'enfermeria'],
   '/agenda': ['admin', 'administrativo', 'medico'],
   '/asignaciones': ['admin', 'administrativo'],
   '/profesionales': ['admin'],
