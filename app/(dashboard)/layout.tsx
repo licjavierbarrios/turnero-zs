@@ -21,15 +21,62 @@ import {
   SettingsIcon
 } from 'lucide-react'
 
+// Definición de navegación con roles permitidos
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Turnos', href: '/turnos', icon: ClockIcon },
-  { name: 'Agenda', href: '/agenda', icon: CalendarIcon },
-  { name: 'Profesionales', href: '/profesionales', icon: UsersIcon },
-  { name: 'Servicios', href: '/servicios', icon: HeartHandshakeIcon },
-  { name: 'Consultorios', href: '/consultorios', icon: MapPinIcon },
-  { name: 'Reportes', href: '/reportes', icon: BarChart3Icon },
-  { name: 'Configuración', href: '/configuracion', icon: SettingsIcon },
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: HomeIcon,
+    roles: ['admin', 'administrativo', 'medico', 'enfermeria'] // Todos menos pantalla
+  },
+  {
+    name: 'Turnos',
+    href: '/turnos',
+    icon: ClockIcon,
+    roles: ['admin', 'administrativo'] // Solo admin y administrativo gestionan turnos
+  },
+  {
+    name: 'Agenda',
+    href: '/agenda',
+    icon: CalendarIcon,
+    roles: ['admin', 'administrativo', 'medico'] // Admin, administrativo y médicos
+  },
+  {
+    name: 'Asignaciones',
+    href: '/asignaciones',
+    icon: UserIcon,
+    roles: ['admin', 'administrativo'] // Admin y administrativo asignan consultorios
+  },
+  {
+    name: 'Profesionales',
+    href: '/profesionales',
+    icon: UsersIcon,
+    roles: ['admin'] // Solo admin gestiona profesionales
+  },
+  {
+    name: 'Servicios',
+    href: '/servicios',
+    icon: HeartHandshakeIcon,
+    roles: ['admin'] // Solo admin gestiona servicios
+  },
+  {
+    name: 'Consultorios',
+    href: '/consultorios',
+    icon: MapPinIcon,
+    roles: ['admin'] // Solo admin gestiona consultorios
+  },
+  {
+    name: 'Reportes',
+    href: '/reportes',
+    icon: BarChart3Icon,
+    roles: ['admin', 'administrativo'] // Admin y administrativo ven reportes
+  },
+  {
+    name: 'Configuración',
+    href: '/configuracion',
+    icon: SettingsIcon,
+    roles: ['admin'] // Solo admin configura TTS
+  },
 ]
 
 function classNames(...classes: string[]) {
@@ -150,6 +197,11 @@ export default function DashboardLayout({
     )
   }
 
+  // Filtrar navegación según el rol del usuario
+  const allowedNavigation = navigation.filter(item =>
+    item.roles.includes(institutionContext.user_role)
+  )
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
@@ -166,7 +218,7 @@ export default function DashboardLayout({
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1">
-            {navigation.map((item) => {
+            {allowedNavigation.map((item) => {
               const IconComponent = item.icon
               return (
                 <Link

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { Calendar, ChevronLeft, ChevronRight, User, Clock, Building, Activity, Users, CalendarDays } from 'lucide-react'
+import { useRequirePermission } from '@/hooks/use-permissions'
 
 type SlotTemplate = {
   id: string
@@ -64,6 +65,7 @@ const daysOfWeek = [
 ]
 
 export default function AgendaPage() {
+  const { hasAccess, loading: permissionLoading } = useRequirePermission('/agenda')
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [institutionContext, setInstitutionContext] = useState<any>(null)
@@ -336,15 +338,19 @@ export default function AgendaPage() {
     )
   )).sort()
 
-  if (!user || !institutionContext) {
+  if (permissionLoading || !user || !institutionContext) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Cargando agenda...</p>
+          <p className="mt-2 text-gray-600">Cargando...</p>
         </div>
       </div>
     )
+  }
+
+  if (!hasAccess) {
+    return null
   }
 
   return (

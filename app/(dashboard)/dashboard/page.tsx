@@ -20,6 +20,7 @@ import {
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
+import { useRequirePermission } from '@/hooks/use-permissions'
 
 interface DashboardStats {
   todayAppointments: number
@@ -42,6 +43,7 @@ import { supabase } from '@/lib/supabase'
 import { startOfDay, endOfDay } from 'date-fns'
 
 export default function DashboardPage() {
+  const { hasAccess, loading: permissionLoading } = useRequirePermission('/dashboard')
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [institutionContext, setInstitutionContext] = useState<any>(null)
@@ -231,15 +233,19 @@ export default function DashboardPage() {
     }
   }
 
-  if (!user || !institutionContext) {
+  if (permissionLoading || !user || !institutionContext) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Cargando dashboard...</p>
+          <p className="mt-2 text-gray-600">Cargando...</p>
         </div>
       </div>
     )
+  }
+
+  if (!hasAccess) {
+    return null
   }
 
   const getStatusColor = (status: string) => {

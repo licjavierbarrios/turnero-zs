@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Volume2, Save, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { initAudioContext, playNotificationSound } from '@/lib/audio-utils'
+import { useRequirePermission } from '@/hooks/use-permissions'
 
 interface TTSConfig {
   tts_enabled: boolean
@@ -18,6 +19,9 @@ interface TTSConfig {
 }
 
 export default function ConfiguracionPage() {
+  // Verificar permisos - solo admin puede acceder
+  const { hasAccess, loading: permissionLoading } = useRequirePermission('/configuracion')
+
   const [config, setConfig] = useState<TTSConfig>({
     tts_enabled: true,
     tts_volume: 0.8,
@@ -108,7 +112,8 @@ export default function ConfiguracionPage() {
     }, 500)
   }
 
-  if (loading) {
+  // Mostrar loading mientras verificamos permisos o cargamos datos
+  if (permissionLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -117,6 +122,11 @@ export default function ConfiguracionPage() {
         </div>
       </div>
     )
+  }
+
+  // Si no tiene acceso, el hook ya redirigió automáticamente
+  if (!hasAccess) {
+    return null
   }
 
   return (

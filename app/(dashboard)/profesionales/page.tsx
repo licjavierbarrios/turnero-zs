@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, UserCheck, UserX, Stethoscope } from 'lucide-react'
+import { useRequirePermission } from '@/hooks/use-permissions'
 
 type Professional = {
   id: string
@@ -43,6 +44,7 @@ type Institution = {
 }
 
 export default function ProfesionalesPage() {
+  const { hasAccess, loading: permissionLoading } = useRequirePermission('/profesionales')
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [loading, setLoading] = useState(true)
@@ -241,7 +243,7 @@ export default function ProfesionalesPage() {
   }
 
   const resetForm = () => {
-    setFormData({ 
+    setFormData({
       first_name: '',
       last_name: '',
       institution_id: '',
@@ -253,6 +255,21 @@ export default function ProfesionalesPage() {
     })
     setEditingProfessional(null)
     setError(null)
+  }
+
+  if (permissionLoading || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!hasAccess) {
+    return null
   }
 
   return (
@@ -428,11 +445,7 @@ export default function ProfesionalesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-8">
-              <p>Cargando profesionales...</p>
-            </div>
-          ) : professionals.length === 0 ? (
+          {professionals.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
                 No hay profesionales registrados. Registra el primer profesional.

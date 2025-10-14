@@ -42,6 +42,7 @@ export default function ConsultoriosPage() {
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<Room | null>(null)
+  const [currentInstitutionId, setCurrentInstitutionId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     institution_id: '',
@@ -52,12 +53,29 @@ export default function ConsultoriosPage() {
   const { toast } = useToast()
 
   useEffect(() => {
+    // Get current institution from localStorage
+    const contextData = localStorage.getItem('institution_context')
+    if (contextData) {
+      const context = JSON.parse(contextData)
+      setCurrentInstitutionId(context.institution_id)
+      setFormData(prev => ({ ...prev, institution_id: context.institution_id }))
+    }
+
     Promise.all([fetchRooms(), fetchInstitutions()])
   }, [])
 
   const fetchRooms = async () => {
     try {
       setLoading(true)
+
+      // Get current institution from localStorage
+      const contextData = localStorage.getItem('institution_context')
+      if (!contextData) {
+        setError('No se encontró el contexto de la institución')
+        return
+      }
+      const context = JSON.parse(contextData)
+
       const { data, error } = await supabase
         .from('room')
         .select(`
@@ -68,11 +86,11 @@ export default function ConsultoriosPage() {
             zone_name:zone!inner(name)
           )
         `)
-        .order('institution_id', { ascending: true })
+        .eq('institution_id', context.institution_id)
         .order('name', { ascending: true })
 
       if (error) throw error
-      
+
       const formattedData = data?.map(item => ({
         ...item,
         institution: item.institution ? {
@@ -81,7 +99,7 @@ export default function ConsultoriosPage() {
           zone_name: item.institution.zone_name?.[0]?.name || 'Sin zona'
         } : undefined
       })) || []
-      
+
       setRooms(formattedData)
     } catch (error) {
       console.error('Error fetching rooms:', error)
@@ -93,6 +111,13 @@ export default function ConsultoriosPage() {
 
   const fetchInstitutions = async () => {
     try {
+      // Get current institution from localStorage
+      const contextData = localStorage.getItem('institution_context')
+      if (!contextData) {
+        return
+      }
+      const context = JSON.parse(contextData)
+
       const { data, error } = await supabase
         .from('institution')
         .select(`
@@ -100,17 +125,18 @@ export default function ConsultoriosPage() {
           name,
           zone_name:zone!inner(name)
         `)
-        .order('name', { ascending: true })
+        .eq('id', context.institution_id)
+        .single()
 
       if (error) throw error
-      
-      const formattedData = data?.map(item => ({
-        id: item.id,
-        name: item.name,
-        zone_name: item.zone_name?.[0]?.name || 'Sin zona'
-      })) || []
-      
-      setInstitutions(formattedData)
+
+      const formattedData = {
+        id: data.id,
+        name: data.name,
+        zone_name: data.zone_name?.[0]?.name || 'Sin zona'
+      }
+
+      setInstitutions([formattedData])
     } catch (error) {
       console.error('Error fetching institutions:', error)
     }
@@ -121,6 +147,12 @@ export default function ConsultoriosPage() {
     setError(null)
 
     try {
+      // Validar que tenemos institution_id
+      if (!formData.institution_id) {
+        setError('No se ha establecido la institución')
+        return
+      }
+
       if (editingRoom) {
         // Update existing room
         const { error } = await supabase
@@ -135,7 +167,7 @@ export default function ConsultoriosPage() {
           .eq('id', editingRoom.id)
 
         if (error) throw error
-        
+
         toast({
           title: "Consultorio actualizado",
           description: "El consultorio se ha actualizado correctamente.",
@@ -152,7 +184,7 @@ export default function ConsultoriosPage() {
           })
 
         if (error) throw error
-        
+
         toast({
           title: "Consultorio creado",
           description: "El consultorio se ha creado correctamente.",
@@ -230,9 +262,12 @@ export default function ConsultoriosPage() {
   }
 
   const resetForm = () => {
-    setFormData({ 
+    const contextData = localStorage.getItem('institution_context')
+    const institutionId = contextData ? JSON.parse(contextData).institution_id : ''
+
+    setFormData({
       name: '',
-      institution_id: '',
+      institution_id: institutionId,
       description: '',
       is_active: true
     })
@@ -307,21 +342,13 @@ export default function ConsultoriosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="room_institution_id">Institución *</Label>
-                <Select 
-                  value={formData.institution_id} 
-                  onValueChange={(value) => setFormData({ ...formData, institution_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar institución" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {institutions.map((institution) => (
-                      <SelectItem key={institution.id} value={institution.id}>
-                        {institution.name} - {institution.zone_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="room_institution_id"
+                  type="text"
+                  value={institutions[0]?.name ? `${institutions[0].name} - ${institutions[0].zone_name}` : 'Cargando...'}
+                  disabled
+                  className="bg-gray-100"
+                />
               </div>
 
               <div className="space-y-2">

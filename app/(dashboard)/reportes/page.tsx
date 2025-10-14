@@ -36,6 +36,7 @@ import {
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from '@/hooks/use-toast'
+import { useRequirePermission } from '@/hooks/use-permissions'
 
 interface MetricsSummary {
   totalAppointments: number
@@ -93,6 +94,7 @@ const PERIOD_OPTIONS = [
 ]
 
 export default function ReportesPage() {
+  const { hasAccess, loading: permissionLoading } = useRequirePermission('/reportes')
   const { userMembership, loading: membershipLoading } = useUserMembership()
   const [selectedInstitution, setSelectedInstitution] = useState<string>('')
   const [institutions, setInstitutions] = useState<Institution[]>([])
@@ -620,29 +622,22 @@ export default function ReportesPage() {
     return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`
   }
 
-  if (membershipLoading) {
+  if (permissionLoading || membershipLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Cargando membresía...</p>
+          <p className="mt-2 text-gray-600">Cargando...</p>
         </div>
       </div>
     )
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Cargando reportes...</p>
-        </div>
-      </div>
-    )
+  if (!hasAccess) {
+    return null
   }
 
-  if (institutions.length === 0 && !loading && !membershipLoading) {
+  if (institutions.length === 0) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
