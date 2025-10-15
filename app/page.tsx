@@ -42,7 +42,7 @@ export default function LoginPage() {
         .eq('user_id', data.user.id)
         .eq('is_active', true)
 
-      const isSuperAdmin = memberships?.some(m => m.role === 'super_admin')
+      const isSuperAdmin = memberships?.some((m: any) => m.role === 'super_admin')
 
       // Redirigir según rol
       if (isSuperAdmin) {

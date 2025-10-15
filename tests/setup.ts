@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import 'whatwg-fetch'
-import { vi } from 'vitest'
+import { vi, beforeAll, afterAll, afterEach } from 'vitest'
 
 // Mock de next/navigation
 vi.mock('next/navigation', () => ({

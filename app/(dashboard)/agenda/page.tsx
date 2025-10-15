@@ -185,7 +185,7 @@ export default function AgendaPage() {
           const { data: templateData, error: templateError } = await supabase
             .from('slot_template')
             .select('*')
-            .in('professional_id', professionalData.map(p => p.id))
+            .in('professional_id', professionalData.map((p: Professional) => p.id))
             .eq('is_active', true)
 
           if (!templateError) {

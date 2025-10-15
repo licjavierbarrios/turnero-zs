@@ -187,7 +187,7 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
 
       if (error) throw error
 
-      const formattedData = data?.map(item => ({
+      const formattedData = data?.map((item: any) => ({
         ...item,
         institution: item.institution ? {
           id: item.institution.id,
@@ -223,7 +223,7 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
 
       if (error) throw error
 
-      const formattedData = data?.map(item => ({
+      const formattedData = data?.map((item: any) => ({
         ...item,
         institution_name: (item.institution as any)?.name || 'Sin institución',
         zone_name: (item.institution as any)?.zone?.name || 'Sin zona'

@@ -322,7 +322,7 @@ export const SecurityMonitor = {
 
       // Detect rapid-fire actions from same user
       const userActions = new Map<string, number>()
-      recentActivity?.forEach(log => {
+      recentActivity?.forEach((log: any) => {
         if (log.user_id) {
           userActions.set(log.user_id, (userActions.get(log.user_id) || 0) + 1)
         }
@@ -357,7 +357,7 @@ export const SecurityMonitor = {
 
       if (error) throw error
 
-      const unauthorizedAttempts = errorLogs?.filter(log =>
+      const unauthorizedAttempts = errorLogs?.filter((log: any) =>
         log.new_data?.error_message?.includes('unauthorized') ||
         log.new_data?.error_message?.includes('permission denied')
       )

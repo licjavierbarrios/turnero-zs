@@ -93,7 +93,7 @@ export default function ServiciosPage() {
 
       if (error) throw error
 
-      const formattedData = data?.map(item => ({
+      const formattedData = data?.map((item: any) => ({
         ...item,
         institution: item.institution ? {
           id: item.institution.id,

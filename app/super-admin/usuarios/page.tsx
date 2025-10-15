@@ -355,7 +355,7 @@ export default function SuperAdminUsuariosPage() {
 
       if (error) throw error
 
-      const formattedData = data?.map(item => ({
+      const formattedData = data?.map((item: any) => ({
         ...item,
         institution: item.institution ? {
           id: item.institution.id,
@@ -384,7 +384,7 @@ export default function SuperAdminUsuariosPage() {
 
       if (error) throw error
 
-      const formattedData = data?.map(item => ({
+      const formattedData = data?.map((item: any) => ({
         id: item.id,
         name: item.name,
         zone_name: item.zone?.name || 'Sin zona'
@@ -895,7 +895,7 @@ export default function SuperAdminUsuariosPage() {
 
                           {editingUserMemberships.length === 0 ? (
                             <p className="text-sm text-muted-foreground italic">
-                              Este usuario no tiene instituciones asignadas. Usa la pestaña "Membresías" para asignarle instituciones.
+                              Este usuario no tiene instituciones asignadas. Usa la pestaña &quot;Membresías&quot; para asignarle instituciones.
                             </p>
                           ) : (
                             <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -916,7 +916,7 @@ export default function SuperAdminUsuariosPage() {
                           )}
 
                           <p className="text-xs text-muted-foreground">
-                            Para gestionar las instituciones de este usuario, ve a la pestaña "Membresías".
+                            Para gestionar las instituciones de este usuario, ve a la pestaña &quot;Membresías&quot;.
                           </p>
                         </div>
                       </>

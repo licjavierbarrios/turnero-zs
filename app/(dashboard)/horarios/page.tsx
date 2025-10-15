@@ -158,12 +158,12 @@ export default function HorariosPage() {
       if (profError || instError || servError || roomsError) {
         throw profError || instError || servError || roomsError
       }
-      
-      const formattedData = templatesData?.map(template => {
-        const professional = professionalsData?.find(p => p.id === template.professional_id)
-        const institution = professional ? institutionsData?.find(i => i.id === professional.institution_id) : undefined
-        const service = servicesData?.find(s => s.id === template.service_id)
-        const room = roomsData?.find(r => r.id === template.room_id)
+
+      const formattedData = templatesData?.map((template: any) => {
+        const professional = professionalsData?.find((p: any) => p.id === template.professional_id)
+        const institution = professional ? institutionsData?.find((i: any) => i.id === professional.institution_id) : undefined
+        const service = servicesData?.find((s: any) => s.id === template.service_id)
+        const room = roomsData?.find((r: any) => r.id === template.room_id)
         
         return {
           ...template,
@@ -220,8 +220,8 @@ export default function HorariosPage() {
 
       if (instError) throw instError
       
-      const formattedData = professionalsData?.map(prof => {
-        const institution = institutionsData?.find(inst => inst.id === prof.institution_id)
+      const formattedData = professionalsData?.map((prof: any) => {
+        const institution = institutionsData?.find((inst: any) => inst.id === prof.institution_id)
         return {
           id: prof.id,
           first_name: prof.first_name,

@@ -237,9 +237,9 @@ export default function ReportesPage() {
       if (error) throw error
 
       const total = appointments?.length || 0
-      const completed = appointments?.filter(apt => apt.status === 'finalizado').length || 0
-      const cancelled = appointments?.filter(apt => apt.status === 'cancelado').length || 0
-      const noShow = appointments?.filter(apt => apt.status === 'ausente').length || 0
+      const completed = appointments?.filter((apt: any) => apt.status === 'finalizado').length || 0
+      const cancelled = appointments?.filter((apt: any) => apt.status === 'cancelado').length || 0
+      const noShow = appointments?.filter((apt: any) => apt.status === 'ausente').length || 0
 
       // Calculate average wait times and consultation times
       let totalWaitTime = 0
@@ -247,7 +247,7 @@ export default function ReportesPage() {
       let totalConsultationTime = 0
       let consultationTimeCount = 0
 
-      appointments?.forEach(apt => {
+      appointments?.forEach((apt: any) => {
         // Wait time: from scheduled_at to called_at
         if (apt.call_event && apt.call_event.length > 0) {
           const scheduledTime = new Date(apt.scheduled_at).getTime()
@@ -318,7 +318,7 @@ export default function ReportesPage() {
 
       // Group by professional
       const professionalGroups: { [key: string]: any[] } = {}
-      appointments?.forEach(apt => {
+      appointments?.forEach((apt: any) => {
         if (apt.professional && !Array.isArray(apt.professional)) {
           const key = (apt.professional as any).id
           if (!professionalGroups[key]) {
@@ -331,9 +331,9 @@ export default function ReportesPage() {
       const metrics: ProfessionalMetrics[] = Object.entries(professionalGroups).map(([professionalId, apts]) => {
         const professional = apts[0].professional as any
         const total = apts.length
-        const completed = apts.filter(apt => apt.status === 'finalizado').length
-        const cancelled = apts.filter(apt => apt.status === 'cancelado').length
-        const noShow = apts.filter(apt => apt.status === 'ausente').length
+        const completed = apts.filter((apt: any) => apt.status === 'finalizado').length
+        const cancelled = apts.filter((apt: any) => apt.status === 'cancelado').length
+        const noShow = apts.filter((apt: any) => apt.status === 'ausente').length
 
         // Calculate times
         let totalWaitTime = 0
@@ -408,7 +408,7 @@ export default function ReportesPage() {
 
       // Group by service
       const serviceGroups: { [key: string]: any[] } = {}
-      appointments?.forEach(apt => {
+      appointments?.forEach((apt: any) => {
         if (apt.service && !Array.isArray(apt.service)) {
           const key = (apt.service as any).id
           if (!serviceGroups[key]) {
@@ -421,7 +421,7 @@ export default function ReportesPage() {
       const metrics: ServiceMetrics[] = Object.entries(serviceGroups).map(([serviceId, apts]) => {
         const service = apts[0].service as any
         const total = apts.length
-        const completed = apts.filter(apt => apt.status === 'finalizado').length
+        const completed = apts.filter((apt: any) => apt.status === 'finalizado').length
 
         // Calculate times
         let totalWaitTime = 0
@@ -489,7 +489,7 @@ export default function ReportesPage() {
 
       // Group by date
       const dateGroups: { [key: string]: any[] } = {}
-      appointments?.forEach(apt => {
+      appointments?.forEach((apt: any) => {
         const date = format(new Date(apt.scheduled_at), 'yyyy-MM-dd')
         if (!dateGroups[date]) {
           dateGroups[date] = []
@@ -499,7 +499,7 @@ export default function ReportesPage() {
 
       const timeSeries: TimeSeriesData[] = Object.entries(dateGroups).map(([date, apts]) => {
         const total = apts.length
-        const completed = apts.filter(apt => apt.status === 'finalizado').length
+        const completed = apts.filter((apt: any) => apt.status === 'finalizado').length
 
         // Calculate average times for this date
         let totalWaitTime = 0

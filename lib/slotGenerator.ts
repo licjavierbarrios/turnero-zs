@@ -168,7 +168,7 @@ export async function getSlotTemplatesForInstitution(
     return []
   }
 
-  const professionalIds = professionals.map(p => p.id)
+  const professionalIds = professionals.map((p: any) => p.id)
   
   if (professionalIds.length === 0) {
     return []

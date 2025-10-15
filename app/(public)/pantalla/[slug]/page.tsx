@@ -96,7 +96,7 @@ export default function PantallaPublicaPage({
         .select('*')
         .eq('id', savedTemplateId)
         .single()
-        .then(({ data }) => {
+        .then(({ data }: { data: any }) => {
           if (data) setCurrentTemplate(data)
         })
     }

@@ -192,8 +192,8 @@ export default function QueuePage() {
       if (userServicesError) throw userServicesError
 
       const assignedServices = (userServicesData || [])
-        .filter(us => us.service)
-        .map(us => ({
+        .filter((us: any) => us.service)
+        .map((us: any) => ({
           id: (us.service as any).id,
           name: (us.service as any).name
         }))
@@ -247,8 +247,8 @@ export default function QueuePage() {
 
       // Transformar asignaciones
       const transformedAssignments: ProfessionalAssignment[] = (assignmentsData || [])
-        .filter(a => a.professional && a.room)
-        .map(a => {
+        .filter((a: any) => a.professional && a.room)
+        .map((a: any) => {
           const prof = a.professional as any
           return {
             id: a.id,
@@ -263,7 +263,7 @@ export default function QueuePage() {
       setProfessionalAssignments(transformedAssignments)
 
       // Combinar servicios y profesionales en opciones de atención
-      const serviceOptions: AttentionOption[] = servicesData.map(s => ({
+      const serviceOptions: AttentionOption[] = servicesData.map((s: Service) => ({
         id: `service-${s.id}`,
         type: 'service',
         label: s.name,
@@ -272,7 +272,7 @@ export default function QueuePage() {
         room_id: null
       }))
 
-      const professionalOptions: AttentionOption[] = transformedAssignments.map(a => ({
+      const professionalOptions: AttentionOption[] = transformedAssignments.map((a: ProfessionalAssignment) => ({
         id: `professional-${a.professional_id}`,
         type: 'professional',
         label: a.speciality
@@ -310,7 +310,7 @@ export default function QueuePage() {
       if (queueError) throw queueError
 
       // Transformar datos
-      const transformedQueue: QueueItem[] = (queueData || []).map(item => ({
+      const transformedQueue: QueueItem[] = (queueData || []).map((item: any) => ({
         id: item.id,
         order_number: item.order_number,
         patient_name: item.patient_name,

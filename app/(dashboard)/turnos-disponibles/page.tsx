@@ -102,8 +102,8 @@ export default function TurnosDisponiblesPage() {
         .order('name', { ascending: true })
 
       if (error) throw error
-      
-      const formattedData = data?.map(item => ({
+
+      const formattedData = data?.map((item: any) => ({
         id: item.id,
         name: item.name,
         zone_name: item.zone?.[0]?.name || 'Sin zona'

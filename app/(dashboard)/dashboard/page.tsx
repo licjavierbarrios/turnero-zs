@@ -166,13 +166,13 @@ export default function DashboardPage() {
 
       // Calculate stats
       const todayTotal = todayAppointments?.length || 0
-      const todayPending = todayAppointments?.filter(apt =>
+      const todayPending = todayAppointments?.filter((apt: any) =>
         apt.status === 'pendiente' || apt.status === 'esperando' || apt.status === 'llamado' || apt.status === 'en_consulta'
       ).length || 0
-      const todayCompleted = todayAppointments?.filter(apt => apt.status === 'finalizado').length || 0
+      const todayCompleted = todayAppointments?.filter((apt: any) => apt.status === 'finalizado').length || 0
 
       // Format recent appointments
-      const formattedRecent = recentAppointments?.map(apt => ({
+      const formattedRecent = recentAppointments?.map((apt: any) => ({
         id: apt.id,
         patient_name: apt.patient ? `${(apt.patient as any).first_name} ${(apt.patient as any).last_name}` : 'N/A',
         professional_name: apt.professional ? `${(apt.professional as any).first_name} ${(apt.professional as any).last_name}` : 'N/A',

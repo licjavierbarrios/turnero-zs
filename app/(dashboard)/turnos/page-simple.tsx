@@ -87,7 +87,7 @@ export default function AppointmentsSimplePage() {
       if (error) throw error
 
       // Transform the data to flat structure
-      const transformedAppointments: Appointment[] = (data || []).map(apt => ({
+      const transformedAppointments: Appointment[] = (data || []).map((apt: any) => ({
         id: apt.id,
         patient_first_name: (apt.patient as any)?.first_name || 'N/A',
         patient_last_name: (apt.patient as any)?.last_name || 'N/A',

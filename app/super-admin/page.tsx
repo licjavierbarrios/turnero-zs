@@ -46,8 +46,8 @@ export default function SuperAdminDashboard() {
         .from('professional')
         .select('id')
 
-      const capsCount = institutions?.filter(i => i.type === 'caps').length || 0
-      const hospitalsCount = institutions?.filter(i => i.type !== 'caps').length || 0
+      const capsCount = institutions?.filter((i: any) => i.type === 'caps').length || 0
+      const hospitalsCount = institutions?.filter((i: any) => i.type !== 'caps').length || 0
 
       setStats({
         totalZones: zones?.length || 0,

@@ -66,7 +66,7 @@ export default function SuperAdminZonasPage() {
 
       // Contar instituciones por zona
       const counts: Record<string, number> = {}
-      data?.forEach((inst) => {
+      data?.forEach((inst: any) => {
         counts[inst.zone_id] = (counts[inst.zone_id] || 0) + 1
       })
 

@@ -114,15 +114,15 @@ export default function SuperAdminMetricasPage() {
 
       // Calculate institutions by type
       const institutionsByType = {
-        caps: institutions?.filter(i => i.type === 'caps').length || 0,
-        hospital_seccional: institutions?.filter(i => i.type === 'hospital_seccional').length || 0,
-        hospital_distrital: institutions?.filter(i => i.type === 'hospital_distrital').length || 0,
-        hospital_regional: institutions?.filter(i => i.type === 'hospital_regional').length || 0
+        caps: institutions?.filter((i: any) => i.type === 'caps').length || 0,
+        hospital_seccional: institutions?.filter((i: any) => i.type === 'hospital_seccional').length || 0,
+        hospital_distrital: institutions?.filter((i: any) => i.type === 'hospital_distrital').length || 0,
+        hospital_regional: institutions?.filter((i: any) => i.type === 'hospital_regional').length || 0
       }
 
       // Calculate institutions by zone
       const zoneMap = new Map<string, number>()
-      institutions?.forEach(inst => {
+      institutions?.forEach((inst: any) => {
         const zoneName = (inst.zone as any)?.name || 'Sin zona'
         zoneMap.set(zoneName, (zoneMap.get(zoneName) || 0) + 1)
       })

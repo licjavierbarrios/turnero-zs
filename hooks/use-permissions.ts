@@ -32,9 +32,9 @@ export function useRequirePermission(route: string) {
         const permitted = hasPermission(userRole, route)
 
         if (!permitted) {
-          // Sin permiso, redirigir al dashboard
+          // Sin permiso, redirigir a la página 403 con información de la ruta intentada
           console.warn(`Usuario con rol ${userRole} intentó acceder a ${route} sin permiso`)
-          router.push('/dashboard')
+          router.push(`/forbidden?route=${encodeURIComponent(route)}`)
           return
         }
 

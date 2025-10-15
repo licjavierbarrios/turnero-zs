@@ -99,8 +99,8 @@ export default function InstitutionSelectPage() {
 
       // Transformar a formato Institution
       const userInstitutions: Institution[] = memberships
-        .filter(m => m.institution) // Solo membresías con institución válida
-        .map(m => ({
+        .filter((m: any) => m.institution) // Solo membresías con institución válida
+        .map((m: any) => ({
           id: m.institution.id,
           name: m.institution.name,
           type: m.institution.type,

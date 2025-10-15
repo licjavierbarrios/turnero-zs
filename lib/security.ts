@@ -102,7 +102,7 @@ class SecurityManager {
 
       if (error) throw error
 
-      data?.forEach(block => this.blockedIPs.add(block.ip_address))
+      data?.forEach((block: any) => this.blockedIPs.add(block.ip_address))
     } catch (error) {
       console.error('Failed to load blocked IPs:', error)
     }
@@ -459,7 +459,7 @@ class SecurityManager {
       const userActions = new Map<string, number>()
       const suspiciousActions = ['DELETE', 'UPDATE', 'EXPORT']
 
-      recentLogs?.forEach(log => {
+      recentLogs?.forEach((log: any) => {
         if (log.user_id && suspiciousActions.includes(log.action)) {
           userActions.set(log.user_id, (userActions.get(log.user_id) || 0) + 1)
         }

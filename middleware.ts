@@ -115,7 +115,7 @@ export async function middleware(request: NextRequest) {
         .eq('is_active', true)
 
       const isSuperAdmin = memberships?.some(
-        (m) => m.role === 'super_admin' && m.is_active
+        (m: any) => m.role === 'super_admin' && m.is_active
       )
 
       if (isSuperAdmin) {

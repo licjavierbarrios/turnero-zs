@@ -137,8 +137,8 @@ export default function UsuariosPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      
-      const formattedData = data?.map(item => ({
+
+      const formattedData = data?.map((item: any) => ({
         ...item,
         institution: item.institution ? {
           id: item.institution.id,
@@ -165,8 +165,8 @@ export default function UsuariosPage() {
         .order('name', { ascending: true })
 
       if (error) throw error
-      
-      const formattedData = data?.map(item => ({
+
+      const formattedData = data?.map((item: any) => ({
         id: item.id,
         name: item.name,
         zone_name: item.zone_name?.[0]?.name || 'Sin zona'

@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, beforeEach, afterEach } from 'vitest'
 
 /**
  * Helper para congelar el tiempo durante un test.
