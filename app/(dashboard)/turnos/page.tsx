@@ -35,6 +35,10 @@ interface QueueItem {
   patient_dni: string
   service_id: string
   service_name: string
+  professional_id: string | null
+  professional_name: string | null
+  room_id: string | null
+  room_name: string | null
   status: 'pendiente' | 'disponible' | 'llamado' | 'atendido' | 'cancelado'
   created_at: string
   enabled_at: string | null
@@ -43,6 +47,17 @@ interface QueueItem {
 }
 
 interface Service {
+  id: string
+  name: string
+}
+
+interface Professional {
+  id: string
+  name: string
+  speciality: string | null
+}
+
+interface Room {
   id: string
   name: string
 }
@@ -98,10 +113,18 @@ export default function QueuePage() {
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [filteredQueue, setFilteredQueue] = useState<QueueItem[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [professionals, setProfessionals] = useState<Professional[]>([])
+  const [rooms, setRooms] = useState<Room[]>([])
   const [professionalAssignments, setProfessionalAssignments] = useState<ProfessionalAssignment[]>([])
   const [attentionOptions, setAttentionOptions] = useState<AttentionOption[]>([])
   const [userServices, setUserServices] = useState<Service[]>([]) // Servicios asignados al usuario
-  const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('ALL') // Filtro por servicio
+
+  // Filtros
+  const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('ALL')
+  const [selectedProfessionalFilter, setSelectedProfessionalFilter] = useState<string>('ALL')
+  const [selectedRoomFilter, setSelectedRoomFilter] = useState<string>('ALL')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL')
+
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [callingId, setCallingId] = useState<string | null>(null) // ID del item que está siendo llamado
@@ -147,14 +170,32 @@ export default function QueuePage() {
     }
   }, [])
 
-  // Filtrar cola por servicio seleccionado
+  // Aplicar todos los filtros a la cola
   useEffect(() => {
-    if (selectedServiceFilter === 'ALL') {
-      setFilteredQueue(queue)
-    } else {
-      setFilteredQueue(queue.filter(item => item.service_id === selectedServiceFilter))
+    let filtered = [...queue]
+
+    // Filtro por servicio
+    if (selectedServiceFilter !== 'ALL') {
+      filtered = filtered.filter(item => item.service_id === selectedServiceFilter)
     }
-  }, [selectedServiceFilter, queue])
+
+    // Filtro por profesional
+    if (selectedProfessionalFilter !== 'ALL') {
+      filtered = filtered.filter(item => item.professional_id === selectedProfessionalFilter)
+    }
+
+    // Filtro por consultorio
+    if (selectedRoomFilter !== 'ALL') {
+      filtered = filtered.filter(item => item.room_id === selectedRoomFilter)
+    }
+
+    // Filtro por estado
+    if (selectedStatusFilter !== 'ALL') {
+      filtered = filtered.filter(item => item.status === selectedStatusFilter)
+    }
+
+    setFilteredQueue(filtered)
+  }, [selectedServiceFilter, selectedProfessionalFilter, selectedRoomFilter, selectedStatusFilter, queue])
 
   const fetchData = async () => {
     try {
@@ -285,7 +326,7 @@ export default function QueuePage() {
 
       setAttentionOptions([...serviceOptions, ...professionalOptions])
 
-      // Obtener cola del día actual
+      // Obtener cola del día actual con datos completos
       const { data: queueData, error: queueError } = await supabase
         .from('daily_queue')
         .select(`
@@ -294,12 +335,22 @@ export default function QueuePage() {
           patient_name,
           patient_dni,
           service_id,
+          professional_id,
+          room_id,
           status,
           created_at,
           enabled_at,
           called_at,
           attended_at,
           service:service_id (
+            name
+          ),
+          professional:professional_id (
+            first_name,
+            last_name,
+            speciality
+          ),
+          room:room_id (
             name
           )
         `)
@@ -317,6 +368,10 @@ export default function QueuePage() {
         patient_dni: item.patient_dni,
         service_id: item.service_id,
         service_name: (item.service as any)?.name || 'Sin servicio',
+        professional_id: item.professional_id,
+        professional_name: item.professional ? `${(item.professional as any).first_name} ${(item.professional as any).last_name}` : null,
+        room_id: item.room_id,
+        room_name: (item.room as any)?.name || null,
         status: item.status,
         created_at: item.created_at,
         enabled_at: item.enabled_at,
@@ -325,6 +380,33 @@ export default function QueuePage() {
       }))
 
       setQueue(transformedQueue)
+
+      // Extraer listas únicas de profesionales y consultorios desde la cola
+      const uniqueProfessionals: Professional[] = []
+      const uniqueRooms: Room[] = []
+      const seenProfessionals = new Set<string>()
+      const seenRooms = new Set<string>()
+
+      transformedQueue.forEach(item => {
+        if (item.professional_id && !seenProfessionals.has(item.professional_id)) {
+          seenProfessionals.add(item.professional_id)
+          uniqueProfessionals.push({
+            id: item.professional_id,
+            name: item.professional_name || 'Sin nombre',
+            speciality: null
+          })
+        }
+        if (item.room_id && !seenRooms.has(item.room_id)) {
+          seenRooms.add(item.room_id)
+          uniqueRooms.push({
+            id: item.room_id,
+            name: item.room_name || 'Sin nombre'
+          })
+        }
+      })
+
+      setProfessionals(uniqueProfessionals)
+      setRooms(uniqueRooms)
     } catch (error) {
       console.error('Error al cargar datos:', error)
     } finally {
@@ -472,12 +554,25 @@ export default function QueuePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Cola del Día</h1>
           <p className="text-gray-600 mt-1">
             {format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
           </p>
+          <div className="flex gap-4 mt-3">
+            <Badge variant="outline" className="text-sm px-3 py-1">
+              Total: {queue.length}
+            </Badge>
+            <Badge variant="outline" className="text-sm px-3 py-1">
+              Mostrando: {filteredQueue.length}
+            </Badge>
+            {filteredQueue.length < queue.length && (
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                {queue.length - filteredQueue.length} ocultos por filtros
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <Button onClick={fetchData} variant="outline">
@@ -614,37 +709,130 @@ export default function QueuePage() {
         </div>
       </div>
 
-      {/* Filtro por servicio */}
-      {userServices.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Filtrar por Servicio</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <Label htmlFor="service_filter">Selecciona el servicio que deseas ver:</Label>
+      {/* Filtros Avanzados */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Filtros</CardTitle>
+          <CardDescription>
+            Filtra la cola por servicio, profesional, consultorio o estado
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Filtro por Servicio */}
+            <div className="space-y-2">
+              <Label htmlFor="service_filter">Servicio</Label>
               <Select value={selectedServiceFilter} onValueChange={setSelectedServiceFilter}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Todos los servicios" />
+                <SelectTrigger id="service_filter">
+                  <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">Todos los servicios</SelectItem>
-                  {userServices.map((service) => (
+                  {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
                       {service.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {selectedServiceFilter !== 'ALL' && (
-                <Badge variant="outline" className="text-sm">
-                  Mostrando: {userServices.find(s => s.id === selectedServiceFilter)?.name}
-                </Badge>
-              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+
+            {/* Filtro por Profesional */}
+            <div className="space-y-2">
+              <Label htmlFor="professional_filter">Profesional</Label>
+              <Select value={selectedProfessionalFilter} onValueChange={setSelectedProfessionalFilter}>
+                <SelectTrigger id="professional_filter">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos los profesionales</SelectItem>
+                  {professionals.map((prof) => (
+                    <SelectItem key={prof.id} value={prof.id}>
+                      {prof.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro por Consultorio */}
+            <div className="space-y-2">
+              <Label htmlFor="room_filter">Consultorio</Label>
+              <Select value={selectedRoomFilter} onValueChange={setSelectedRoomFilter}>
+                <SelectTrigger id="room_filter">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos los consultorios</SelectItem>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro por Estado */}
+            <div className="space-y-2">
+              <Label htmlFor="status_filter">Estado</Label>
+              <Select value={selectedStatusFilter} onValueChange={setSelectedStatusFilter}>
+                <SelectTrigger id="status_filter">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos los estados</SelectItem>
+                  {Object.entries(statusConfig).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      {config.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Resumen de filtros activos y botón limpiar */}
+          {(selectedServiceFilter !== 'ALL' || selectedProfessionalFilter !== 'ALL' || selectedRoomFilter !== 'ALL' || selectedStatusFilter !== 'ALL') && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex flex-wrap gap-2">
+                {selectedServiceFilter !== 'ALL' && (
+                  <Badge variant="secondary">
+                    Servicio: {services.find(s => s.id === selectedServiceFilter)?.name}
+                  </Badge>
+                )}
+                {selectedProfessionalFilter !== 'ALL' && (
+                  <Badge variant="secondary">
+                    Profesional: {professionals.find(p => p.id === selectedProfessionalFilter)?.name}
+                  </Badge>
+                )}
+                {selectedRoomFilter !== 'ALL' && (
+                  <Badge variant="secondary">
+                    Consultorio: {rooms.find(r => r.id === selectedRoomFilter)?.name}
+                  </Badge>
+                )}
+                {selectedStatusFilter !== 'ALL' && (
+                  <Badge variant="secondary">
+                    Estado: {statusConfig[selectedStatusFilter as keyof typeof statusConfig].label}
+                  </Badge>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedServiceFilter('ALL')
+                  setSelectedProfessionalFilter('ALL')
+                  setSelectedRoomFilter('ALL')
+                  setSelectedStatusFilter('ALL')
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Leyenda de colores */}
       <Card>
@@ -696,9 +884,26 @@ export default function QueuePage() {
                       <h3 className="text-xl font-semibold text-gray-900">
                         {item.patient_name}
                       </h3>
-                      <p className="text-sm text-gray-600">
-                        DNI: {item.patient_dni} • {item.service_name}
-                      </p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <span className="text-sm text-gray-600">
+                          DNI: {item.patient_dni}
+                        </span>
+                        {item.service_name && (
+                          <Badge variant="outline" className="text-xs">
+                            {item.service_name}
+                          </Badge>
+                        )}
+                        {item.professional_name && (
+                          <Badge variant="outline" className="text-xs">
+                            👨‍⚕️ {item.professional_name}
+                          </Badge>
+                        )}
+                        {item.room_name && (
+                          <Badge variant="outline" className="text-xs">
+                            🚪 {item.room_name}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 
