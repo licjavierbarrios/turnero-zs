@@ -2,6 +2,44 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨🚨🚨 CRITICAL GIT POLICY 🚨🚨🚨
+
+### ⛔ NUNCA HAGAS COMMIT SIN AUTORIZACIÓN EXPLÍCITA DEL USUARIO ⛔
+
+**REGLA ABSOLUTA:**
+- ❌ **NO EJECUTES** `git add`, `git commit`, `git push` NI NINGÚN COMANDO GIT
+- ❌ **NO HAGAS COMMIT** después de implementar cambios
+- ❌ **NO ASUMAS** que el usuario quiere que hagas commit
+- ✅ **ESPERA** a que el usuario verifique que todo funciona correctamente
+- ✅ **ESPERA** a que el usuario **EXPLÍCITAMENTE** te pida hacer commit
+
+**POR QUÉ:**
+El usuario necesita:
+1. Verificar que los cambios funcionan correctamente
+2. Probar la aplicación manualmente
+3. Revisar el código antes de commitearlo
+4. Decidir cuándo es el momento apropiado para hacer commit
+
+**FLUJO CORRECTO:**
+```
+1. Claude implementa cambios
+2. Claude explica qué cambió
+3. ⏸️  PAUSA - Esperar a que el usuario pruebe
+4. Usuario verifica que funciona
+5. Usuario dice: "Haz el commit" o "Commitea los cambios"
+6. ✅ SOLO ENTONCES Claude ejecuta git add/commit/push
+```
+
+**EXCEPCIÓN:**
+Solo puedes hacer commit si el usuario dice explícitamente:
+- "Haz el commit"
+- "Commitea los cambios"
+- "Push los cambios"
+- "Guarda los cambios en git"
+- O cualquier variante clara y explícita de estas instrucciones
+
+---
+
 ## ⚠️ CRITICAL: SISTEMA ACTIVO vs FUTURO
 
 **ANTES DE HACER CUALQUIER CAMBIO, LEE ESTO:**
