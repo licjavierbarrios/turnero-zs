@@ -174,7 +174,21 @@ export default function QueuePage() {
   useEffect(() => {
     let filtered = [...queue]
 
-    // Filtro por servicio
+    // FILTRO AUTOMÁTICO: Si el usuario tiene servicios asignados, solo mostrar esos servicios
+    // (a menos que sea admin/administrativo que pueden ver todo)
+    const contextData = localStorage.getItem('institution_context')
+    if (contextData) {
+      const context = JSON.parse(contextData)
+      const userRole = context.user_role
+
+      // Si NO es admin ni administrativo, Y tiene servicios asignados
+      if (userRole !== 'admin' && userRole !== 'administrativo' && userServices.length > 0) {
+        const userServiceIds = userServices.map(s => s.id)
+        filtered = filtered.filter(item => userServiceIds.includes(item.service_id))
+      }
+    }
+
+    // Filtro manual por servicio (solo aplica si el usuario puede ver múltiples servicios)
     if (selectedServiceFilter !== 'ALL') {
       filtered = filtered.filter(item => item.service_id === selectedServiceFilter)
     }
@@ -195,7 +209,7 @@ export default function QueuePage() {
     }
 
     setFilteredQueue(filtered)
-  }, [selectedServiceFilter, selectedProfessionalFilter, selectedRoomFilter, selectedStatusFilter, queue])
+  }, [selectedServiceFilter, selectedProfessionalFilter, selectedRoomFilter, selectedStatusFilter, queue, userServices])
 
   const fetchData = async () => {
     try {
@@ -714,28 +728,62 @@ export default function QueuePage() {
         <CardHeader>
           <CardTitle className="text-sm">Filtros</CardTitle>
           <CardDescription>
-            Filtra la cola por servicio, profesional, consultorio o estado
+            {(() => {
+              const contextData = localStorage.getItem('institution_context')
+              if (contextData) {
+                const context = JSON.parse(contextData)
+                const userRole = context.user_role
+
+                if (userRole !== 'admin' && userRole !== 'administrativo' && userServices.length > 0) {
+                  return `Mostrando solo turnos de: ${userServices.map(s => s.name).join(', ')}`
+                }
+              }
+              return 'Filtra la cola por servicio, profesional, consultorio o estado'
+            })()}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Filtro por Servicio */}
-            <div className="space-y-2">
-              <Label htmlFor="service_filter">Servicio</Label>
-              <Select value={selectedServiceFilter} onValueChange={setSelectedServiceFilter}>
-                <SelectTrigger id="service_filter">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos los servicios</SelectItem>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${(() => {
+            const contextData = localStorage.getItem('institution_context')
+            if (contextData) {
+              const context = JSON.parse(contextData)
+              const userRole = context.user_role
+              // Si no es admin/administrativo, usar grid de 3 columnas (sin filtro de servicio)
+              return (userRole !== 'admin' && userRole !== 'administrativo') ? 'lg:grid-cols-3' : 'lg:grid-cols-4'
+            }
+            return 'lg:grid-cols-4'
+          })()} gap-4`}>
+            {/* Filtro por Servicio - Solo para admin y administrativo */}
+            {(() => {
+              const contextData = localStorage.getItem('institution_context')
+              if (contextData) {
+                const context = JSON.parse(contextData)
+                const userRole = context.user_role
+
+                // Solo mostrar filtro de servicio si es admin o administrativo
+                if (userRole === 'admin' || userRole === 'administrativo') {
+                  return (
+                    <div className="space-y-2">
+                      <Label htmlFor="service_filter">Servicio</Label>
+                      <Select value={selectedServiceFilter} onValueChange={setSelectedServiceFilter}>
+                        <SelectTrigger id="service_filter">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">Todos los servicios</SelectItem>
+                          {services.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )
+                }
+              }
+              return null
+            })()}
 
             {/* Filtro por Profesional */}
             <div className="space-y-2">
