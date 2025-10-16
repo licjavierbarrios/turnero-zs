@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, DoorOpen, DoorClosed, Building } from 'lucide-react'
 
@@ -50,6 +51,8 @@ export default function ConsultoriosPage() {
     is_active: true
   })
   const [error, setError] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingRoom, setDeletingRoom] = useState<Room | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -236,28 +239,34 @@ export default function ConsultoriosPage() {
     }
   }
 
-  const handleDelete = async (room: Room) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar el consultorio "${room.name}"?`)) {
-      return
-    }
+  const openDeleteDialog = (room: Room) => {
+    setDeletingRoom(room)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingRoom) return
 
     try {
       const { error } = await supabase
         .from('room')
         .delete()
-        .eq('id', room.id)
+        .eq('id', deletingRoom.id)
 
       if (error) throw error
-      
+
       toast({
         title: "Consultorio eliminado",
         description: "El consultorio se ha eliminado correctamente.",
       })
-      
+
       fetchRooms()
     } catch (error) {
       console.error('Error deleting room:', error)
       setError('Error al eliminar el consultorio')
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setDeletingRoom(null)
     }
   }
 
@@ -488,7 +497,7 @@ export default function ConsultoriosPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDelete(room)}
+                              onClick={() => openDeleteDialog(room)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -503,6 +512,33 @@ export default function ConsultoriosPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente el consultorio <strong>{deletingRoom?.name}</strong>.
+              <br /><br />
+              <strong>Esta acción no se puede deshacer.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false)
+              setDeletingRoom(null)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

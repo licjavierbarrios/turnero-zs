@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -36,6 +37,10 @@ export default function SuperAdminInstitucionesPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+
+  // Delete confirmation dialog
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingInstitution, setDeletingInstitution] = useState<InstitutionWithZone | null>(null)
 
   useEffect(() => {
     Promise.all([fetchInstitutions(), fetchZones()])
@@ -200,26 +205,29 @@ export default function SuperAdminInstitucionesPage() {
     setError(null)
   }
 
-  const handleDelete = async (institution: InstitutionWithZone) => {
-    // Verificar si tiene instituciones relacionadas (profesionales, consultorios, etc.)
-    // Por ahora solo confirmamos
-    if (!confirm(`¿Estás seguro de eliminar la institución "${institution.name}"?\n\nEsto eliminará también todos los recursos relacionados (profesionales, consultorios, servicios, etc.)`)) {
-      return
-    }
+  const openDeleteDialog = (institution: InstitutionWithZone) => {
+    setDeletingInstitution(institution)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingInstitution) return
 
     try {
       const { error } = await supabase
         .from('institution')
         .delete()
-        .eq('id', institution.id)
+        .eq('id', deletingInstitution.id)
 
       if (error) throw error
 
       toast({
         title: "Institución eliminada",
-        description: `La institución "${institution.name}" se ha eliminado correctamente.`,
+        description: `La institución "${deletingInstitution.name}" se ha eliminado correctamente.`,
       })
 
+      setIsDeleteDialogOpen(false)
+      setDeletingInstitution(null)
       fetchInstitutions()
     } catch (error: any) {
       console.error('Error deleting institution:', error)
@@ -553,7 +561,7 @@ export default function SuperAdminInstitucionesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(institution)}
+                          onClick={() => openDeleteDialog(institution)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -567,6 +575,38 @@ export default function SuperAdminInstitucionesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar eliminación de institución</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingInstitution && (
+                <>
+                  ¿Estás seguro de que deseas eliminar la institución <strong>{deletingInstitution.name}</strong>?
+                  <br /><br />
+                  <strong>Esto eliminará también todos los recursos relacionados:</strong>
+                  <ul className="list-disc list-inside mt-2">
+                    <li>Profesionales asignados</li>
+                    <li>Consultorios y servicios</li>
+                    <li>Turnos y eventos de atención</li>
+                    <li>Membresías de usuarios</li>
+                  </ul>
+                  <br />
+                  <strong>Esta acción no se puede deshacer.</strong>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Eliminar institución
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

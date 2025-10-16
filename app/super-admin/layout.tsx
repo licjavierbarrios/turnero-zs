@@ -12,7 +12,8 @@ import {
   HomeIcon,
   LogOutIcon,
   ShieldCheckIcon,
-  BarChart3Icon
+  BarChart3Icon,
+  Stethoscope
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Dashboard', href: '/super-admin', icon: HomeIcon },
   { name: 'Zonas Sanitarias', href: '/super-admin/zonas', icon: MapPinIcon },
   { name: 'Instituciones', href: '/super-admin/instituciones', icon: BuildingIcon },
+  { name: 'Profesionales', href: '/super-admin/profesionales', icon: Stethoscope },
   { name: 'Usuarios', href: '/super-admin/usuarios', icon: UsersIcon },
   { name: 'Métricas Globales', href: '/super-admin/metricas', icon: BarChart3Icon },
 ]

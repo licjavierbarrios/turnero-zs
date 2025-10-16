@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, Activity, Clock, Building } from 'lucide-react'
 
@@ -52,6 +53,8 @@ export default function ServiciosPage() {
     is_active: true
   })
   const [error, setError] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingService, setDeletingService] = useState<Service | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -259,28 +262,34 @@ export default function ServiciosPage() {
     }
   }
 
-  const handleDelete = async (service: Service) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`)) {
-      return
-    }
+  const openDeleteDialog = (service: Service) => {
+    setDeletingService(service)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingService) return
 
     try {
       const { error } = await supabase
         .from('service')
         .delete()
-        .eq('id', service.id)
+        .eq('id', deletingService.id)
 
       if (error) throw error
-      
+
       toast({
         title: "Servicio eliminado",
         description: "El servicio se ha eliminado correctamente.",
       })
-      
+
       fetchServices()
     } catch (error) {
       console.error('Error deleting service:', error)
       setError('Error al eliminar el servicio')
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setDeletingService(null)
     }
   }
 
@@ -547,7 +556,7 @@ export default function ServiciosPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDelete(service)}
+                              onClick={() => openDeleteDialog(service)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -562,6 +571,33 @@ export default function ServiciosPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente el servicio <strong>{deletingService?.name}</strong>.
+              <br /><br />
+              <strong>Esta acción no se puede deshacer.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false)
+              setDeletingService(null)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

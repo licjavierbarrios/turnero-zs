@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -92,6 +93,12 @@ export default function UsuariosPage() {
   
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+
+  // Delete confirmation dialogs
+  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false)
+  const [deletingUser, setDeletingUser] = useState<User | null>(null)
+  const [isDeleteMembershipDialogOpen, setIsDeleteMembershipDialogOpen] = useState(false)
+  const [deletingMembership, setDeletingMembership] = useState<Membership | null>(null)
 
   useEffect(() => {
     Promise.all([fetchUsers(), fetchMemberships(), fetchInstitutions()])
@@ -322,24 +329,29 @@ export default function UsuariosPage() {
     setIsMembershipDialogOpen(true)
   }
 
-  const handleDeleteUser = async (user: User) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al usuario "${user.first_name} ${user.last_name}"?`)) {
-      return
-    }
+  const openDeleteUserDialog = (user: User) => {
+    setDeletingUser(user)
+    setIsDeleteUserDialogOpen(true)
+  }
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return
 
     try {
       const { error } = await supabase
         .from('users')
         .delete()
-        .eq('id', user.id)
+        .eq('id', deletingUser.id)
 
       if (error) throw error
-      
+
       toast({
         title: "Usuario eliminado",
         description: "El usuario se ha eliminado correctamente.",
       })
-      
+
+      setIsDeleteUserDialogOpen(false)
+      setDeletingUser(null)
       fetchUsers()
       fetchMemberships() // Refresh memberships as they may be affected
     } catch (error) {
@@ -348,24 +360,29 @@ export default function UsuariosPage() {
     }
   }
 
-  const handleDeleteMembership = async (membership: Membership) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar esta membresía?`)) {
-      return
-    }
+  const openDeleteMembershipDialog = (membership: Membership) => {
+    setDeletingMembership(membership)
+    setIsDeleteMembershipDialogOpen(true)
+  }
+
+  const handleDeleteMembership = async () => {
+    if (!deletingMembership) return
 
     try {
       const { error } = await supabase
         .from('membership')
         .delete()
-        .eq('id', membership.id)
+        .eq('id', deletingMembership.id)
 
       if (error) throw error
-      
+
       toast({
         title: "Membresía eliminada",
         description: "La membresía se ha eliminado correctamente.",
       })
-      
+
+      setIsDeleteMembershipDialogOpen(false)
+      setDeletingMembership(null)
       fetchMemberships()
     } catch (error) {
       console.error('Error deleting membership:', error)
@@ -613,7 +630,7 @@ export default function UsuariosPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteUser(user)}
+                            onClick={() => openDeleteUserDialog(user)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -835,7 +852,7 @@ export default function UsuariosPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteMembership(membership)}
+                            onClick={() => openDeleteMembershipDialog(membership)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -849,6 +866,60 @@ export default function UsuariosPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={isDeleteUserDialogOpen} onOpenChange={setIsDeleteUserDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar eliminación de usuario</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingUser && (
+                <>
+                  ¿Estás seguro de que deseas eliminar al usuario <strong>{deletingUser.first_name} {deletingUser.last_name}</strong>?
+                  <br /><br />
+                  <strong>Esta acción no se puede deshacer.</strong>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
+              Eliminar usuario
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Membership Confirmation Dialog */}
+      <AlertDialog open={isDeleteMembershipDialogOpen} onOpenChange={setIsDeleteMembershipDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar eliminación de membresía</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingMembership && (
+                <>
+                  ¿Estás seguro de que deseas eliminar esta membresía?
+                  <br /><br />
+                  Usuario: <strong>{deletingMembership.user?.first_name} {deletingMembership.user?.last_name}</strong>
+                  <br />
+                  Institución: <strong>{deletingMembership.institution?.name}</strong>
+                  <br />
+                  Rol: <strong>{roleLabels[deletingMembership.role]}</strong>
+                  <br /><br />
+                  <strong>Esta acción no se puede deshacer.</strong>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMembership} className="bg-red-600 hover:bg-red-700">
+              Eliminar membresía
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

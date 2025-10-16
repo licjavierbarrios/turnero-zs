@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, Calendar, Clock, User, Activity, Building, DoorOpen } from 'lucide-react'
 
@@ -97,6 +98,8 @@ export default function HorariosPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [selectedInstitution, setSelectedInstitution] = useState<string>('')
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingTemplate, setDeletingTemplate] = useState<SlotTemplate | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -370,31 +373,34 @@ export default function HorariosPage() {
     }
   }
 
-  const handleDelete = async (slotTemplate: SlotTemplate) => {
-    const professional = slotTemplate.professional
-    const dayName = daysOfWeek.find(d => d.value === slotTemplate.day_of_week)?.label
-    
-    if (!confirm(`¿Estás seguro de que deseas eliminar la plantilla de horario de ${professional?.first_name} ${professional?.last_name} para el ${dayName}?`)) {
-      return
-    }
+  const openDeleteDialog = (slotTemplate: SlotTemplate) => {
+    setDeletingTemplate(slotTemplate)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingTemplate) return
 
     try {
       const { error } = await supabase
         .from('slot_template')
         .delete()
-        .eq('id', slotTemplate.id)
+        .eq('id', deletingTemplate.id)
 
       if (error) throw error
-      
+
       toast({
         title: "Plantilla eliminada",
         description: "La plantilla de horario se ha eliminado correctamente.",
       })
-      
+
       fetchSlotTemplates()
     } catch (error) {
       console.error('Error deleting slot template:', error)
       setError('Error al eliminar la plantilla')
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setDeletingTemplate(null)
     }
   }
 
@@ -765,7 +771,7 @@ export default function HorariosPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDelete(template)}
+                              onClick={() => openDeleteDialog(template)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -780,6 +786,37 @@ export default function HorariosPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente la plantilla de horario de{' '}
+              <strong>
+                {deletingTemplate?.professional?.first_name} {deletingTemplate?.professional?.last_name}
+              </strong>{' '}
+              para el <strong>{daysOfWeek.find(d => d.value === deletingTemplate?.day_of_week)?.label}</strong>.
+              <br /><br />
+              <strong>Esta acción no se puede deshacer.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false)
+              setDeletingTemplate(null)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

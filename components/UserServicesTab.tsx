@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, Activity } from 'lucide-react'
 
@@ -70,6 +71,8 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUserService, setEditingUserService] = useState<UserService | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingUserService, setDeletingUserService] = useState<UserService | null>(null)
   const { toast } = useToast()
 
   // Form state
@@ -310,16 +313,19 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (userService: UserService) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar esta asignación de servicio?`)) {
-      return
-    }
+  const openDeleteDialog = (userService: UserService) => {
+    setDeletingUserService(userService)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingUserService) return
 
     try {
       const { error } = await supabase
         .from('user_service')
         .delete()
-        .eq('id', userService.id)
+        .eq('id', deletingUserService.id)
 
       if (error) throw error
 
@@ -328,10 +334,14 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
         description: "La asignación de servicio se ha eliminado correctamente.",
       })
 
+      setIsDeleteDialogOpen(false)
+      setDeletingUserService(null)
       fetchUserServices()
     } catch (error) {
       console.error('Error deleting user service:', error)
       setError('Error al eliminar la asignación')
+      setIsDeleteDialogOpen(false)
+      setDeletingUserService(null)
     }
   }
 
@@ -707,7 +717,7 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(userService)}
+                        onClick={() => openDeleteDialog(userService)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -719,6 +729,31 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
           </Table>
         )}
       </CardContent>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará la asignación de servicio para el usuario <strong>{deletingUserService?.user?.first_name} {deletingUserService?.user?.last_name}</strong> en el servicio <strong>{deletingUserService?.service?.name}</strong> de la institución <strong>{deletingUserService?.institution?.name}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false)
+              setDeletingUserService(null)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

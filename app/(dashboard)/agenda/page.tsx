@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Calendar, ChevronLeft, ChevronRight, User, Clock, Building, Activity, Users, CalendarDays } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, User, Clock, Building, Activity, Users, CalendarDays, Search, Trash2, X } from 'lucide-react'
 import { useRequirePermission } from '@/hooks/use-permissions'
 
 type SlotTemplate = {
@@ -79,6 +81,10 @@ export default function AgendaPage() {
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [error, setError] = useState<string | null>(null)
+  const [searchProfessional, setSearchProfessional] = useState('')
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>('ALL')
+  const [deletingTemplate, setDeletingTemplate] = useState<SlotTemplate | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -125,6 +131,23 @@ export default function AgendaPage() {
     }
   }
 
+  // Filtrar profesionales por búsqueda (con useMemo para evitar loops infinitos)
+  const filteredProfessionals = useMemo(() => {
+    return professionals.filter(prof => {
+      const searchLower = searchProfessional.toLowerCase()
+      const fullName = `${prof.first_name} ${prof.last_name}`.toLowerCase()
+      const speciality = prof.speciality?.toLowerCase() || ''
+      return fullName.includes(searchLower) || speciality.includes(searchLower)
+    })
+  }, [professionals, searchProfessional])
+
+  // Filtrar plantillas según profesional seleccionado (con useMemo para evitar loops infinitos)
+  const filteredSlotTemplates = useMemo(() => {
+    return selectedProfessionalId === 'ALL'
+      ? slotTemplates
+      : slotTemplates.filter(template => template.professional_id === selectedProfessionalId)
+  }, [slotTemplates, selectedProfessionalId])
+
   useEffect(() => {
     if (institutionContext?.institution_id) {
       fetchInstitutionData()
@@ -132,10 +155,10 @@ export default function AgendaPage() {
   }, [institutionContext]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (institutionContext?.institution_id && slotTemplates.length > 0) {
+    if (institutionContext?.institution_id && filteredSlotTemplates.length >= 0) {
       generateWeekSchedule()
     }
-  }, [institutionContext, slotTemplates, currentWeek]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [institutionContext, filteredSlotTemplates, currentWeek]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchInstitutionData = async () => {
     if (!institutionContext?.institution_id) {
@@ -226,17 +249,17 @@ export default function AgendaPage() {
   const generateWeekSchedule = () => {
     const weekStart = new Date(currentWeek)
     weekStart.setDate(weekStart.getDate() - weekStart.getDay()) // Start on Sunday
-    
+
     const schedule: DaySchedule[] = []
-    
+
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart)
       date.setDate(date.getDate() + i)
-      
+
       const daySlots: GeneratedSlot[] = []
-      
-      // Find templates for this day of week
-      const dayTemplates = slotTemplates.filter(template => template.day_of_week === i)
+
+      // Find templates for this day of week (usar filteredSlotTemplates en lugar de slotTemplates)
+      const dayTemplates = filteredSlotTemplates.filter(template => template.day_of_week === i)
       
       dayTemplates.forEach(template => {
         const professional = professionals.find(p => p.id === template.professional_id)
@@ -328,15 +351,62 @@ export default function AgendaPage() {
     return grouped
   }
 
-  const uniqueProfessionals = professionals.filter(prof => 
+  const uniqueProfessionals = professionals.filter(prof =>
     slotTemplates.some(template => template.professional_id === prof.id)
   )
 
   const timeSlots = Array.from(new Set(
-    slotTemplates.flatMap(template => 
+    filteredSlotTemplates.flatMap(template =>
       generateTimeSlots(template.start_time, template.end_time, template.slot_duration_minutes)
     )
   )).sort()
+
+  const handleDeleteTemplate = async () => {
+    if (!deletingTemplate) return
+
+    try {
+      const { error } = await supabase
+        .from('slot_template')
+        .delete()
+        .eq('id', deletingTemplate.id)
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error al eliminar",
+          description: error.message || "No se pudo eliminar la plantilla de horario.",
+        })
+        return
+      }
+
+      toast({
+        title: "Plantilla eliminada",
+        description: "La plantilla de horario se ha eliminado correctamente.",
+      })
+
+      // Actualizar datos
+      await fetchInstitutionData()
+      setIsDeleteDialogOpen(false)
+      setDeletingTemplate(null)
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Ocurrió un error al eliminar la plantilla.",
+      })
+    }
+  }
+
+  const getTemplateInfo = (templateId: string) => {
+    const template = slotTemplates.find(t => t.id === templateId)
+    if (!template) return null
+
+    const professional = professionals.find(p => p.id === template.professional_id)
+    const service = services.find(s => s.id === template.service_id)
+    const room = rooms.find(r => r.id === template.room_id)
+
+    return { template, professional, service, room }
+  }
 
   if (permissionLoading || !user || !institutionContext) {
     return (
@@ -377,6 +447,97 @@ export default function AgendaPage() {
           </div>
         </div>
       </div>
+
+      {/* Filtros */}
+      {professionals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Search className="mr-2 h-5 w-5" />
+              Filtros de Búsqueda
+            </CardTitle>
+            <CardDescription>
+              Busca y filtra profesionales para ver sus horarios
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Búsqueda por texto */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Buscar Profesional</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por nombre o especialidad..."
+                    value={searchProfessional}
+                    onChange={(e) => setSearchProfessional(e.target.value)}
+                    className="pl-10 pr-10"
+                  />
+                  {searchProfessional && (
+                    <button
+                      onClick={() => {
+                        setSearchProfessional('')
+                        setSelectedProfessionalId('ALL')
+                      }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Selector de profesional */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Filtrar por Profesional</label>
+                <Select value={selectedProfessionalId} onValueChange={setSelectedProfessionalId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los profesionales" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todos los profesionales</SelectItem>
+                    {filteredProfessionals.map((prof) => (
+                      <SelectItem key={prof.id} value={prof.id}>
+                        {prof.first_name} {prof.last_name}
+                        {prof.speciality && ` - ${prof.speciality}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Resumen de filtros activos */}
+            {(selectedProfessionalId !== 'ALL' || searchProfessional) && (
+              <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {selectedProfessionalId !== 'ALL' && (
+                    <Badge variant="secondary">
+                      Profesional: {professionals.find(p => p.id === selectedProfessionalId)?.first_name} {professionals.find(p => p.id === selectedProfessionalId)?.last_name}
+                    </Badge>
+                  )}
+                  {searchProfessional && (
+                    <Badge variant="secondary">
+                      Búsqueda: &quot;{searchProfessional}&quot;
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchProfessional('')
+                    setSelectedProfessionalId('ALL')
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Institution Info */}
       <Card>
@@ -626,7 +787,22 @@ export default function AgendaPage() {
                               </div>
                               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {slots.map((slot, index) => (
-                                  <div key={index} className="p-3 bg-white rounded border">
+                                  <div key={index} className="p-3 bg-white rounded border relative group">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="absolute top-1 right-1 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => {
+                                        const template = slotTemplates.find(t => t.id === slot.template_id)
+                                        if (template) {
+                                          setDeletingTemplate(template)
+                                          setIsDeleteDialogOpen(true)
+                                        }
+                                      }}
+                                      title="Eliminar plantilla de horario"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-600" />
+                                    </Button>
                                     <div className="flex items-center space-x-2 mb-2">
                                       <User className="h-4 w-4 text-blue-600" />
                                       <span className="font-medium">
@@ -644,8 +820,8 @@ export default function AgendaPage() {
                                           <span>{slot.room.name}</span>
                                         </div>
                                       )}
-                                      <Badge 
-                                        variant="outline" 
+                                      <Badge
+                                        variant="outline"
                                         className={slot.available ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}
                                       >
                                         {slot.available ? 'Disponible' : 'Ocupado'}
@@ -668,6 +844,51 @@ export default function AgendaPage() {
           )}
         </>
       )}
+
+      {/* Alert Dialog para Confirmación de Eliminación */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar plantilla de horario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingTemplate && (() => {
+                const info = getTemplateInfo(deletingTemplate.id)
+                if (!info) return null
+
+                return (
+                  <div className="space-y-2">
+                    <p>Esta acción eliminará permanentemente la plantilla de horario:</p>
+                    <div className="bg-gray-50 p-3 rounded space-y-1">
+                      <p><strong>Profesional:</strong> {info.professional?.first_name} {info.professional?.last_name}</p>
+                      <p><strong>Servicio:</strong> {info.service?.name}</p>
+                      {info.room && <p><strong>Consultorio:</strong> {info.room.name}</p>}
+                      <p><strong>Día:</strong> {daysOfWeek[info.template.day_of_week]}</p>
+                      <p><strong>Horario:</strong> {info.template.start_time} - {info.template.end_time}</p>
+                    </div>
+                    <p className="text-destructive font-semibold mt-3">
+                      ⚠️ Esta acción no se puede deshacer. Se eliminarán todos los horarios generados por esta plantilla.
+                    </p>
+                  </div>
+                )
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false)
+              setDeletingTemplate(null)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTemplate}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar Plantilla
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

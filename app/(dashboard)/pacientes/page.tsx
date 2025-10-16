@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, User, Calendar } from 'lucide-react'
 
@@ -42,6 +43,8 @@ export default function PacientesPage() {
     birth_date: ''
   })
   const [error, setError] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -139,28 +142,34 @@ export default function PacientesPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (patient: Patient) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al paciente "${patient.first_name} ${patient.last_name}"?`)) {
-      return
-    }
+  const openDeleteDialog = (patient: Patient) => {
+    setDeletingPatient(patient)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingPatient) return
 
     try {
       const { error } = await supabase
         .from('patient')
         .delete()
-        .eq('id', patient.id)
+        .eq('id', deletingPatient.id)
 
       if (error) throw error
-      
+
       toast({
         title: "Paciente eliminado",
         description: "El paciente se ha eliminado correctamente.",
       })
-      
+
       fetchPatients()
     } catch (error) {
       console.error('Error deleting patient:', error)
       setError('Error al eliminar el paciente')
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setDeletingPatient(null)
     }
   }
 
@@ -432,7 +441,7 @@ export default function PacientesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(patient)}
+                          onClick={() => openDeleteDialog(patient)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -445,6 +454,33 @@ export default function PacientesPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente al paciente <strong>{deletingPatient?.first_name} {deletingPatient?.last_name}</strong>.
+              <br /><br />
+              <strong>Esta acción no se puede deshacer.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false)
+              setDeletingPatient(null)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

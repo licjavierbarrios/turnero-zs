@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, MapPin, Building2, AlertCircle } from 'lucide-react'
 import type { Zone } from '@/lib/types'
@@ -21,12 +22,14 @@ export default function SuperAdminZonasPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingZone, setEditingZone] = useState<Zone | null>(null)
   const [institutionCounts, setInstitutionCounts] = useState<Record<string, number>>({})
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingZone, setDeletingZone] = useState<Zone | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: ''
   })
   const [error, setError] = useState<string | null>(null)
-  const { toast } = useToast()
+  const { toast} = useToast()
 
   useEffect(() => {
     fetchZones()
@@ -146,7 +149,7 @@ export default function SuperAdminZonasPage() {
     setError(null)
   }
 
-  const handleDelete = async (zone: Zone) => {
+  const openDeleteDialog = (zone: Zone) => {
     const institutionCount = institutionCounts[zone.id] || 0
 
     if (institutionCount > 0) {
@@ -158,23 +161,28 @@ export default function SuperAdminZonasPage() {
       return
     }
 
-    if (!confirm(`¿Estás seguro de eliminar la zona "${zone.name}"?`)) {
-      return
-    }
+    setDeletingZone(zone)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingZone) return
 
     try {
       const { error } = await supabase
         .from('zone')
         .delete()
-        .eq('id', zone.id)
+        .eq('id', deletingZone.id)
 
       if (error) throw error
 
       toast({
         title: "Zona eliminada",
-        description: `La zona "${zone.name}" se ha eliminado correctamente.`,
+        description: `La zona "${deletingZone.name}" se ha eliminado correctamente.`,
       })
 
+      setIsDeleteDialogOpen(false)
+      setDeletingZone(null)
       fetchZones()
       fetchInstitutionCounts()
     } catch (error: any) {
@@ -184,6 +192,8 @@ export default function SuperAdminZonasPage() {
         description: "No se pudo eliminar la zona sanitaria.",
         variant: "destructive"
       })
+      setIsDeleteDialogOpen(false)
+      setDeletingZone(null)
     }
   }
 
@@ -404,7 +414,7 @@ export default function SuperAdminZonasPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(zone)}
+                          onClick={() => openDeleteDialog(zone)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -418,6 +428,31 @@ export default function SuperAdminZonasPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente la zona sanitaria <strong>{deletingZone?.name}</strong>. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false)
+              setDeletingZone(null)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
