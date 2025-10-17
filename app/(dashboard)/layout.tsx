@@ -102,6 +102,9 @@ export default function DashboardLayout({
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
       if (authError || !authUser) {
+        // Sesión expirada o inválida - limpiar localStorage
+        localStorage.removeItem('institution_context')
+        await supabase.auth.signOut() // Asegurar que la sesión se limpie completamente
         router.push('/')
         return
       }
@@ -114,6 +117,9 @@ export default function DashboardLayout({
         .single()
 
       if (userError) {
+        // Error al obtener datos - probablemente sesión expirada
+        localStorage.removeItem('institution_context')
+        await supabase.auth.signOut()
         router.push('/')
         return
       }
@@ -132,6 +138,9 @@ export default function DashboardLayout({
       setInstitutionContext(parsedContext)
     } catch (error) {
       console.error('Error en loadLayoutData:', error)
+      // En caso de cualquier error, limpiar y redirigir
+      localStorage.removeItem('institution_context')
+      await supabase.auth.signOut()
       router.push('/')
     }
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ShieldXIcon, ArrowLeftIcon, HomeIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -28,7 +28,7 @@ const routeNames: Record<string, string> = {
   '/configuracion': 'Configuración del Sistema',
 }
 
-export default function ForbiddenPage() {
+function ForbiddenContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [userRole, setUserRole] = useState<UserRole | null>(null)
@@ -162,5 +162,26 @@ export default function ForbiddenPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function ForbiddenPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-xl">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
+              <ShieldXIcon className="w-12 h-12 text-red-600" />
+            </div>
+            <CardTitle className="text-3xl font-bold text-gray-900">
+              Cargando...
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    }>
+      <ForbiddenContent />
+    </Suspense>
   )
 }
