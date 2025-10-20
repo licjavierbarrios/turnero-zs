@@ -80,6 +80,24 @@ interface Institution {
   name: string
 }
 
+interface DailyQueueItem {
+  id: string
+  status: string
+  enabled_at?: string | null
+  called_at?: string | null
+  attended_at?: string | null
+  queue_date: string
+  professional?: {
+    id: string
+    first_name: string
+    last_name: string
+  } | null
+  service?: {
+    id: string
+    name: string
+  } | null
+}
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
 
 const PERIOD_OPTIONS = [
@@ -224,9 +242,9 @@ export default function ReportesPage() {
       if (error) throw error
 
       const total = queueItems?.length || 0
-      const attended = queueItems?.filter(q => q.status === 'atendido').length || 0
-      const cancelled = queueItems?.filter(q => q.status === 'cancelado').length || 0
-      const pending = queueItems?.filter(q => q.status === 'pendiente' || q.status === 'disponible').length || 0
+      const attended = queueItems?.filter((q: DailyQueueItem) => q.status === 'atendido').length || 0
+      const cancelled = queueItems?.filter((q: DailyQueueItem) => q.status === 'cancelado').length || 0
+      const pending = queueItems?.filter((q: DailyQueueItem) => q.status === 'pendiente' || q.status === 'disponible').length || 0
 
       // Calculate average wait times (from enabled_at to called_at)
       let totalWaitTime = 0
@@ -236,7 +254,7 @@ export default function ReportesPage() {
       let totalAttentionTime = 0
       let attentionTimeCount = 0
 
-      queueItems?.forEach(q => {
+      queueItems?.forEach((q: DailyQueueItem) => {
         // Wait time: from enabled_at to called_at
         if (q.enabled_at && q.called_at) {
           const enabledTime = new Date(q.enabled_at).getTime()
@@ -294,8 +312,8 @@ export default function ReportesPage() {
       if (error) throw error
 
       // Group by professional
-      const professionalGroups: { [key: string]: any[] } = {}
-      queueItems?.forEach(q => {
+      const professionalGroups: { [key: string]: DailyQueueItem[] } = {}
+      queueItems?.forEach((q: DailyQueueItem) => {
         if (q.professional && !Array.isArray(q.professional)) {
           const key = (q.professional as any).id
           if (!professionalGroups[key]) {
@@ -308,8 +326,8 @@ export default function ReportesPage() {
       const metrics: ProfessionalMetrics[] = Object.entries(professionalGroups).map(([professionalId, items]) => {
         const professional = items[0].professional as any
         const total = items.length
-        const attended = items.filter(q => q.status === 'atendido').length
-        const cancelled = items.filter(q => q.status === 'cancelado').length
+        const attended = items.filter((q: DailyQueueItem) => q.status === 'atendido').length
+        const cancelled = items.filter((q: DailyQueueItem) => q.status === 'cancelado').length
 
         // Calculate times
         let totalWaitTime = 0
@@ -317,7 +335,7 @@ export default function ReportesPage() {
         let totalAttentionTime = 0
         let attentionTimeCount = 0
 
-        items.forEach(q => {
+        items.forEach((q: DailyQueueItem) => {
           if (q.enabled_at && q.called_at) {
             const enabledTime = new Date(q.enabled_at).getTime()
             const calledTime = new Date(q.called_at).getTime()
@@ -368,8 +386,8 @@ export default function ReportesPage() {
       if (error) throw error
 
       // Group by service
-      const serviceGroups: { [key: string]: any[] } = {}
-      queueItems?.forEach(q => {
+      const serviceGroups: { [key: string]: DailyQueueItem[] } = {}
+      queueItems?.forEach((q: DailyQueueItem) => {
         if (q.service && !Array.isArray(q.service)) {
           const key = (q.service as any).id
           if (!serviceGroups[key]) {
@@ -382,7 +400,7 @@ export default function ReportesPage() {
       const metrics: ServiceMetrics[] = Object.entries(serviceGroups).map(([serviceId, items]) => {
         const service = items[0].service as any
         const total = items.length
-        const attended = items.filter(q => q.status === 'atendido').length
+        const attended = items.filter((q: DailyQueueItem) => q.status === 'atendido').length
 
         // Calculate times
         let totalWaitTime = 0
@@ -390,7 +408,7 @@ export default function ReportesPage() {
         let totalAttentionTime = 0
         let attentionTimeCount = 0
 
-        items.forEach(q => {
+        items.forEach((q: DailyQueueItem) => {
           if (q.enabled_at && q.called_at) {
             const enabledTime = new Date(q.enabled_at).getTime()
             const calledTime = new Date(q.called_at).getTime()
@@ -434,8 +452,8 @@ export default function ReportesPage() {
       if (error) throw error
 
       // Group by date
-      const dateGroups: { [key: string]: any[] } = {}
-      queueItems?.forEach(q => {
+      const dateGroups: { [key: string]: DailyQueueItem[] } = {}
+      queueItems?.forEach((q: DailyQueueItem) => {
         const date = q.queue_date
         if (!dateGroups[date]) {
           dateGroups[date] = []
@@ -445,7 +463,7 @@ export default function ReportesPage() {
 
       const timeSeries: TimeSeriesData[] = Object.entries(dateGroups).map(([date, items]) => {
         const total = items.length
-        const attended = items.filter(q => q.status === 'atendido').length
+        const attended = items.filter((q: DailyQueueItem) => q.status === 'atendido').length
 
         // Calculate average times for this date
         let totalWaitTime = 0
@@ -453,7 +471,7 @@ export default function ReportesPage() {
         let totalAttentionTime = 0
         let attentionTimeCount = 0
 
-        items.forEach(q => {
+        items.forEach((q: DailyQueueItem) => {
           if (q.enabled_at && q.called_at) {
             const enabledTime = new Date(q.enabled_at).getTime()
             const calledTime = new Date(q.called_at).getTime()

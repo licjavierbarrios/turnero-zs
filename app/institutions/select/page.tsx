@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,11 +32,7 @@ export default function InstitutionSelectPage() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    loadUserData()
-  }, [router])
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     try {
       // Verificar sesión de Supabase
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -66,7 +62,11 @@ export default function InstitutionSelectPage() {
       console.error('Error en loadUserData:', error)
       router.push('/')
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    loadUserData()
+  }, [loadUserData])
 
   const loadUserInstitutions = async (userId: string) => {
     try {

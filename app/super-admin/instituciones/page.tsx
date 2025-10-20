@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -42,11 +42,7 @@ export default function SuperAdminInstitucionesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deletingInstitution, setDeletingInstitution] = useState<InstitutionWithZone | null>(null)
 
-  useEffect(() => {
-    Promise.all([fetchInstitutions(), fetchZones()])
-  }, [])
-
-  const fetchInstitutions = async () => {
+  const fetchInstitutions = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -73,9 +69,9 @@ export default function SuperAdminInstitucionesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const fetchZones = async () => {
+  const fetchZones = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('zone')
@@ -87,7 +83,11 @@ export default function SuperAdminInstitucionesPage() {
     } catch (error) {
       console.error('Error fetching zones:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    Promise.all([fetchInstitutions(), fetchZones()])
+  }, [fetchInstitutions, fetchZones])
 
   // Generar slug automático desde el nombre
   const generateSlug = (name: string): string => {

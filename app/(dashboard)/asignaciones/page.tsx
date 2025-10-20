@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,11 +44,7 @@ export default function AsignacionesPage() {
   const [selectedProfessional, setSelectedProfessional] = useState('')
   const [selectedRoom, setSelectedRoom] = useState('')
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       const contextData = localStorage.getItem('institution_context')
@@ -112,7 +108,11 @@ export default function AsignacionesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleAddAssignment = async () => {
     if (!selectedProfessional || !selectedRoom) {

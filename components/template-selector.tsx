@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   Dialog,
@@ -36,11 +36,7 @@ export function TemplateSelector({ currentTemplateId, onTemplateChange }: Templa
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [])
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('display_template')
@@ -62,7 +58,11 @@ export function TemplateSelector({ currentTemplateId, onTemplateChange }: Templa
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentTemplateId])
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [fetchTemplates])
 
   const handleApply = () => {
     const selectedTemplate = templates.find(t => t.id === selectedTemplateId)

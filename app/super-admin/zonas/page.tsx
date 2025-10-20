@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,12 +31,7 @@ export default function SuperAdminZonasPage() {
   const [error, setError] = useState<string | null>(null)
   const { toast} = useToast()
 
-  useEffect(() => {
-    fetchZones()
-    fetchInstitutionCounts()
-  }, [])
-
-  const fetchZones = async () => {
+  const fetchZones = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -57,9 +52,9 @@ export default function SuperAdminZonasPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const fetchInstitutionCounts = async () => {
+  const fetchInstitutionCounts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('institution')
@@ -77,7 +72,12 @@ export default function SuperAdminZonasPage() {
     } catch (error) {
       console.error('Error fetching institution counts:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchZones()
+    fetchInstitutionCounts()
+  }, [fetchZones, fetchInstitutionCounts])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -87,11 +87,7 @@ export default function AgendaPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    loadAuthData()
-  }, [router])
-
-  const loadAuthData = async () => {
+  const loadAuthData = useCallback(async () => {
     try {
       // Verificar sesión de Supabase
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -129,7 +125,11 @@ export default function AgendaPage() {
       console.error('Error loading auth data:', error)
       router.push('/')
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    loadAuthData()
+  }, [loadAuthData])
 
   // Filtrar profesionales por búsqueda (con useMemo para evitar loops infinitos)
   const filteredProfessionals = useMemo(() => {
