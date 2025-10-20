@@ -43,7 +43,7 @@ export function useUserMembership() {
             )
           `)
           .eq('user_id', user.id)
-          .eq('active', true)
+          .eq('is_active', true)
           .single()
 
         if (membershipError) {

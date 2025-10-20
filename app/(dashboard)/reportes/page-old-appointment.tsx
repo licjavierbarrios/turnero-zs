@@ -39,40 +39,43 @@ import { toast } from '@/hooks/use-toast'
 import { useRequirePermission } from '@/hooks/use-permissions'
 
 interface MetricsSummary {
-  totalQueue: number
-  attendedQueue: number
-  cancelledQueue: number
-  pendingQueue: number
+  totalAppointments: number
+  completedAppointments: number
+  cancelledAppointments: number
+  noShowAppointments: number
   averageWaitTime: number
-  averageAttentionTime: number
-  attentionRate: number
+  averageConsultationTime: number
+  occupancyRate: number
 }
 
 interface ProfessionalMetrics {
   professional_id: string
   professional_name: string
-  total_queue: number
-  attended_queue: number
-  cancelled_queue: number
+  total_appointments: number
+  completed_appointments: number
+  cancelled_appointments: number
+  no_show_appointments: number
   average_wait_time: number
-  average_attention_time: number
+  average_consultation_time: number
+  specialties: string[]
 }
 
 interface ServiceMetrics {
   service_id: string
   service_name: string
-  total_queue: number
-  attended_queue: number
+  total_appointments: number
+  completed_appointments: number
   average_wait_time: number
-  average_attention_time: number
+  average_consultation_time: number
+  duration_minutes: number
 }
 
 interface TimeSeriesData {
   date: string
-  queue: number
-  attended: number
+  appointments: number
+  completed: number
   wait_time: number
-  attention_time: number
+  consultation_time: number
 }
 
 interface Institution {
@@ -130,12 +133,14 @@ export default function ReportesPage() {
 
         if (error) throw error
         setInstitutions(data || [])
+        // Set first institution as default if none selected
         if (!selectedInstitution && data && data.length > 0) {
           setSelectedInstitution(data[0].id)
         }
       } else if (userMembership) {
         setInstitutions([{ id: userMembership.institution_id, name: 'Mi Institución' }])
       } else {
+        // If no membership, try to get all institutions
         const { data, error } = await supabase
           .from('institution')
           .select('id, name')
@@ -147,6 +152,7 @@ export default function ReportesPage() {
           setInstitutions([])
         } else {
           setInstitutions(data || [])
+          // Set first institution as default if none selected
           if (!selectedInstitution && data && data.length > 0) {
             setSelectedInstitution(data[0].id)
           }
@@ -214,60 +220,73 @@ export default function ReportesPage() {
 
   const fetchSummaryMetrics = async (startDate: Date, endDate: Date) => {
     try {
-      const { data: queueItems, error } = await supabase
-        .from('daily_queue')
-        .select('*')
+      const { data: appointments, error } = await supabase
+        .from('appointment')
+        .select(`
+          id,
+          status,
+          scheduled_at,
+          created_at,
+          call_event(called_at),
+          attendance_event(event_type, occurred_at)
+        `)
         .eq('institution_id', selectedInstitution)
-        .gte('queue_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('queue_date', format(endDate, 'yyyy-MM-dd'))
+        .gte('scheduled_at', startDate.toISOString())
+        .lte('scheduled_at', endDate.toISOString())
 
       if (error) throw error
 
-      const total = queueItems?.length || 0
-      const attended = queueItems?.filter(q => q.status === 'atendido').length || 0
-      const cancelled = queueItems?.filter(q => q.status === 'cancelado').length || 0
-      const pending = queueItems?.filter(q => q.status === 'pendiente' || q.status === 'disponible').length || 0
+      const total = appointments?.length || 0
+      const completed = appointments?.filter((apt: any) => apt.status === 'finalizado').length || 0
+      const cancelled = appointments?.filter((apt: any) => apt.status === 'cancelado').length || 0
+      const noShow = appointments?.filter((apt: any) => apt.status === 'ausente').length || 0
 
-      // Calculate average wait times (from enabled_at to called_at)
+      // Calculate average wait times and consultation times
       let totalWaitTime = 0
       let waitTimeCount = 0
+      let totalConsultationTime = 0
+      let consultationTimeCount = 0
 
-      // Calculate average attention times (from called_at to attended_at)
-      let totalAttentionTime = 0
-      let attentionTimeCount = 0
-
-      queueItems?.forEach(q => {
-        // Wait time: from enabled_at to called_at
-        if (q.enabled_at && q.called_at) {
-          const enabledTime = new Date(q.enabled_at).getTime()
-          const calledTime = new Date(q.called_at).getTime()
-          totalWaitTime += Math.max(0, calledTime - enabledTime)
+      appointments?.forEach((apt: any) => {
+        // Wait time: from scheduled_at to called_at
+        if (apt.call_event && apt.call_event.length > 0) {
+          const scheduledTime = new Date(apt.scheduled_at).getTime()
+          const calledTime = new Date(apt.call_event[0].called_at).getTime()
+          totalWaitTime += Math.max(0, calledTime - scheduledTime)
           waitTimeCount++
         }
 
-        // Attention time: from called_at to attended_at
-        if (q.called_at && q.attended_at) {
-          const calledTime = new Date(q.called_at).getTime()
-          const attendedTime = new Date(q.attended_at).getTime()
-          totalAttentionTime += Math.max(0, attendedTime - calledTime)
-          attentionTimeCount++
+        // Consultation time: from consultation_start to consultation_end
+        if (apt.attendance_event && apt.attendance_event.length > 0) {
+          const events = apt.attendance_event.filter((e: any) => 
+            e.event_type === 'consultation_start' || e.event_type === 'consultation_end'
+          )
+          const startEvent = events.find((e: any) => e.event_type === 'consultation_start')
+          const endEvent = events.find((e: any) => e.event_type === 'consultation_end')
+          
+          if (startEvent && endEvent) {
+            const startTime = new Date(startEvent.occurred_at).getTime()
+            const endTime = new Date(endEvent.occurred_at).getTime()
+            totalConsultationTime += Math.max(0, endTime - startTime)
+            consultationTimeCount++
+          }
         }
       })
 
       const avgWaitTime = waitTimeCount > 0 ? totalWaitTime / waitTimeCount / (1000 * 60) : 0 // in minutes
-      const avgAttentionTime = attentionTimeCount > 0 ? totalAttentionTime / attentionTimeCount / (1000 * 60) : 0 // in minutes
+      const avgConsultationTime = consultationTimeCount > 0 ? totalConsultationTime / consultationTimeCount / (1000 * 60) : 0 // in minutes
 
-      // Calculate attention rate (attended vs total)
-      const attentionRate = total > 0 ? (attended / total) * 100 : 0
+      // Calculate occupancy rate (completed vs scheduled)
+      const occupancyRate = total > 0 ? (completed / total) * 100 : 0
 
       setSummary({
-        totalQueue: total,
-        attendedQueue: attended,
-        cancelledQueue: cancelled,
-        pendingQueue: pending,
+        totalAppointments: total,
+        completedAppointments: completed,
+        cancelledAppointments: cancelled,
+        noShowAppointments: noShow,
         averageWaitTime: Math.round(avgWaitTime),
-        averageAttentionTime: Math.round(avgAttentionTime),
-        attentionRate: Math.round(attentionRate * 100) / 100
+        averageConsultationTime: Math.round(avgConsultationTime),
+        occupancyRate: Math.round(occupancyRate * 100) / 100
       })
     } catch (error) {
       console.error('Error fetching summary metrics:', error)
@@ -276,75 +295,90 @@ export default function ReportesPage() {
 
   const fetchProfessionalMetrics = async (startDate: Date, endDate: Date) => {
     try {
-      const { data: queueItems, error } = await supabase
-        .from('daily_queue')
+      const { data: appointments, error } = await supabase
+        .from('appointment')
         .select(`
-          *,
+          id,
+          status,
+          scheduled_at,
           professional:professional_id (
             id,
             first_name,
-            last_name
-          )
+            last_name,
+            speciality
+          ),
+          call_event(called_at),
+          attendance_event(event_type, occurred_at)
         `)
         .eq('institution_id', selectedInstitution)
-        .gte('queue_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('queue_date', format(endDate, 'yyyy-MM-dd'))
-        .not('professional_id', 'is', null)
+        .gte('scheduled_at', startDate.toISOString())
+        .lte('scheduled_at', endDate.toISOString())
 
       if (error) throw error
 
       // Group by professional
       const professionalGroups: { [key: string]: any[] } = {}
-      queueItems?.forEach(q => {
-        if (q.professional && !Array.isArray(q.professional)) {
-          const key = (q.professional as any).id
+      appointments?.forEach((apt: any) => {
+        if (apt.professional && !Array.isArray(apt.professional)) {
+          const key = (apt.professional as any).id
           if (!professionalGroups[key]) {
             professionalGroups[key] = []
           }
-          professionalGroups[key].push(q)
+          professionalGroups[key].push(apt)
         }
       })
 
-      const metrics: ProfessionalMetrics[] = Object.entries(professionalGroups).map(([professionalId, items]) => {
-        const professional = items[0].professional as any
-        const total = items.length
-        const attended = items.filter(q => q.status === 'atendido').length
-        const cancelled = items.filter(q => q.status === 'cancelado').length
+      const metrics: ProfessionalMetrics[] = Object.entries(professionalGroups).map(([professionalId, apts]) => {
+        const professional = apts[0].professional as any
+        const total = apts.length
+        const completed = apts.filter((apt: any) => apt.status === 'finalizado').length
+        const cancelled = apts.filter((apt: any) => apt.status === 'cancelado').length
+        const noShow = apts.filter((apt: any) => apt.status === 'ausente').length
 
         // Calculate times
         let totalWaitTime = 0
         let waitTimeCount = 0
-        let totalAttentionTime = 0
-        let attentionTimeCount = 0
+        let totalConsultationTime = 0
+        let consultationTimeCount = 0
 
-        items.forEach(q => {
-          if (q.enabled_at && q.called_at) {
-            const enabledTime = new Date(q.enabled_at).getTime()
-            const calledTime = new Date(q.called_at).getTime()
-            totalWaitTime += Math.max(0, calledTime - enabledTime)
+        apts.forEach(apt => {
+          if (apt.call_event && apt.call_event.length > 0) {
+            const scheduledTime = new Date(apt.scheduled_at).getTime()
+            const calledTime = new Date(apt.call_event[0].called_at).getTime()
+            totalWaitTime += Math.max(0, calledTime - scheduledTime)
             waitTimeCount++
           }
 
-          if (q.called_at && q.attended_at) {
-            const calledTime = new Date(q.called_at).getTime()
-            const attendedTime = new Date(q.attended_at).getTime()
-            totalAttentionTime += Math.max(0, attendedTime - calledTime)
-            attentionTimeCount++
+          if (apt.attendance_event && apt.attendance_event.length > 0) {
+            const events = apt.attendance_event.filter((e: any) => 
+              e.event_type === 'consultation_start' || e.event_type === 'consultation_end'
+            )
+            const startEvent = events.find((e: any) => e.event_type === 'consultation_start')
+            const endEvent = events.find((e: any) => e.event_type === 'consultation_end')
+            
+            if (startEvent && endEvent) {
+              const startTime = new Date(startEvent.occurred_at).getTime()
+              const endTime = new Date(endEvent.occurred_at).getTime()
+              totalConsultationTime += Math.max(0, endTime - startTime)
+              consultationTimeCount++
+            }
           }
         })
 
         return {
           professional_id: professionalId,
           professional_name: `${professional.first_name} ${professional.last_name}`,
-          total_queue: total,
-          attended_queue: attended,
-          cancelled_queue: cancelled,
+          total_appointments: total,
+          completed_appointments: completed,
+          cancelled_appointments: cancelled,
+          no_show_appointments: noShow,
           average_wait_time: waitTimeCount > 0 ? Math.round(totalWaitTime / waitTimeCount / (1000 * 60)) : 0,
-          average_attention_time: attentionTimeCount > 0 ? Math.round(totalAttentionTime / attentionTimeCount / (1000 * 60)) : 0
+          average_consultation_time: consultationTimeCount > 0 ? Math.round(totalConsultationTime / consultationTimeCount / (1000 * 60)) : 0,
+          specialties: professional.speciality ? [professional.speciality] : []
         }
       })
 
-      setProfessionalMetrics(metrics.sort((a, b) => b.total_queue - a.total_queue))
+      setProfessionalMetrics(metrics.sort((a, b) => b.total_appointments - a.total_appointments))
     } catch (error) {
       console.error('Error fetching professional metrics:', error)
     }
@@ -352,71 +386,85 @@ export default function ReportesPage() {
 
   const fetchServiceMetrics = async (startDate: Date, endDate: Date) => {
     try {
-      const { data: queueItems, error } = await supabase
-        .from('daily_queue')
+      const { data: appointments, error } = await supabase
+        .from('appointment')
         .select(`
-          *,
+          id,
+          status,
+          scheduled_at,
           service:service_id (
             id,
-            name
-          )
+            name,
+            duration_minutes
+          ),
+          call_event(called_at),
+          attendance_event(event_type, occurred_at)
         `)
         .eq('institution_id', selectedInstitution)
-        .gte('queue_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('queue_date', format(endDate, 'yyyy-MM-dd'))
+        .gte('scheduled_at', startDate.toISOString())
+        .lte('scheduled_at', endDate.toISOString())
 
       if (error) throw error
 
       // Group by service
       const serviceGroups: { [key: string]: any[] } = {}
-      queueItems?.forEach(q => {
-        if (q.service && !Array.isArray(q.service)) {
-          const key = (q.service as any).id
+      appointments?.forEach((apt: any) => {
+        if (apt.service && !Array.isArray(apt.service)) {
+          const key = (apt.service as any).id
           if (!serviceGroups[key]) {
             serviceGroups[key] = []
           }
-          serviceGroups[key].push(q)
+          serviceGroups[key].push(apt)
         }
       })
 
-      const metrics: ServiceMetrics[] = Object.entries(serviceGroups).map(([serviceId, items]) => {
-        const service = items[0].service as any
-        const total = items.length
-        const attended = items.filter(q => q.status === 'atendido').length
+      const metrics: ServiceMetrics[] = Object.entries(serviceGroups).map(([serviceId, apts]) => {
+        const service = apts[0].service as any
+        const total = apts.length
+        const completed = apts.filter((apt: any) => apt.status === 'finalizado').length
 
         // Calculate times
         let totalWaitTime = 0
         let waitTimeCount = 0
-        let totalAttentionTime = 0
-        let attentionTimeCount = 0
+        let totalConsultationTime = 0
+        let consultationTimeCount = 0
 
-        items.forEach(q => {
-          if (q.enabled_at && q.called_at) {
-            const enabledTime = new Date(q.enabled_at).getTime()
-            const calledTime = new Date(q.called_at).getTime()
-            totalWaitTime += Math.max(0, calledTime - enabledTime)
+        apts.forEach(apt => {
+          if (apt.call_event && apt.call_event.length > 0) {
+            const scheduledTime = new Date(apt.scheduled_at).getTime()
+            const calledTime = new Date(apt.call_event[0].called_at).getTime()
+            totalWaitTime += Math.max(0, calledTime - scheduledTime)
             waitTimeCount++
           }
 
-          if (q.called_at && q.attended_at) {
-            const calledTime = new Date(q.called_at).getTime()
-            const attendedTime = new Date(q.attended_at).getTime()
-            totalAttentionTime += Math.max(0, attendedTime - calledTime)
-            attentionTimeCount++
+          if (apt.attendance_event && apt.attendance_event.length > 0) {
+            const events = apt.attendance_event.filter((e: any) => 
+              e.event_type === 'consultation_start' || e.event_type === 'consultation_end'
+            )
+            const startEvent = events.find((e: any) => e.event_type === 'consultation_start')
+            const endEvent = events.find((e: any) => e.event_type === 'consultation_end')
+            
+            if (startEvent && endEvent) {
+              const startTime = new Date(startEvent.occurred_at).getTime()
+              const endTime = new Date(endEvent.occurred_at).getTime()
+              totalConsultationTime += Math.max(0, endTime - startTime)
+              consultationTimeCount++
+            }
           }
         })
 
         return {
           service_id: serviceId,
           service_name: service.name,
-          total_queue: total,
-          attended_queue: attended,
+          total_appointments: total,
+          completed_appointments: completed,
           average_wait_time: waitTimeCount > 0 ? Math.round(totalWaitTime / waitTimeCount / (1000 * 60)) : 0,
-          average_attention_time: attentionTimeCount > 0 ? Math.round(totalAttentionTime / attentionTimeCount / (1000 * 60)) : 0
+          average_consultation_time: consultationTimeCount > 0 ? Math.round(totalConsultationTime / consultationTimeCount / (1000 * 60)) : 0,
+          duration_minutes: service.duration_minutes || 0
         }
       })
 
-      setServiceMetrics(metrics.sort((a, b) => b.total_queue - a.total_queue))
+      setServiceMetrics(metrics.sort((a, b) => b.total_appointments - a.total_appointments))
     } catch (error) {
       console.error('Error fetching service metrics:', error)
     }
@@ -424,57 +472,71 @@ export default function ReportesPage() {
 
   const fetchTimeSeriesData = async (startDate: Date, endDate: Date) => {
     try {
-      const { data: queueItems, error } = await supabase
-        .from('daily_queue')
-        .select('*')
+      const { data: appointments, error } = await supabase
+        .from('appointment')
+        .select(`
+          id,
+          status,
+          scheduled_at,
+          call_event(called_at),
+          attendance_event(event_type, occurred_at)
+        `)
         .eq('institution_id', selectedInstitution)
-        .gte('queue_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('queue_date', format(endDate, 'yyyy-MM-dd'))
+        .gte('scheduled_at', startDate.toISOString())
+        .lte('scheduled_at', endDate.toISOString())
 
       if (error) throw error
 
       // Group by date
       const dateGroups: { [key: string]: any[] } = {}
-      queueItems?.forEach(q => {
-        const date = q.queue_date
+      appointments?.forEach((apt: any) => {
+        const date = format(new Date(apt.scheduled_at), 'yyyy-MM-dd')
         if (!dateGroups[date]) {
           dateGroups[date] = []
         }
-        dateGroups[date].push(q)
+        dateGroups[date].push(apt)
       })
 
-      const timeSeries: TimeSeriesData[] = Object.entries(dateGroups).map(([date, items]) => {
-        const total = items.length
-        const attended = items.filter(q => q.status === 'atendido').length
+      const timeSeries: TimeSeriesData[] = Object.entries(dateGroups).map(([date, apts]) => {
+        const total = apts.length
+        const completed = apts.filter((apt: any) => apt.status === 'finalizado').length
 
         // Calculate average times for this date
         let totalWaitTime = 0
         let waitTimeCount = 0
-        let totalAttentionTime = 0
-        let attentionTimeCount = 0
+        let totalConsultationTime = 0
+        let consultationTimeCount = 0
 
-        items.forEach(q => {
-          if (q.enabled_at && q.called_at) {
-            const enabledTime = new Date(q.enabled_at).getTime()
-            const calledTime = new Date(q.called_at).getTime()
-            totalWaitTime += Math.max(0, calledTime - enabledTime)
+        apts.forEach(apt => {
+          if (apt.call_event && apt.call_event.length > 0) {
+            const scheduledTime = new Date(apt.scheduled_at).getTime()
+            const calledTime = new Date(apt.call_event[0].called_at).getTime()
+            totalWaitTime += Math.max(0, calledTime - scheduledTime)
             waitTimeCount++
           }
 
-          if (q.called_at && q.attended_at) {
-            const calledTime = new Date(q.called_at).getTime()
-            const attendedTime = new Date(q.attended_at).getTime()
-            totalAttentionTime += Math.max(0, attendedTime - calledTime)
-            attentionTimeCount++
+          if (apt.attendance_event && apt.attendance_event.length > 0) {
+            const events = apt.attendance_event.filter((e: any) => 
+              e.event_type === 'consultation_start' || e.event_type === 'consultation_end'
+            )
+            const startEvent = events.find((e: any) => e.event_type === 'consultation_start')
+            const endEvent = events.find((e: any) => e.event_type === 'consultation_end')
+            
+            if (startEvent && endEvent) {
+              const startTime = new Date(startEvent.occurred_at).getTime()
+              const endTime = new Date(endEvent.occurred_at).getTime()
+              totalConsultationTime += Math.max(0, endTime - startTime)
+              consultationTimeCount++
+            }
           }
         })
 
         return {
           date,
-          queue: total,
-          attended,
+          appointments: total,
+          completed,
           wait_time: waitTimeCount > 0 ? Math.round(totalWaitTime / waitTimeCount / (1000 * 60)) : 0,
-          attention_time: attentionTimeCount > 0 ? Math.round(totalAttentionTime / attentionTimeCount / (1000 * 60)) : 0
+          consultation_time: consultationTimeCount > 0 ? Math.round(totalConsultationTime / consultationTimeCount / (1000 * 60)) : 0
         }
       }).sort((a, b) => a.date.localeCompare(b.date))
 
@@ -497,22 +559,22 @@ export default function ReportesPage() {
           if (!summary) return
           csvContent = [
             'Métrica,Valor',
-            `Total Cola,${summary.totalQueue}`,
-            `Atendidos,${summary.attendedQueue}`,
-            `Cancelados,${summary.cancelledQueue}`,
-            `Pendientes,${summary.pendingQueue}`,
+            `Total Turnos,${summary.totalAppointments}`,
+            `Turnos Completados,${summary.completedAppointments}`,
+            `Turnos Cancelados,${summary.cancelledAppointments}`,
+            `Ausencias,${summary.noShowAppointments}`,
             `Tiempo Promedio Espera (min),${summary.averageWaitTime}`,
-            `Tiempo Promedio Atención (min),${summary.averageAttentionTime}`,
-            `Tasa Atención (%),${summary.attentionRate}`
+            `Tiempo Promedio Consulta (min),${summary.averageConsultationTime}`,
+            `Tasa Ocupación (%),${summary.occupancyRate}`
           ].join('\n')
           filename = `resumen_metricas_${dateRange}.csv`
           break
 
         case 'professionals':
           csvContent = [
-            'Profesional,Total Cola,Atendidos,Cancelados,Tiempo Espera Prom (min),Tiempo Atención Prom (min)',
+            'Profesional,Total Turnos,Completados,Cancelados,Ausencias,Tiempo Espera Prom (min),Tiempo Consulta Prom (min),Especialidades',
             ...professionalMetrics.map(prof =>
-              `"${prof.professional_name}",${prof.total_queue},${prof.attended_queue},${prof.cancelled_queue},${prof.average_wait_time},${prof.average_attention_time}`
+              `"${prof.professional_name}",${prof.total_appointments},${prof.completed_appointments},${prof.cancelled_appointments},${prof.no_show_appointments},${prof.average_wait_time},${prof.average_consultation_time},"${prof.specialties.join('; ')}"`
             )
           ].join('\n')
           filename = `metricas_profesionales_${dateRange}.csv`
@@ -520,9 +582,9 @@ export default function ReportesPage() {
 
         case 'services':
           csvContent = [
-            'Servicio,Total Cola,Atendidos,Tiempo Espera Prom (min),Tiempo Atención Prom (min)',
+            'Servicio,Total Turnos,Completados,Tiempo Espera Prom (min),Tiempo Consulta Prom (min),Duración Configurada (min)',
             ...serviceMetrics.map(service =>
-              `"${service.service_name}",${service.total_queue},${service.attended_queue},${service.average_wait_time},${service.average_attention_time}`
+              `"${service.service_name}",${service.total_appointments},${service.completed_appointments},${service.average_wait_time},${service.average_consultation_time},${service.duration_minutes}`
             )
           ].join('\n')
           filename = `metricas_servicios_${dateRange}.csv`
@@ -602,7 +664,7 @@ export default function ReportesPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Métricas y Reportes</h1>
-          <p className="text-gray-600">Análisis de rendimiento de cola diaria</p>
+          <p className="text-gray-600">Análisis de rendimiento y tiempos de atención</p>
         </div>
       </div>
 
@@ -615,7 +677,25 @@ export default function ReportesPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {userMembership?.role === 'admin' && (
+              <div>
+                <Label>Institución</Label>
+                <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar institución" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {institutions.map((institution) => (
+                      <SelectItem key={institution.id} value={institution.id}>
+                        {institution.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div>
               <Label>Período</Label>
               <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -673,23 +753,23 @@ export default function ReportesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Cola</CardTitle>
+                <CardTitle className="text-sm font-medium">Total Turnos</CardTitle>
                 <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary?.totalQueue || 0}</div>
+                <div className="text-2xl font-bold">{summary?.totalAppointments || 0}</div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tasa de Atención</CardTitle>
+                <CardTitle className="text-sm font-medium">Tasa de Ocupación</CardTitle>
                 <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary?.attentionRate || 0}%</div>
+                <div className="text-2xl font-bold">{summary?.occupancyRate || 0}%</div>
                 <p className="text-xs text-muted-foreground">
-                  {summary?.attendedQueue || 0} de {summary?.totalQueue || 0} atendidos
+                  {summary?.completedAppointments || 0} de {summary?.totalAppointments || 0} completados
                 </p>
               </CardContent>
             </Card>
@@ -708,12 +788,12 @@ export default function ReportesPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tiempo Atención Prom.</CardTitle>
+                <CardTitle className="text-sm font-medium">Tiempo Consulta Prom.</CardTitle>
                 <HeartHandshakeIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatTime(summary?.averageAttentionTime || 0)}
+                  {formatTime(summary?.averageConsultationTime || 0)}
                 </div>
               </CardContent>
             </Card>
@@ -740,9 +820,9 @@ export default function ReportesPage() {
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'Atendidos', value: summary?.attendedQueue || 0, color: COLORS[0] },
-                        { name: 'Cancelados', value: summary?.cancelledQueue || 0, color: COLORS[1] },
-                        { name: 'Pendientes', value: summary?.pendingQueue || 0, color: COLORS[2] }
+                        { name: 'Completados', value: summary?.completedAppointments || 0, color: COLORS[0] },
+                        { name: 'Cancelados', value: summary?.cancelledAppointments || 0, color: COLORS[1] },
+                        { name: 'Ausencias', value: summary?.noShowAppointments || 0, color: COLORS[2] }
                       ]}
                       cx="50%"
                       cy="50%"
@@ -753,9 +833,9 @@ export default function ReportesPage() {
                       dataKey="value"
                     >
                       {[
-                        { name: 'Atendidos', value: summary?.attendedQueue || 0 },
-                        { name: 'Cancelados', value: summary?.cancelledQueue || 0 },
-                        { name: 'Pendientes', value: summary?.pendingQueue || 0 }
+                        { name: 'Completados', value: summary?.completedAppointments || 0 },
+                        { name: 'Cancelados', value: summary?.cancelledAppointments || 0 },
+                        { name: 'Ausencias', value: summary?.noShowAppointments || 0 }
                       ].map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
@@ -775,7 +855,7 @@ export default function ReportesPage() {
                   <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                     <div>
                       <p className="font-medium">Tiempo de Espera Promedio</p>
-                      <p className="text-sm text-gray-600">Desde habilitación hasta llamado</p>
+                      <p className="text-sm text-gray-600">Desde turno programado hasta llamado</p>
                     </div>
                     <div className="text-2xl font-bold text-blue-600">
                       {formatTime(summary?.averageWaitTime || 0)}
@@ -783,11 +863,11 @@ export default function ReportesPage() {
                   </div>
                   <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
                     <div>
-                      <p className="font-medium">Tiempo de Atención Promedio</p>
-                      <p className="text-sm text-gray-600">Desde llamado hasta atendido</p>
+                      <p className="font-medium">Tiempo de Consulta Promedio</p>
+                      <p className="text-sm text-gray-600">Duración real de la consulta</p>
                     </div>
                     <div className="text-2xl font-bold text-green-600">
-                      {formatTime(summary?.averageAttentionTime || 0)}
+                      {formatTime(summary?.averageConsultationTime || 0)}
                     </div>
                   </div>
                 </div>
@@ -822,12 +902,19 @@ export default function ReportesPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                           <h3 className="font-semibold text-lg">{prof.professional_name}</h3>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {prof.specialties.map((specialty, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {specialty}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Total Cola</p>
-                          <p className="text-xl font-bold">{prof.total_queue}</p>
+                          <p className="text-sm text-gray-600">Total Turnos</p>
+                          <p className="text-xl font-bold">{prof.total_appointments}</p>
                           <p className="text-xs text-green-600">
-                            {prof.attended_queue} atendidos
+                            {prof.completed_appointments} completados
                           </p>
                         </div>
                         <div>
@@ -837,9 +924,9 @@ export default function ReportesPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Tiempo Atención Prom.</p>
+                          <p className="text-sm text-gray-600">Tiempo Consulta Prom.</p>
                           <p className="text-lg font-semibold text-green-600">
-                            {formatTime(prof.average_attention_time)}
+                            {formatTime(prof.average_consultation_time)}
                           </p>
                         </div>
                       </div>
@@ -881,18 +968,21 @@ export default function ReportesPage() {
                 {serviceMetrics.map((service) => (
                   <Card key={service.service_id} className="border-l-4 border-l-green-500">
                     <CardContent className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div>
                           <h3 className="font-semibold text-lg">{service.service_name}</h3>
+                          <p className="text-sm text-gray-600">
+                            Duración: {formatTime(service.duration_minutes)}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Total Cola</p>
-                          <p className="text-xl font-bold">{service.total_queue}</p>
+                          <p className="text-sm text-gray-600">Total Turnos</p>
+                          <p className="text-xl font-bold">{service.total_appointments}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Atendidos</p>
+                          <p className="text-sm text-gray-600">Completados</p>
                           <p className="text-lg font-semibold text-green-600">
-                            {service.attended_queue}
+                            {service.completed_appointments}
                           </p>
                         </div>
                         <div>
@@ -900,6 +990,17 @@ export default function ReportesPage() {
                           <p className="text-lg font-semibold text-blue-600">
                             {formatTime(service.average_wait_time)}
                           </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Tiempo Consulta Prom.</p>
+                          <p className="text-lg font-semibold text-green-600">
+                            {formatTime(service.average_consultation_time)}
+                          </p>
+                          {service.average_consultation_time > 0 && service.duration_minutes > 0 && (
+                            <p className="text-xs text-gray-500">
+                              {Math.round((service.average_consultation_time / service.duration_minutes) * 100)}% del tiempo configurado
+                            </p>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -921,7 +1022,7 @@ export default function ReportesPage() {
           <div className="grid lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Tendencia de Cola</CardTitle>
+                <CardTitle>Tendencia de Turnos</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -937,16 +1038,16 @@ export default function ReportesPage() {
                     />
                     <Line
                       type="monotone"
-                      dataKey="queue"
+                      dataKey="appointments"
                       stroke={COLORS[0]}
-                      name="Total Cola"
+                      name="Total Turnos"
                       strokeWidth={2}
                     />
                     <Line
                       type="monotone"
-                      dataKey="attended"
+                      dataKey="completed"
                       stroke={COLORS[1]}
-                      name="Atendidos"
+                      name="Completados"
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -980,9 +1081,9 @@ export default function ReportesPage() {
                     />
                     <Line
                       type="monotone"
-                      dataKey="attention_time"
+                      dataKey="consultation_time"
                       stroke={COLORS[3]}
-                      name="Tiempo de Atención (min)"
+                      name="Tiempo de Consulta (min)"
                       strokeWidth={2}
                     />
                   </LineChart>

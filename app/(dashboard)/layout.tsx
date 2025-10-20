@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -92,11 +92,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null)
   const [institutionContext, setInstitutionContext] = useState<any>(null)
 
-  useEffect(() => {
-    loadLayoutData()
-  }, [router])
-
-  const loadLayoutData = async () => {
+  const loadLayoutData = useCallback(async () => {
     try {
       // Verificar sesión de Supabase
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -143,7 +139,11 @@ export default function DashboardLayout({
       await supabase.auth.signOut()
       router.push('/')
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    loadLayoutData()
+  }, [loadLayoutData])
 
   const handleLogout = async () => {
     try {
@@ -217,11 +217,11 @@ export default function DashboardLayout({
       <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-200">
+          <div className="flex items-center justify-center h-16 px-6 border-b border-gray-200">
             <img
               src="/images/logo.png"
               alt="Turnero ZS"
-              className="h-10 w-auto"
+              className="h-16 w-auto"
             />
           </div>
 

@@ -93,11 +93,14 @@ class SecurityManager {
   }
 
   private async loadBlockedIPs(): Promise<void> {
+    // TODO: Implementar tabla security_blocks en la base de datos
+    // La tabla security_blocks no existe aún, deshabilitado temporalmente
+    /*
     try {
       const { data, error } = await supabase
         .from('security_blocks')
         .select('ip_address')
-        .eq('active', true)
+        .eq('is_active', true)  // Cambiado de 'active' a 'is_active'
         .gt('expires_at', new Date().toISOString())
 
       if (error) throw error
@@ -106,6 +109,7 @@ class SecurityManager {
     } catch (error) {
       console.error('Failed to load blocked IPs:', error)
     }
+    */
   }
 
   /**
@@ -167,6 +171,9 @@ class SecurityManager {
 
       const expiresAt = new Date(Date.now() + duration)
 
+      // TODO: Implementar tabla security_blocks en la base de datos
+      // La tabla security_blocks no existe aún, deshabilitado temporalmente
+      /*
       await supabase
         .from('security_blocks')
         .insert({
@@ -174,8 +181,9 @@ class SecurityManager {
           reason,
           blocked_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString(),
-          active: true
+          is_active: true  // Cambiado de 'active' a 'is_active'
         })
+      */
 
       this.reportThreat({
         type: 'unauthorized_access',
