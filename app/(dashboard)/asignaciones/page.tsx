@@ -1,17 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCrudOperation } from '@/hooks/useCrudOperation'
+import { useInstitutionContext } from '@/hooks/useInstitutionContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { DeleteConfirmation } from '@/components/crud/DeleteConfirmation'
 import { useToast } from '@/hooks/use-toast'
 import { useRequirePermission } from '@/hooks/use-permissions'
 import { CalendarIcon, Plus, Trash2, Building2, UserCheck, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { getTodayISO, formatFullName } from '@/lib/supabase/helpers'
 
 interface Professional {
   id: string
@@ -29,115 +33,136 @@ interface Assignment {
   id: string
   professional_id: string
   room_id: string
-  professional: Professional
-  room: Room
+  institution_id: string
+  assignment_date: string
+  professional_name?: string
+  professional_speciality?: string | null
+  room_name?: string
 }
 
 export default function AsignacionesPage() {
   const { hasAccess, loading: permissionLoading } = useRequirePermission('/asignaciones')
   const { toast } = useToast()
-
+  const { context, requireContext } = useInstitutionContext()
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
-  const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [loading, setLoading] = useState(true)
   const [selectedProfessional, setSelectedProfessional] = useState('')
   const [selectedRoom, setSelectedRoom] = useState('')
 
-  const fetchData = useCallback(async () => {
+  // Obtener institution_id del contexto
+  requireContext()
+  const institutionId = context!.institution_id
+  const today = getTodayISO()
+
+  // Hook CRUD para asignaciones diarias (solo CREATE y DELETE)
+  const {
+    items: assignments,
+    isLoading,
+    isSaving,
+    isDeleteDialogOpen,
+    itemToDelete: deletingAssignment,
+    error,
+    openDeleteDialog,
+    closeDeleteDialog,
+    handleDelete: crudHandleDelete,
+    refreshData
+  } = useCrudOperation<Assignment>({
+    tableName: 'daily_professional_assignment',
+    initialFormData: {
+      professional_id: '',
+      room_id: '',
+      institution_id: institutionId,
+      assignment_date: today
+    },
+    selectFields: `
+      *,
+      professional:professional_id!inner(first_name, last_name, speciality),
+      room:room_id!inner(name)
+    `,
+    filterConditions: {
+      institution_id: institutionId,
+      assignment_date: today
+    },
+    transformFn: (item: any) => ({
+      ...item,
+      professional_name: formatFullName(item.professional?.first_name, item.professional?.last_name),
+      professional_speciality: item.professional?.speciality,
+      room_name: item.room?.name
+    }),
+    onSuccess: (operation) => {
+      const messages = {
+        create: { title: 'Asignación creada', description: 'El profesional ha sido asignado al consultorio.' },
+        update: { title: 'Asignación actualizada', description: 'La asignación se ha actualizado correctamente.' },
+        delete: { title: 'Asignación eliminada', description: 'La asignación ha sido eliminada correctamente.' }
+      }
+      toast(messages[operation])
+    },
+    onError: (operation, error) => {
+      toast({
+        title: 'Error',
+        description: `Error al ${operation === 'create' ? 'crear' : operation === 'delete' ? 'eliminar' : 'actualizar'} la asignación`,
+        variant: 'destructive'
+      })
+    }
+  })
+
+  // Cargar profesionales y consultorios al montar
+  useEffect(() => {
+    fetchProfessionalsAndRooms()
+  }, [])
+
+  const fetchProfessionalsAndRooms = async () => {
     try {
-      setLoading(true)
-      const contextData = localStorage.getItem('institution_context')
-      if (!contextData) return
-
-      const context = JSON.parse(contextData)
-      const today = new Date().toISOString().split('T')[0]
-
-      // Obtener profesionales activos
+      // Profesionales activos
       const { data: profsData, error: profsError } = await supabase
         .from('professional')
         .select('id, first_name, last_name, speciality')
-        .eq('institution_id', context.institution_id)
+        .eq('institution_id', institutionId)
         .eq('is_active', true)
         .order('last_name')
 
       if (profsError) throw profsError
       setProfessionals(profsData || [])
 
-      // Obtener consultorios activos
+      // Consultorios activos
       const { data: roomsData, error: roomsError } = await supabase
         .from('room')
         .select('id, name')
-        .eq('institution_id', context.institution_id)
+        .eq('institution_id', institutionId)
         .eq('is_active', true)
         .order('name')
 
       if (roomsError) throw roomsError
       setRooms(roomsData || [])
-
-      // Obtener asignaciones del día
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('daily_professional_assignment')
-        .select(`
-          id,
-          professional_id,
-          room_id,
-          professional:professional_id (
-            id,
-            first_name,
-            last_name,
-            speciality
-          ),
-          room:room_id (
-            id,
-            name
-          )
-        `)
-        .eq('institution_id', context.institution_id)
-        .eq('assignment_date', today)
-
-      if (assignmentsError) throw assignmentsError
-      setAssignments(assignmentsData || [])
     } catch (error) {
       console.error('Error al cargar datos:', error)
       toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos",
-        variant: "destructive",
+        title: 'Error',
+        description: 'No se pudieron cargar los datos',
+        variant: 'destructive'
       })
-    } finally {
-      setLoading(false)
     }
-  }, [toast])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  }
 
   const handleAddAssignment = async () => {
     if (!selectedProfessional || !selectedRoom) {
       toast({
-        title: "Error",
-        description: "Selecciona un profesional y un consultorio",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Selecciona un profesional y un consultorio',
+        variant: 'destructive'
       })
       return
     }
 
     try {
-      const contextData = localStorage.getItem('institution_context')
-      if (!contextData) return
-
-      const context = JSON.parse(contextData)
       const { data: authData } = await supabase.auth.getUser()
-      const today = new Date().toISOString().split('T')[0]
 
       const { error } = await supabase
         .from('daily_professional_assignment')
         .insert({
           professional_id: selectedProfessional,
           room_id: selectedRoom,
-          institution_id: context.institution_id,
+          institution_id: institutionId,
           assignment_date: today,
           created_by: authData.user?.id
         })
@@ -145,9 +170,9 @@ export default function AsignacionesPage() {
       if (error) {
         if (error.code === '23505') {
           toast({
-            title: "Error",
-            description: "Este profesional ya tiene una asignación para hoy",
-            variant: "destructive",
+            title: 'Error',
+            description: 'Este profesional ya tiene una asignación para hoy',
+            variant: 'destructive'
           })
         } else {
           throw error
@@ -156,8 +181,8 @@ export default function AsignacionesPage() {
       }
 
       toast({
-        title: "Asignación creada",
-        description: "El profesional ha sido asignado al consultorio",
+        title: 'Asignación creada',
+        description: 'El profesional ha sido asignado al consultorio'
       })
 
       // Limpiar selección
@@ -165,40 +190,19 @@ export default function AsignacionesPage() {
       setSelectedRoom('')
 
       // Recargar datos
-      fetchData()
+      refreshData()
     } catch (error) {
       console.error('Error al crear asignación:', error)
       toast({
-        title: "Error",
-        description: "No se pudo crear la asignación",
-        variant: "destructive",
+        title: 'Error',
+        description: 'No se pudo crear la asignación',
+        variant: 'destructive'
       })
     }
   }
 
-  const handleDeleteAssignment = async (assignmentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('daily_professional_assignment')
-        .delete()
-        .eq('id', assignmentId)
-
-      if (error) throw error
-
-      toast({
-        title: "Asignación eliminada",
-        description: "La asignación ha sido eliminada correctamente",
-      })
-
-      fetchData()
-    } catch (error) {
-      console.error('Error al eliminar asignación:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la asignación",
-        variant: "destructive",
-      })
-    }
+  const handleDelete = async () => {
+    await crudHandleDelete()
   }
 
   // Profesionales que ya están asignados hoy
@@ -208,7 +212,7 @@ export default function AsignacionesPage() {
   // Consultorios ocupados hoy
   const occupiedRoomIds = assignments.map(a => a.room_id)
 
-  if (permissionLoading || loading) {
+  if (permissionLoading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -241,6 +245,12 @@ export default function AsignacionesPage() {
         </AlertDescription>
       </Alert>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Formulario de nueva asignación */}
       <Card>
         <CardHeader>
@@ -268,7 +278,7 @@ export default function AsignacionesPage() {
                   ) : (
                     availableProfessionals.map((prof) => (
                       <SelectItem key={prof.id} value={prof.id}>
-                        {prof.first_name} {prof.last_name}
+                        {formatFullName(prof.first_name, prof.last_name)}
                         {prof.speciality && ` - ${prof.speciality}`}
                       </SelectItem>
                     ))
@@ -297,7 +307,7 @@ export default function AsignacionesPage() {
             <div className="flex items-end">
               <Button
                 onClick={handleAddAssignment}
-                disabled={!selectedProfessional || !selectedRoom}
+                disabled={!selectedProfessional || !selectedRoom || isSaving}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -342,19 +352,18 @@ export default function AsignacionesPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-lg">
-                            {(assignment.professional as any).first_name}{' '}
-                            {(assignment.professional as any).last_name}
+                            {assignment.professional_name}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
-                            {(assignment.professional as any).speciality && (
+                            {assignment.professional_speciality && (
                               <Badge variant="secondary" className="text-xs">
-                                {(assignment.professional as any).speciality}
+                                {assignment.professional_speciality}
                               </Badge>
                             )}
                             <span className="text-sm text-muted-foreground">→</span>
                             <Badge className="bg-green-100 text-green-800">
                               <Building2 className="h-3 w-3 mr-1" />
-                              {(assignment.room as any).name}
+                              {assignment.room_name}
                             </Badge>
                           </div>
                         </div>
@@ -362,8 +371,9 @@ export default function AsignacionesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDeleteAssignment(assignment.id)}
+                        onClick={() => openDeleteDialog(assignment)}
                         className="text-red-600 hover:text-red-700"
+                        disabled={isSaving}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -375,6 +385,15 @@ export default function AsignacionesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Confirmación de Eliminación */}
+      <DeleteConfirmation
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={closeDeleteDialog}
+        itemName={deletingAssignment?.professional_name || ''}
+        onConfirm={handleDelete}
+        isDeleting={isSaving}
+      />
     </div>
   )
 }

@@ -2,18 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCrudOperation } from '@/hooks/useCrudOperation'
+import { useToggleState } from '@/hooks/useToggleState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { CrudDialog } from '@/components/crud/CrudDialog'
+import { DeleteConfirmation } from '@/components/crud/DeleteConfirmation'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, Calendar, Clock, User, Activity, Building, DoorOpen } from 'lucide-react'
+import { Plus, Edit, Trash2, Calendar, Clock, User, Activity, DoorOpen } from 'lucide-react'
+import { formatFullName } from '@/lib/supabase/helpers'
 
 type SlotTemplate = {
   id: string
@@ -27,23 +30,10 @@ type SlotTemplate = {
   is_active: boolean
   created_at: string
   updated_at: string
-  professional?: {
-    id: string
-    first_name: string
-    last_name: string
-    institution: {
-      name: string
-      zone_name: string
-    }
-  }
-  service?: {
-    id: string
-    name: string
-  }
-  room?: {
-    id: string
-    name: string
-  } | null
+  professional_name?: string
+  institution_name?: string
+  service_name?: string
+  room_name?: string | null
 }
 
 type Professional = {
@@ -79,129 +69,112 @@ const daysOfWeek = [
 ]
 
 export default function HorariosPage() {
-  const [slotTemplates, setSlotTemplates] = useState<SlotTemplate[]>([])
+  const { toast } = useToast()
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingSlotTemplate, setEditingSlotTemplate] = useState<SlotTemplate | null>(null)
-  const [formData, setFormData] = useState({
-    professional_id: '',
-    service_id: '',
-    room_id: '',
-    day_of_week: 1,
-    start_time: '08:00',
-    end_time: '17:00',
-    slot_duration_minutes: 30,
-    is_active: true
-  })
-  const [error, setError] = useState<string | null>(null)
   const [selectedInstitution, setSelectedInstitution] = useState<string>('')
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [deletingTemplate, setDeletingTemplate] = useState<SlotTemplate | null>(null)
-  const { toast } = useToast()
 
+  // Hook CRUD para slot_template
+  const {
+    items: slotTemplates,
+    formData,
+    isLoading,
+    isSaving,
+    isDialogOpen,
+    isDeleteDialogOpen,
+    editingItem: editingSlotTemplate,
+    itemToDelete: deletingTemplate,
+    error,
+    updateFormField,
+    openCreateDialog,
+    openEditDialog,
+    closeDialog,
+    openDeleteDialog,
+    closeDeleteDialog,
+    handleSubmit: crudHandleSubmit,
+    handleDelete: crudHandleDelete,
+    refreshData
+  } = useCrudOperation<SlotTemplate>({
+    tableName: 'slot_template',
+    initialFormData: {
+      professional_id: '',
+      service_id: '',
+      room_id: '',
+      day_of_week: 1,
+      start_time: '08:00',
+      end_time: '17:00',
+      slot_duration_minutes: 30,
+      is_active: true
+    },
+    selectFields: `
+      *,
+      professional:professional_id!inner(id, first_name, last_name, institution:institution_id!inner(name)),
+      service:service_id!inner(id, name),
+      room:room_id(id, name)
+    `,
+    transformFn: (item: any) => ({
+      ...item,
+      professional_name: item.professional
+        ? formatFullName(item.professional.first_name, item.professional.last_name)
+        : undefined,
+      institution_name: item.professional?.institution?.name || 'Sin institución',
+      service_name: item.service?.name || 'Sin servicio',
+      room_name: item.room?.name || null
+    }),
+    onSuccess: (operation) => {
+      const messages = {
+        create: { title: 'Plantilla creada', description: 'La plantilla de horario se ha creado correctamente.' },
+        update: { title: 'Plantilla actualizada', description: 'La plantilla de horario se ha actualizado correctamente.' },
+        delete: { title: 'Plantilla eliminada', description: 'La plantilla de horario se ha eliminado correctamente.' }
+      }
+      toast(messages[operation])
+    },
+    onError: (operation, error) => {
+      toast({
+        title: 'Error',
+        description: `Error al ${operation === 'create' ? 'crear' : operation === 'update' ? 'actualizar' : 'eliminar'} la plantilla`,
+        variant: 'destructive'
+      })
+    }
+  })
+
+  // Hook para toggle de is_active
+  const { toggle: toggleActive, isToggling } = useToggleState({
+    tableName: 'slot_template',
+    fieldName: 'is_active',
+    onSuccess: (id, newValue) => {
+      toast({
+        title: newValue ? 'Plantilla activada' : 'Plantilla desactivada',
+        description: `La plantilla ha sido ${newValue ? 'activada' : 'desactivada'} correctamente.`
+      })
+      refreshData()
+    }
+  })
+
+  // Cargar datos relacionados al montar
   useEffect(() => {
-    Promise.all([fetchSlotTemplates(), fetchProfessionals()])
+    fetchProfessionals()
   }, [])
 
+  // Cuando cambia el profesional, cargar servicios y consultorios de su institución
   useEffect(() => {
     if (formData.professional_id) {
       const professional = professionals.find(p => p.id === formData.professional_id)
       if (professional) {
+        setSelectedInstitution(professional.institution_id)
         fetchServicesForInstitution(professional.institution_id)
         fetchRoomsForInstitution(professional.institution_id)
-        setSelectedInstitution(professional.institution_id)
       }
+    } else {
+      setSelectedInstitution('')
+      setServices([])
+      setRooms([])
     }
   }, [formData.professional_id, professionals])
 
-  const fetchSlotTemplates = async () => {
-    try {
-      setLoading(true)
-      // Get slot templates first
-      const { data: templatesData, error: templatesError } = await supabase
-        .from('slot_template')
-        .select('*')
-        .order('professional_id', { ascending: true })
-        .order('day_of_week', { ascending: true })
-        .order('start_time', { ascending: true })
-
-      if (templatesError) throw templatesError
-
-      // Get related data
-      const { data: professionalsData, error: profError } = await supabase
-        .from('professional')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          institution_id
-        `)
-
-      const { data: institutionsData, error: instError } = await supabase
-        .from('institution')
-        .select(`
-          id,
-          name,
-          zone:zone_id!inner(
-            name
-          )
-        `)
-
-      const { data: servicesData, error: servError } = await supabase
-        .from('service')
-        .select('id, name')
-
-      const { data: roomsData, error: roomsError } = await supabase
-        .from('room')
-        .select('id, name')
-
-      if (profError || instError || servError || roomsError) {
-        throw profError || instError || servError || roomsError
-      }
-
-      const formattedData = templatesData?.map((template: any) => {
-        const professional = professionalsData?.find((p: any) => p.id === template.professional_id)
-        const institution = professional ? institutionsData?.find((i: any) => i.id === professional.institution_id) : undefined
-        const service = servicesData?.find((s: any) => s.id === template.service_id)
-        const room = roomsData?.find((r: any) => r.id === template.room_id)
-        
-        return {
-          ...template,
-          professional: professional ? {
-            id: professional.id,
-            first_name: professional.first_name,
-            last_name: professional.last_name,
-            institution: {
-              name: institution?.name || 'Sin institución',
-              zone_name: institution?.zone?.[0]?.name || 'Sin zona'
-            }
-          } : undefined,
-          service: service ? {
-            id: service.id,
-            name: service.name
-          } : undefined,
-          room: room ? {
-            id: room.id,
-            name: room.name
-          } : null
-        }
-      }) || []
-      
-      setSlotTemplates(formattedData)
-    } catch (error) {
-      console.error('Error fetching slot templates:', error)
-      setError('Error al cargar las plantillas de horarios')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const fetchProfessionals = async () => {
     try {
-      // First get professionals
       const { data: professionalsData, error: profError } = await supabase
         .from('professional')
         .select('id, first_name, last_name, institution_id')
@@ -210,19 +183,12 @@ export default function HorariosPage() {
 
       if (profError) throw profError
 
-      // Then get institutions with zones
       const { data: institutionsData, error: instError } = await supabase
         .from('institution')
-        .select(`
-          id,
-          name,
-          zone:zone_id!inner(
-            name
-          )
-        `)
+        .select('id, name, zone:zone_id!inner(name)')
 
       if (instError) throw instError
-      
+
       const formattedData = professionalsData?.map((prof: any) => {
         const institution = institutionsData?.find((inst: any) => inst.id === prof.institution_id)
         return {
@@ -234,7 +200,7 @@ export default function HorariosPage() {
           zone_name: institution?.zone?.[0]?.name || 'Sin zona'
         }
       }) || []
-      
+
       setProfessionals(formattedData)
     } catch (error) {
       console.error('Error fetching professionals:', error)
@@ -273,157 +239,31 @@ export default function HorariosPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    try {
-      if (editingSlotTemplate) {
-        // Update existing slot template
-        const { error } = await supabase
-          .from('slot_template')
-          .update({
-            professional_id: formData.professional_id,
-            service_id: formData.service_id,
-            room_id: formData.room_id || null,
-            day_of_week: formData.day_of_week,
-            start_time: formData.start_time,
-            end_time: formData.end_time,
-            slot_duration_minutes: formData.slot_duration_minutes,
-            is_active: formData.is_active,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingSlotTemplate.id)
-
-        if (error) throw error
-        
-        toast({
-          title: "Plantilla de horario actualizada",
-          description: "La plantilla de horario se ha actualizado correctamente.",
-        })
-      } else {
-        // Create new slot template
-        const { error } = await supabase
-          .from('slot_template')
-          .insert({
-            professional_id: formData.professional_id,
-            service_id: formData.service_id,
-            room_id: formData.room_id || null,
-            day_of_week: formData.day_of_week,
-            start_time: formData.start_time,
-            end_time: formData.end_time,
-            slot_duration_minutes: formData.slot_duration_minutes,
-            is_active: formData.is_active
-          })
-
-        if (error) throw error
-        
-        toast({
-          title: "Plantilla de horario creada",
-          description: "La plantilla de horario se ha creado correctamente.",
-        })
-      }
-
-      setIsDialogOpen(false)
-      setEditingSlotTemplate(null)
-      resetForm()
-      fetchSlotTemplates()
-    } catch (error) {
-      console.error('Error saving slot template:', error)
-      setError(`Error al ${editingSlotTemplate ? 'actualizar' : 'crear'} la plantilla de horario`)
+  // Cuando cambia el servicio seleccionado, actualizar la duración
+  const handleServiceChange = (serviceId: string) => {
+    const service = services.find(s => s.id === serviceId)
+    updateFormField('service_id', serviceId)
+    if (service) {
+      updateFormField('slot_duration_minutes', service.duration_minutes)
     }
   }
 
-  const handleEdit = (slotTemplate: SlotTemplate) => {
-    setEditingSlotTemplate(slotTemplate)
-    setFormData({
-      professional_id: slotTemplate.professional_id,
-      service_id: slotTemplate.service_id,
-      room_id: slotTemplate.room_id || '',
-      day_of_week: slotTemplate.day_of_week,
-      start_time: slotTemplate.start_time,
-      end_time: slotTemplate.end_time,
-      slot_duration_minutes: slotTemplate.slot_duration_minutes,
-      is_active: slotTemplate.is_active
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleToggleActive = async (slotTemplate: SlotTemplate) => {
-    try {
-      const { error } = await supabase
-        .from('slot_template')
-        .update({
-          is_active: !slotTemplate.is_active,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', slotTemplate.id)
-
-      if (error) throw error
-      
-      toast({
-        title: slotTemplate.is_active ? "Plantilla desactivada" : "Plantilla activada",
-        description: `La plantilla ha sido ${slotTemplate.is_active ? 'desactivada' : 'activada'} correctamente.`,
-      })
-      
-      fetchSlotTemplates()
-    } catch (error) {
-      console.error('Error toggling slot template status:', error)
-      setError('Error al cambiar el estado de la plantilla')
-    }
-  }
-
-  const openDeleteDialog = (slotTemplate: SlotTemplate) => {
-    setDeletingTemplate(slotTemplate)
-    setIsDeleteDialogOpen(true)
+  // Wrappers para los handlers
+  const handleSubmit = async () => {
+    await crudHandleSubmit()
   }
 
   const handleDelete = async () => {
-    if (!deletingTemplate) return
-
-    try {
-      const { error } = await supabase
-        .from('slot_template')
-        .delete()
-        .eq('id', deletingTemplate.id)
-
-      if (error) throw error
-
-      toast({
-        title: "Plantilla eliminada",
-        description: "La plantilla de horario se ha eliminado correctamente.",
-      })
-
-      fetchSlotTemplates()
-    } catch (error) {
-      console.error('Error deleting slot template:', error)
-      setError('Error al eliminar la plantilla')
-    } finally {
-      setIsDeleteDialogOpen(false)
-      setDeletingTemplate(null)
-    }
+    await crudHandleDelete()
   }
 
-  const resetForm = () => {
-    setFormData({ 
-      professional_id: '',
-      service_id: '',
-      room_id: '',
-      day_of_week: 1,
-      start_time: '08:00',
-      end_time: '17:00',
-      slot_duration_minutes: 30,
-      is_active: true
-    })
-    setEditingSlotTemplate(null)
-    setSelectedInstitution('')
-    setServices([])
-    setRooms([])
-    setError(null)
+  const handleToggleActive = async (template: SlotTemplate) => {
+    await toggleActive(template.id, template.is_active)
   }
 
+  // Helpers
   const formatTime = (time: string): string => {
-    return time.substring(0, 5) // Remove seconds if present
+    return time.substring(0, 5)
   }
 
   const calculateSlots = (startTime: string, endTime: string, duration: number): number => {
@@ -433,11 +273,11 @@ export default function HorariosPage() {
     return Math.floor(diffMinutes / duration)
   }
 
-  // Group slot templates by professional
+  // Agrupar plantillas por profesional
   const templatesByProfessional = slotTemplates.reduce((acc, template) => {
-    if (!template.professional) return acc
-    
-    const professionalKey = `${template.professional.first_name} ${template.professional.last_name} - ${template.professional.institution.name}`
+    if (!template.professional_name || !template.institution_name) return acc
+
+    const professionalKey = `${template.professional_name} - ${template.institution_name}`
     if (!acc[professionalKey]) {
       acc[professionalKey] = []
     }
@@ -454,210 +294,19 @@ export default function HorariosPage() {
             Administra las plantillas de horarios de los profesionales
           </p>
         </div>
-        <Dialog 
-          open={isDialogOpen} 
-          onOpenChange={(open) => {
-            setIsDialogOpen(open)
-            if (!open) resetForm()
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Plantilla
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {editingSlotTemplate ? 'Editar Plantilla de Horario' : 'Nueva Plantilla de Horario'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingSlotTemplate 
-                  ? 'Modifica la plantilla de horario' 
-                  : 'Crea una nueva plantilla de horario semanal'
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="slot_professional_id">Profesional *</Label>
-                <Select 
-                  value={formData.professional_id} 
-                  onValueChange={(value) => setFormData({ ...formData, professional_id: value, service_id: '', room_id: '' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar profesional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {professionals.map((professional) => (
-                      <SelectItem key={professional.id} value={professional.id}>
-                        {professional.first_name} {professional.last_name} - {professional.institution_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="slot_service_id">Servicio *</Label>
-                  <Select 
-                    value={formData.service_id} 
-                    onValueChange={(value) => {
-                      const service = services.find(s => s.id === value)
-                      setFormData({ 
-                        ...formData, 
-                        service_id: value,
-                        slot_duration_minutes: service?.duration_minutes || 30
-                      })
-                    }}
-                    disabled={!selectedInstitution}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar servicio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name} ({service.duration_minutes} min)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="slot_room_id">Consultorio (opcional)</Label>
-                  <Select 
-                    value={formData.room_id} 
-                    onValueChange={(value) => setFormData({ ...formData, room_id: value })}
-                    disabled={!selectedInstitution}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar consultorio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Sin consultorio asignado</SelectItem>
-                      {rooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="slot_day_of_week">Día de la semana *</Label>
-                <Select 
-                  value={formData.day_of_week.toString()} 
-                  onValueChange={(value) => setFormData({ ...formData, day_of_week: parseInt(value) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar día" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {daysOfWeek.map((day) => (
-                      <SelectItem key={day.value} value={day.value.toString()}>
-                        {day.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="slot_start_time">Hora de inicio *</Label>
-                  <Input
-                    id="slot_start_time"
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="slot_end_time">Hora de fin *</Label>
-                  <Input
-                    id="slot_end_time"
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="slot_duration_minutes">Duración turno (min) *</Label>
-                  <Input
-                    id="slot_duration_minutes"
-                    type="number"
-                    min="5"
-                    max="240"
-                    step="5"
-                    value={formData.slot_duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, slot_duration_minutes: parseInt(e.target.value) || 30 })}
-                    required
-                  />
-                </div>
-              </div>
-
-              {formData.start_time && formData.end_time && formData.slot_duration_minutes && (
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <Clock className="inline mr-1 h-4 w-4" />
-                    Esta plantilla generará aproximadamente {' '}
-                    <strong>{calculateSlots(formData.start_time, formData.end_time, formData.slot_duration_minutes)} turnos</strong>
-                    {' '} por día
-                  </p>
-                </div>
-              )}
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="slot_is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-                <Label htmlFor="slot_is_active">Plantilla activa</Label>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingSlotTemplate ? 'Actualizar' : 'Crear'} Plantilla
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={openCreateDialog}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nueva Plantilla
+        </Button>
       </div>
 
       {error && (
         <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error.message}</AlertDescription>
         </Alert>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-8">
           <p>Cargando plantillas de horarios...</p>
         </div>
@@ -709,14 +358,14 @@ export default function HorariosPage() {
                         <TableCell>
                           <div className="flex items-center">
                             <Activity className="mr-2 h-4 w-4 text-green-600" />
-                            {template.service?.name}
+                            {template.service_name}
                           </div>
                         </TableCell>
                         <TableCell>
-                          {template.room ? (
+                          {template.room_name ? (
                             <div className="flex items-center">
                               <DoorOpen className="mr-2 h-4 w-4 text-purple-600" />
-                              {template.room.name}
+                              {template.room_name}
                             </div>
                           ) : (
                             <span className="text-muted-foreground">Sin consultorio</span>
@@ -738,9 +387,9 @@ export default function HorariosPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            className={template.is_active 
-                              ? 'bg-green-100 text-green-800' 
+                          <Badge
+                            className={template.is_active
+                              ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                             }
                           >
@@ -754,17 +403,14 @@ export default function HorariosPage() {
                               size="sm"
                               onClick={() => handleToggleActive(template)}
                               title={template.is_active ? 'Desactivar' : 'Activar'}
+                              disabled={isToggling[template.id]}
                             >
-                              {template.is_active ? (
-                                <Calendar className="h-4 w-4 text-red-600" />
-                              ) : (
-                                <Calendar className="h-4 w-4 text-green-600" />
-                              )}
+                              <Calendar className={`h-4 w-4 ${template.is_active ? 'text-red-600' : 'text-green-600'}`} />
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleEdit(template)}
+                              onClick={() => openEditDialog(template)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -787,36 +433,187 @@ export default function HorariosPage() {
         </div>
       )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará permanentemente la plantilla de horario de{' '}
-              <strong>
-                {deletingTemplate?.professional?.first_name} {deletingTemplate?.professional?.last_name}
-              </strong>{' '}
-              para el <strong>{daysOfWeek.find(d => d.value === deletingTemplate?.day_of_week)?.label}</strong>.
-              <br /><br />
-              <strong>Esta acción no se puede deshacer.</strong>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setIsDeleteDialogOpen(false)
-              setDeletingTemplate(null)
-            }}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      {/* Dialog de Creación/Edición */}
+      <CrudDialog
+        isOpen={isDialogOpen}
+        onOpenChange={closeDialog}
+        title={editingSlotTemplate ? 'Editar Plantilla de Horario' : 'Nueva Plantilla de Horario'}
+        description={
+          editingSlotTemplate
+            ? 'Modifica la plantilla de horario'
+            : 'Crea una nueva plantilla de horario semanal'
+        }
+        editingItem={editingSlotTemplate}
+        onSubmit={handleSubmit}
+        isSaving={isSaving}
+        size="2xl"
+      >
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="slot_professional_id">Profesional *</Label>
+            <Select
+              value={formData.professional_id || ''}
+              onValueChange={(value) => {
+                updateFormField('professional_id', value)
+                updateFormField('service_id', '')
+                updateFormField('room_id', '')
+              }}
             >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar profesional" />
+              </SelectTrigger>
+              <SelectContent>
+                {professionals.map((professional) => (
+                  <SelectItem key={professional.id} value={professional.id}>
+                    {formatFullName(professional.first_name, professional.last_name)} - {professional.institution_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="slot_service_id">Servicio *</Label>
+              <Select
+                value={formData.service_id || ''}
+                onValueChange={handleServiceChange}
+                disabled={!selectedInstitution}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar servicio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} ({service.duration_minutes} min)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="slot_room_id">Consultorio (opcional)</Label>
+              <Select
+                value={formData.room_id || ''}
+                onValueChange={(value) => updateFormField('room_id', value)}
+                disabled={!selectedInstitution}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar consultorio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sin consultorio asignado</SelectItem>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="slot_day_of_week">Día de la semana *</Label>
+            <Select
+              value={formData.day_of_week?.toString() || '1'}
+              onValueChange={(value) => updateFormField('day_of_week', parseInt(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar día" />
+              </SelectTrigger>
+              <SelectContent>
+                {daysOfWeek.map((day) => (
+                  <SelectItem key={day.value} value={day.value.toString()}>
+                    {day.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="slot_start_time">Hora de inicio *</Label>
+              <Input
+                id="slot_start_time"
+                type="time"
+                value={formData.start_time || '08:00'}
+                onChange={(e) => updateFormField('start_time', e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="slot_end_time">Hora de fin *</Label>
+              <Input
+                id="slot_end_time"
+                type="time"
+                value={formData.end_time || '17:00'}
+                onChange={(e) => updateFormField('end_time', e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="slot_duration_minutes">Duración turno (min) *</Label>
+              <Input
+                id="slot_duration_minutes"
+                type="number"
+                min="5"
+                max="240"
+                step="5"
+                value={formData.slot_duration_minutes || 30}
+                onChange={(e) => updateFormField('slot_duration_minutes', parseInt(e.target.value) || 30)}
+                required
+              />
+            </div>
+          </div>
+
+          {formData.start_time && formData.end_time && formData.slot_duration_minutes && (
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <Clock className="inline mr-1 h-4 w-4" />
+                Esta plantilla generará aproximadamente{' '}
+                <strong>{calculateSlots(formData.start_time, formData.end_time, formData.slot_duration_minutes)} turnos</strong>
+                {' '}por día
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="slot_is_active"
+              checked={formData.is_active || false}
+              onChange={(e) => updateFormField('is_active', e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <Label htmlFor="slot_is_active">Plantilla activa</Label>
+          </div>
+        </div>
+      </CrudDialog>
+
+      {/* Dialog de Confirmación de Eliminación */}
+      <DeleteConfirmation
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={closeDeleteDialog}
+        itemName={
+          deletingTemplate
+            ? `${deletingTemplate.professional_name} - ${daysOfWeek.find(d => d.value === deletingTemplate.day_of_week)?.label}`
+            : ''
+        }
+        onConfirm={handleDelete}
+        isDeleting={isSaving}
+      />
     </div>
   )
 }
