@@ -6,7 +6,6 @@ import { useCrudOperation } from '@/hooks/useCrudOperation'
 import { useInstitutionContext } from '@/hooks/useInstitutionContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DeleteConfirmation } from '@/components/crud/DeleteConfirmation'
@@ -16,6 +15,7 @@ import { CalendarIcon, Plus, Trash2, Building2, UserCheck, CheckCircle2 } from '
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { getTodayISO, formatFullName } from '@/lib/supabase/helpers'
+import { AssignmentForm } from './components/AssignmentForm'
 
 interface Professional {
   id: string
@@ -44,10 +44,6 @@ export default function AsignacionesPage() {
   const { hasAccess, loading: permissionLoading } = useRequirePermission('/asignaciones')
   const { toast } = useToast()
   const { context, requireContext } = useInstitutionContext()
-  const [professionals, setProfessionals] = useState<Professional[]>([])
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [selectedProfessional, setSelectedProfessional] = useState('')
-  const [selectedRoom, setSelectedRoom] = useState('')
 
   // Obtener institution_id del contexto
   requireContext()
@@ -106,62 +102,15 @@ export default function AsignacionesPage() {
     }
   })
 
-  // Cargar profesionales y consultorios al montar
-  useEffect(() => {
-    fetchProfessionalsAndRooms()
-  }, [])
-
-  const fetchProfessionalsAndRooms = async () => {
-    try {
-      // Profesionales activos
-      const { data: profsData, error: profsError } = await supabase
-        .from('professional')
-        .select('id, first_name, last_name, speciality')
-        .eq('institution_id', institutionId)
-        .eq('is_active', true)
-        .order('last_name')
-
-      if (profsError) throw profsError
-      setProfessionals(profsData || [])
-
-      // Consultorios activos
-      const { data: roomsData, error: roomsError } = await supabase
-        .from('room')
-        .select('id, name')
-        .eq('institution_id', institutionId)
-        .eq('is_active', true)
-        .order('name')
-
-      if (roomsError) throw roomsError
-      setRooms(roomsData || [])
-    } catch (error) {
-      console.error('Error al cargar datos:', error)
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los datos',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const handleAddAssignment = async () => {
-    if (!selectedProfessional || !selectedRoom) {
-      toast({
-        title: 'Error',
-        description: 'Selecciona un profesional y un consultorio',
-        variant: 'destructive'
-      })
-      return
-    }
-
+  const handleAddAssignment = async (professionalId: string, roomId: string) => {
     try {
       const { data: authData } = await supabase.auth.getUser()
 
       const { error } = await supabase
         .from('daily_professional_assignment')
         .insert({
-          professional_id: selectedProfessional,
-          room_id: selectedRoom,
+          professional_id: professionalId,
+          room_id: roomId,
           institution_id: institutionId,
           assignment_date: today,
           created_by: authData.user?.id
@@ -185,11 +134,6 @@ export default function AsignacionesPage() {
         description: 'El profesional ha sido asignado al consultorio'
       })
 
-      // Limpiar selección
-      setSelectedProfessional('')
-      setSelectedRoom('')
-
-      // Recargar datos
       refreshData()
     } catch (error) {
       console.error('Error al crear asignación:', error)
@@ -207,8 +151,6 @@ export default function AsignacionesPage() {
 
   // Profesionales que ya están asignados hoy
   const assignedProfessionalIds = assignments.map(a => a.professional_id)
-  const availableProfessionals = professionals.filter(p => !assignedProfessionalIds.includes(p.id))
-
   // Consultorios ocupados hoy
   const occupiedRoomIds = assignments.map(a => a.room_id)
 
@@ -263,58 +205,13 @@ export default function AsignacionesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Profesional</label>
-              <Select value={selectedProfessional} onValueChange={setSelectedProfessional}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar profesional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableProfessionals.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      Todos los profesionales ya están asignados
-                    </div>
-                  ) : (
-                    availableProfessionals.map((prof) => (
-                      <SelectItem key={prof.id} value={prof.id}>
-                        {formatFullName(prof.first_name, prof.last_name)}
-                        {prof.speciality && ` - ${prof.speciality}`}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Consultorio</label>
-              <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar consultorio" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id}>
-                      {room.name}
-                      {occupiedRoomIds.includes(room.id) && ' (Ocupado)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end">
-              <Button
-                onClick={handleAddAssignment}
-                disabled={!selectedProfessional || !selectedRoom || isSaving}
-                className="w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Asignar
-              </Button>
-            </div>
-          </div>
+          <AssignmentForm
+            institutionId={institutionId}
+            assignedProfessionalIds={assignedProfessionalIds}
+            occupiedRoomIds={occupiedRoomIds}
+            onSubmit={handleAddAssignment}
+            isLoading={isSaving}
+          />
         </CardContent>
       </Card>
 

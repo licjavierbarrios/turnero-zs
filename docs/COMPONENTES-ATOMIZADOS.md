@@ -9,12 +9,12 @@
 | Módulo | Estado | % Completado | Líneas Reducidas |
 |--------|--------|--------------|------------------|
 | `/turnos` | ✅ COMPLETO | 100% | 1250 → 662 (47%) |
-| `/pacientes` | ⏳ Pendiente | 0% | 335 → ~80 |
-| `/servicios` | ⏳ Pendiente | 0% | 395 → ~100 |
-| `/consultorios` | ⏳ Pendiente | 0% | 350 → ~90 |
-| `/profesionales` | ⏳ Pendiente | 0% | 244 → ~80 |
-| `/asignaciones` | ⏳ Pendiente | 0% | 399 → ~100 |
-| **TOTAL PROYECTO** | 🔄 EN PROGRESO | **16%** | ~2973 → ~1932 |
+| `/pacientes` | ✅ COMPLETO | 100% | 335 → 192 (43%) |
+| `/servicios` | ✅ COMPLETO | 100% | 395 → 267 (32%) |
+| `/consultorios` | ✅ COMPLETO | 100% | 350 → 288 (18%) |
+| `/profesionales` | ✅ COMPLETO | 100% | 244 → 186 (24%) |
+| `/asignaciones` | ✅ COMPLETO | 100% | 399 → 296 (26%) |
+| **TOTAL PROYECTO** | ✅ FASE 2 COMPLETA | **100%** | ~2973 → ~1891 (36%) |
 
 ---
 
@@ -199,30 +199,51 @@ VENTAJAS:
 
 ---
 
-## ⏳ MÓDULOS PENDIENTES
+## ✅ MÓDULO: `/pacientes` - COMPLETADO (335 → 192 líneas, 43%)
 
-### `/pacientes` (335 líneas → ~80)
-- [ ] Extraer PatientForm.tsx
-- [ ] Extraer PatientTableRow.tsx
-- [ ] Usar CrudPageLayout
-- [ ] Usar LoadingState, EmptyState
+### Componentes Creados (2)
 
-### `/servicios` (395 líneas → ~100)
-- [ ] Extraer ServiceForm.tsx
-- [ ] Extraer DurationSelector.tsx
-- [ ] Usar componentes CRUD genéricos
+1. **PatientForm.tsx** - Formulario para crear/editar pacientes
+2. **PatientTableRow.tsx** - Fila de tabla con acciones toggle/edit/delete
 
-### `/consultorios` (350 líneas → ~90)
-- [ ] Extraer RoomForm.tsx
-- [ ] Usar componentes CRUD genéricos
+---
 
-### `/profesionales` (244 líneas → ~80)
-- [ ] Extraer ProfessionalForm.tsx
-- [ ] Crear componentes específicos
+## ✅ MÓDULO: `/servicios` - COMPLETADO (395 → 267 líneas, 32%)
 
-### `/asignaciones` (399 líneas → ~100)
-- [ ] Extraer AssignmentForm.tsx
-- [ ] Usar ProfessionalSelector
+### Componentes Creados (2)
+
+1. **ServiceForm.tsx** - Formulario con selector de duración
+2. **ServiceTableRow.tsx** - Fila de tabla con estado y acciones
+
+---
+
+## ✅ MÓDULO: `/consultorios` - COMPLETADO (350 → 288 líneas, 18%)
+
+### Componentes Creados (2)
+
+1. **RoomForm.tsx** - Formulario simple para consultorios
+2. **RoomTableRow.tsx** - Fila con toggle de estado y acciones CRUD
+
+---
+
+## ✅ MÓDULO: `/profesionales` - COMPLETADO (244 → 186 líneas, 24%)
+
+### Componentes Creados (1)
+
+1. **ProfessionalTableRow.tsx** - Fila con información completa del profesional e icono de estado
+
+---
+
+## ✅ MÓDULO: `/asignaciones` - COMPLETADO (399 → 296 líneas, 26%)
+
+### Componentes Creados (2)
+
+1. **AssignmentForm.tsx** - Formulario con selects en cascada de profesionales y consultorios
+   - Filtra profesionales no asignados
+   - Indica consultorios ocupados
+   - Integrado en el flujo de asignación diaria
+
+2. **AssignmentTableRow.tsx** - Fila con información de asignación (profesional → consultorio)
 
 ---
 
