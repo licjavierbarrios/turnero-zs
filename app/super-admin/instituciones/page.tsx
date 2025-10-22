@@ -4,18 +4,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, Building2, MapPin, AlertCircle } from 'lucide-react'
+import { Plus, Building2 } from 'lucide-react'
 import type { Institution, InstitutionType, Zone } from '@/lib/types'
-import { INSTITUTION_TYPE_LABELS } from '@/lib/types'
+import { InstitutionForm } from './components/InstitutionForm'
+import { InstitutionTableRow } from './components/InstitutionTableRow'
+import { InstitutionStats } from './components/InstitutionStats'
 
 type InstitutionWithZone = Institution & {
   zone?: Zone
@@ -316,99 +313,21 @@ export default function SuperAdminInstitucionesPage() {
                   : 'Registra una nueva institución de salud (CAPS, hospital, etc.)'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="name">Nombre de la Institución *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ej: CAPS Villa María, Hospital Regional Norte"
-                    value={formData.name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="zone">Zona Sanitaria *</Label>
-                  <Select
-                    value={formData.zone_id}
-                    onValueChange={(value) => setFormData({ ...formData, zone_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar zona" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zones.map((zone) => (
-                        <SelectItem key={zone.id} value={zone.id}>
-                          {zone.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="type">Tipo de Institución *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value as InstitutionType })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="caps">CAPS</SelectItem>
-                      <SelectItem value="hospital_seccional">Hospital Seccional</SelectItem>
-                      <SelectItem value="hospital_distrital">Hospital Distrital</SelectItem>
-                      <SelectItem value="hospital_regional">Hospital Regional</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="slug">Slug (URL amigable) *</Label>
-                  <Input
-                    id="slug"
-                    placeholder="ej: caps-villa-maria"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase() })}
-                    required
-                  />
-                  <p className="text-xs text-gray-500">
-                    Se usa para URLs públicas. Solo letras, números y guiones.
-                  </p>
-                </div>
-
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="address">Dirección</Label>
-                  <Input
-                    id="address"
-                    placeholder="Dirección completa"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  />
-                </div>
-
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="phone">Teléfono</Label>
-                  <Input
-                    id="phone"
-                    placeholder="Ej: (0123) 456-7890"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <InstitutionForm
+                formData={formData}
+                error={error}
+                zones={zones}
+                editingInstitution={editingInstitution}
+                onFormChange={(field, value) => {
+                  if (field === 'type') {
+                    setFormData({ ...formData, [field]: value as InstitutionType })
+                  } else {
+                    setFormData({ ...formData, [field]: value })
+                  }
+                }}
+                onNameChange={handleNameChange}
+              />
 
               <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="outline" onClick={handleDialogClose}>
@@ -424,53 +343,7 @@ export default function SuperAdminInstitucionesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Instituciones</CardTitle>
-            <Building2 className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{institutions.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CAPS</CardTitle>
-            <Building2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {institutions.filter(i => i.type === 'caps').length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hospitales</CardTitle>
-            <Building2 className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {institutions.filter(i => i.type !== 'caps').length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Zonas Activas</CardTitle>
-            <MapPin className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Object.keys(institutionsByZone).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <InstitutionStats institutions={institutions} />
 
       {/* Instituciones Table */}
       <Card>
@@ -518,57 +391,12 @@ export default function SuperAdminInstitucionesPage() {
               </TableHeader>
               <TableBody>
                 {institutions.map((institution) => (
-                  <TableRow key={institution.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center">
-                        <Building2 className="h-4 w-4 text-purple-600 mr-2" />
-                        <div>
-                          <div>{institution.name}</div>
-                          <div className="text-xs text-gray-500">/{institution.slug}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getInstitutionTypeColor(institution.type)}>
-                        {INSTITUTION_TYPE_LABELS[institution.type]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm">
-                        <MapPin className="h-3 w-3 text-gray-400 mr-1" />
-                        {institution.zone?.name || 'Sin zona'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {institution.address || (
-                        <span className="text-gray-400 italic">Sin dirección</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {institution.phone || (
-                        <span className="text-gray-400 italic">Sin teléfono</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(institution)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteDialog(institution)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <InstitutionTableRow
+                    key={institution.id}
+                    institution={institution}
+                    onEdit={handleEdit}
+                    onDelete={openDeleteDialog}
+                  />
                 ))}
               </TableBody>
             </Table>
