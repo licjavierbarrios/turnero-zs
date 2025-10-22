@@ -4,17 +4,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, MapPin, Building2, AlertCircle } from 'lucide-react'
+import { Plus, MapPin } from 'lucide-react'
 import type { Zone } from '@/lib/types'
+import { ZoneForm } from './components/ZoneForm'
+import { ZoneTableRow } from './components/ZoneTableRow'
+import { ZoneStats } from './components/ZoneStats'
 
 export default function SuperAdminZonasPage() {
   const [zones, setZones] = useState<Zone[]>([])
@@ -251,35 +249,13 @@ export default function SuperAdminZonasPage() {
                   : 'Crea una nueva zona geográfica para organizar las instituciones de salud'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre de la Zona *</Label>
-                <Input
-                  id="name"
-                  placeholder="Ej: Zona Norte, Zona Centro, etc."
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Descripción opcional de la zona sanitaria"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <ZoneForm
+                formData={formData}
+                error={error}
+                editingZone={editingZone}
+                onFormChange={(field, value) => setFormData({ ...formData, [field]: value })}
+              />
 
               <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="outline" onClick={handleDialogClose}>
@@ -295,52 +271,7 @@ export default function SuperAdminZonasPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Zonas</CardTitle>
-            <MapPin className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{zones.length}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Zonas sanitarias registradas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Instituciones</CardTitle>
-            <Building2 className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Object.values(institutionCounts).reduce((a, b) => a + b, 0)}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Instituciones en todas las zonas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Promedio</CardTitle>
-            <Building2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {zones.length > 0
-                ? Math.round(Object.values(institutionCounts).reduce((a, b) => a + b, 0) / zones.length)
-                : 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Instituciones por zona
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <ZoneStats zones={zones} institutionCounts={institutionCounts} />
 
       {/* Zonas Table */}
       <Card>
@@ -381,47 +312,13 @@ export default function SuperAdminZonasPage() {
               </TableHeader>
               <TableBody>
                 {zones.map((zone) => (
-                  <TableRow key={zone.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 text-purple-600 mr-2" />
-                        {zone.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {zone.description || (
-                        <span className="text-gray-400 italic">Sin descripción</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        <Building2 className="h-3 w-3 mr-1" />
-                        {institutionCounts[zone.id] || 0}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
-                      {formatDate(zone.created_at)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(zone)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteDialog(zone)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <ZoneTableRow
+                    key={zone.id}
+                    zone={zone}
+                    institutionCount={institutionCounts[zone.id] || 0}
+                    onEdit={handleEdit}
+                    onDelete={openDeleteDialog}
+                  />
                 ))}
               </TableBody>
             </Table>
