@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
@@ -13,8 +12,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, User, Shield, Building2, Eye, EyeOff, Activity } from 'lucide-react'
+import { Plus, Edit, Trash2, User, Shield, Eye, EyeOff, Activity } from 'lucide-react'
 import { UserServicesTab } from '@/components/UserServicesTab'
+import { UsersTab } from './components/UsersTab'
+import { MembershipsTab } from './components/MembershipsTab'
 
 type User = {
   id: string
@@ -779,44 +780,36 @@ export default function SuperAdminUsuariosPage() {
 
       {/* Users Tab */}
       {activeTab === 'users' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center">
-                  <User className="mr-2 h-5 w-5" />
-                  Usuarios del Sistema
-                </CardTitle>
-                <CardDescription>
-                  Lista de todos los usuarios registrados en el sistema
-                </CardDescription>
+        <>
+          {/* User Dialog Form */}
+          <Dialog
+            open={isUserDialogOpen}
+            onOpenChange={(open) => {
+              setIsUserDialogOpen(open)
+              if (!open) resetUserForm()
+            }}
+          >
+            <DialogTrigger asChild>
+              <div className="mb-4">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nuevo Usuario
+                </Button>
               </div>
-              <Dialog
-                open={isUserDialogOpen}
-                onOpenChange={(open) => {
-                  setIsUserDialogOpen(open)
-                  if (!open) resetUserForm()
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nuevo Usuario
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingUser
-                        ? 'Modifica los datos del usuario'
-                        : 'Crea un nuevo usuario del sistema'
-                      }
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleUserSubmit} className="space-y-4">
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingUser
+                    ? 'Modifica los datos del usuario'
+                    : 'Crea un nuevo usuario del sistema'
+                  }
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleUserSubmit} className="space-y-4">
                     {error && (
                       <Alert variant="destructive">
                         <AlertDescription>{error}</AlertDescription>
@@ -1030,221 +1023,61 @@ export default function SuperAdminUsuariosPage() {
                       </Button>
                     </div>
                   </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Filtros */}
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between min-h-[20px]">
-                  <Label htmlFor="zone_filter">Filtrar por Zona</Label>
-                  {selectedZone !== 'ALL' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedZone('ALL')
-                        setSelectedInstitution('ALL')
-                      }}
-                      className="text-xs text-muted-foreground hover:text-foreground underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <Select
-                  value={selectedZone}
-                  onValueChange={setSelectedZone}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas las zonas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todas las zonas</SelectItem>
-                    {zones.map((zone) => (
-                      <SelectItem key={zone.id} value={zone.name}>
-                        {zone.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              </DialogContent>
+            </Dialog>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between min-h-[20px]">
-                  <Label htmlFor="institution_filter">Filtrar por Institución</Label>
-                  {selectedInstitution !== 'ALL' && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedInstitution('ALL')}
-                      className="text-xs text-muted-foreground hover:text-foreground underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <Select
-                  value={selectedInstitution}
-                  onValueChange={setSelectedInstitution}
-                  disabled={selectedZone === 'ALL'}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={selectedZone === 'ALL' ? 'Selecciona una zona primero' : 'Todas las instituciones'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todas las instituciones</SelectItem>
-                    {filteredInstitutionsForFilter.map((institution) => (
-                      <SelectItem key={institution.id} value={institution.name}>
-                        {institution.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between min-h-[20px]">
-                  <Label htmlFor="user_search_filter">Buscar Usuario</Label>
-                  <div className="h-[20px]"></div>
-                </div>
-                <Input
-                  id="user_search_filter"
-                  type="text"
-                  placeholder="Nombre, apellido o email..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="text-center py-8">
-                <p>Cargando usuarios...</p>
-              </div>
-            ) : users.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No hay usuarios registrados. Crea el primer usuario.
-                </p>
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No se encontraron usuarios con los filtros aplicados.
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre Completo</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Instituciones</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => {
-                    const userMemberships = memberships.filter(m => m.user_id === user.id)
-                    return (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">
-                          {user.first_name} {user.last_name}
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          {userMemberships.length === 0 ? (
-                            <span className="text-xs text-muted-foreground italic">Sin instituciones</span>
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {userMemberships.map((m) => (
-                                <Badge key={m.id} variant="outline" className="text-xs">
-                                  {m.institution?.name} ({roleLabels[m.role]})
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={user.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                            }
-                          >
-                            {user.is_active ? 'Activo' : 'Inactivo'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditUser(user)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteUserDialog(user)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+          {/* Users Tab Content */}
+          <UsersTab
+            users={users}
+            memberships={memberships}
+            institutions={institutions}
+            zones={zones}
+            loading={loading}
+            selectedZone={selectedZone}
+            selectedInstitution={selectedInstitution}
+            userSearch={userSearch}
+            filteredUsers={filteredUsers}
+            filteredInstitutionsForFilter={filteredInstitutionsForFilter}
+            onZoneChange={setSelectedZone}
+            onInstitutionChange={setSelectedInstitution}
+            onSearchChange={setUserSearch}
+            onEditUser={handleEditUser}
+            onDeleteUser={openDeleteUserDialog}
+          />
+        </>
       )}
 
       {/* Memberships Tab */}
       {activeTab === 'memberships' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center">
-                  <Shield className="mr-2 h-5 w-5" />
-                  Membresías del Sistema
-                </CardTitle>
-                <CardDescription>
-                  Gestiona los roles de todos los usuarios en todas las instituciones
-                </CardDescription>
-              </div>
-              <Dialog
-                open={isMembershipDialogOpen}
-                onOpenChange={(open) => {
-                  setIsMembershipDialogOpen(open)
-                  if (!open) resetMembershipForm()
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nueva Membresía
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingMembership ? 'Editar Membresía' : 'Nueva Membresía'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingMembership
-                        ? 'Modifica la membresía del usuario'
-                        : 'Asigna un rol a un usuario en una institución'
-                      }
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleMembershipSubmit} className="space-y-4">
+        <>
+          {/* Membership Dialog Form */}
+          <div className="mb-4">
+            <Dialog
+              open={isMembershipDialogOpen}
+              onOpenChange={(open) => {
+                setIsMembershipDialogOpen(open)
+                if (!open) resetMembershipForm()
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nueva Membresía
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingMembership ? 'Editar Membresía' : 'Nueva Membresía'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingMembership
+                      ? 'Modifica la membresía del usuario'
+                      : 'Asigna un rol a un usuario en una institución'
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleMembershipSubmit} className="space-y-4">
                     {error && (
                       <Alert variant="destructive">
                         <AlertDescription>{error}</AlertDescription>
@@ -1403,185 +1236,25 @@ export default function SuperAdminUsuariosPage() {
                 </DialogContent>
               </Dialog>
             </div>
-          </CardHeader>
-          <CardContent>
-            {/* Filtros */}
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between min-h-[20px]">
-                  <Label htmlFor="membership_zone_filter">Filtrar por Zona</Label>
-                  {membershipSelectedZone !== 'ALL' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMembershipSelectedZone('ALL')
-                        setMembershipSelectedInstitution('ALL')
-                      }}
-                      className="text-xs text-muted-foreground hover:text-foreground underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <Select
-                  value={membershipSelectedZone}
-                  onValueChange={setMembershipSelectedZone}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas las zonas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todas las zonas</SelectItem>
-                    {zones.map((zone) => (
-                      <SelectItem key={zone.id} value={zone.name}>
-                        {zone.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between min-h-[20px]">
-                  <Label htmlFor="membership_institution_filter">Filtrar por Institución</Label>
-                  {membershipSelectedInstitution !== 'ALL' && (
-                    <button
-                      type="button"
-                      onClick={() => setMembershipSelectedInstitution('ALL')}
-                      className="text-xs text-muted-foreground hover:text-foreground underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <Select
-                  value={membershipSelectedInstitution}
-                  onValueChange={setMembershipSelectedInstitution}
-                  disabled={membershipSelectedZone === 'ALL'}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={membershipSelectedZone === 'ALL' ? 'Selecciona una zona primero' : 'Todas las instituciones'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todas las instituciones</SelectItem>
-                    {filteredMembershipInstitutions.map((institution) => (
-                      <SelectItem key={institution.id} value={institution.name}>
-                        {institution.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between min-h-[20px]">
-                  <Label htmlFor="membership_search_filter">Buscar por Usuario</Label>
-                  <div className="h-[20px]"></div>
-                </div>
-                <Input
-                  id="membership_search_filter"
-                  type="text"
-                  placeholder="Nombre, apellido o email..."
-                  value={membershipSearch}
-                  onChange={(e) => setMembershipSearch(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="text-center py-8">
-                <p>Cargando membresías...</p>
-              </div>
-            ) : memberships.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No hay membresías registradas. Crea la primera membresía.
-                </p>
-              </div>
-            ) : filteredMemberships.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No se encontraron membresías con los filtros aplicados.
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Institución</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha de Creación</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMemberships.map((membership) => (
-                    <TableRow key={membership.id}>
-                      <TableCell className="font-medium">
-                        {membership.user ? (
-                          <div className="flex flex-col">
-                            <span>{membership.user.first_name} {membership.user.last_name}</span>
-                            <span className="text-sm text-muted-foreground">{membership.user.email}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Usuario eliminado</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {membership.institution ? (
-                          <div className="flex flex-col">
-                            <span className="font-medium">{membership.institution.name}</span>
-                            <span className="text-sm text-muted-foreground">{membership.institution.zone_name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Institución eliminada</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={roleColors[membership.role]}>
-                          {roleLabels[membership.role]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={membership.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                          }
-                        >
-                          {membership.is_active ? 'Activa' : 'Inactiva'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(membership.created_at).toLocaleDateString('es-AR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditMembership(membership)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openDeleteMembershipDialog(membership)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+          {/* Memberships Tab Content */}
+          <MembershipsTab
+            memberships={memberships}
+            zones={zones}
+            institutions={institutions}
+            loading={loading}
+            membershipSelectedZone={membershipSelectedZone}
+            membershipSelectedInstitution={membershipSelectedInstitution}
+            membershipSearch={membershipSearch}
+            filteredMemberships={filteredMemberships}
+            filteredMembershipInstitutions={filteredMembershipInstitutions}
+            onZoneChange={setMembershipSelectedZone}
+            onInstitutionChange={setMembershipSelectedInstitution}
+            onSearchChange={setMembershipSearch}
+            onEditMembership={handleEditMembership}
+            onDeleteMembership={openDeleteMembershipDialog}
+          />
+        </>
       )}
 
       {/* Services Tab */}
