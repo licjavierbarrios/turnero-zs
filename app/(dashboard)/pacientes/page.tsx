@@ -3,17 +3,13 @@
 import { useCrudOperation } from '@/hooks/useCrudOperation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CrudDialog } from '@/components/crud/CrudDialog'
 import { DeleteConfirmation } from '@/components/crud/DeleteConfirmation'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, User, Calendar } from 'lucide-react'
-import { calculateAge, formatDNI, formatDate } from '@/lib/supabase/helpers'
+import { Plus, User } from 'lucide-react'
+import { PatientForm } from './components/PatientForm'
+import { PatientTableRow } from './components/PatientTableRow'
 
 type Patient = {
   id: string
@@ -148,66 +144,12 @@ export default function PacientesPage() {
               </TableHeader>
               <TableBody>
                 {patients.map((patient) => (
-                  <TableRow key={patient.id}>
-                    <TableCell className="font-medium">
-                      {patient.first_name} {patient.last_name}
-                    </TableCell>
-                    <TableCell>
-                      {patient.dni ? (
-                        <Badge variant="outline">
-                          {formatDNI(patient.dni)}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">Sin DNI</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Calendar className="mr-1 h-3 w-3 text-muted-foreground" />
-                        {patient.birth_date ? `${calculateAge(patient.birth_date)} años` : 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {patient.email || (
-                        <span className="text-muted-foreground">Sin email</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {patient.phone || (
-                        <span className="text-muted-foreground">Sin teléfono</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {patient.address ? (
-                        <span className="text-sm truncate max-w-[200px] block">
-                          {patient.address}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">Sin dirección</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(patient.created_at)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(patient)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteDialog(patient)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <PatientTableRow
+                    key={patient.id}
+                    patient={patient}
+                    onEdit={openEditDialog}
+                    onDelete={openDeleteDialog}
+                  />
                 ))}
               </TableBody>
             </Table>
@@ -230,96 +172,11 @@ export default function PacientesPage() {
         isSaving={isSaving}
         size="2xl"
       >
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="first_name">Nombre *</Label>
-            <Input
-              id="first_name"
-              type="text"
-              value={formData.first_name || ''}
-              onChange={(e) => updateFormField('first_name', e.target.value)}
-              placeholder="Nombre del paciente"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="last_name">Apellido *</Label>
-            <Input
-              id="last_name"
-              type="text"
-              value={formData.last_name || ''}
-              onChange={(e) => updateFormField('last_name', e.target.value)}
-              placeholder="Apellido del paciente"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="dni">DNI</Label>
-            <Input
-              id="dni"
-              type="text"
-              value={formData.dni || ''}
-              onChange={(e) => updateFormField('dni', e.target.value.replace(/\D/g, ''))}
-              placeholder="12345678"
-              maxLength={8}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="birth_date">Fecha de Nacimiento</Label>
-            <Input
-              id="birth_date"
-              type="date"
-              value={formData.birth_date || ''}
-              onChange={(e) => updateFormField('birth_date', e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email || ''}
-              onChange={(e) => updateFormField('email', e.target.value)}
-              placeholder="email@ejemplo.com"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Teléfono</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone || ''}
-              onChange={(e) => updateFormField('phone', e.target.value)}
-              placeholder="Ej: +54 11 1234-5678"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="address">Dirección</Label>
-          <Textarea
-            id="address"
-            value={formData.address || ''}
-            onChange={(e) => updateFormField('address', e.target.value)}
-            placeholder="Dirección completa del paciente"
-            rows={2}
-          />
-        </div>
+        <PatientForm
+          formData={formData}
+          error={error}
+          updateFormField={updateFormField}
+        />
       </CrudDialog>
 
       {/* Dialog de Confirmación de Eliminación */}

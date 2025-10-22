@@ -5,19 +5,14 @@ import { useToggleState } from '@/hooks/useToggleState'
 import { useInstitutionContext } from '@/hooks/useInstitutionContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CrudDialog } from '@/components/crud/CrudDialog'
 import { DeleteConfirmation } from '@/components/crud/DeleteConfirmation'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, Activity, Clock, Building } from 'lucide-react'
-import { formatDate } from '@/lib/supabase/helpers'
-import { groupByField } from '@/lib/supabase/transforms'
+import { Plus, Activity, Building } from 'lucide-react'
+import { ServiceForm } from './components/ServiceForm'
+import { ServiceTableRow } from './components/ServiceTableRow'
 
 type Service = {
   id: string
@@ -218,71 +213,14 @@ export default function ServiciosPage() {
                   </TableHeader>
                   <TableBody>
                     {institutionServices.map((service) => (
-                      <TableRow key={service.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center">
-                            <Activity className="mr-2 h-4 w-4 text-blue-600" />
-                            {service.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                            <Badge variant="outline">
-                              {formatDuration(service.duration_minutes)}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {service.description || (
-                            <span className="text-muted-foreground">Sin descripción</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={service.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                            }
-                          >
-                            {service.is_active ? 'Activo' : 'Inactivo'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {formatDate(service.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleActive(service)}
-                              title={service.is_active ? 'Desactivar' : 'Activar'}
-                              disabled={isToggling[service.id]}
-                            >
-                              {service.is_active ? (
-                                <Activity className="h-4 w-4 text-red-600" />
-                              ) : (
-                                <Activity className="h-4 w-4 text-green-600" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditDialog(service)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteDialog(service)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                      <ServiceTableRow
+                        key={service.id}
+                        service={service}
+                        isToggling={isToggling[service.id]}
+                        onToggleActive={handleToggleActive}
+                        onEdit={openEditDialog}
+                        onDelete={openDeleteDialog}
+                      />
                     ))}
                   </TableBody>
                 </Table>
@@ -307,79 +245,12 @@ export default function ServiciosPage() {
         isSaving={isSaving}
         size="lg"
       >
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="service_name">Nombre *</Label>
-            <Input
-              id="service_name"
-              type="text"
-              value={formData.name || ''}
-              onChange={(e) => updateFormField('name', e.target.value)}
-              placeholder="Ej: Medicina General, Cardiología, Enfermería"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="service_institution_id">Institución *</Label>
-            <Input
-              id="service_institution_id"
-              type="text"
-              value={context?.institution_name || 'Cargando...'}
-              disabled
-              className="bg-gray-100"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="service_duration_minutes">Duración por turno (minutos) *</Label>
-            <Select
-              value={formData.duration_minutes?.toString() || '30'}
-              onValueChange={(value) => updateFormField('duration_minutes', parseInt(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar duración" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 minutos</SelectItem>
-                <SelectItem value="20">20 minutos</SelectItem>
-                <SelectItem value="30">30 minutos</SelectItem>
-                <SelectItem value="45">45 minutos</SelectItem>
-                <SelectItem value="60">1 hora</SelectItem>
-                <SelectItem value="90">1 hora 30 minutos</SelectItem>
-                <SelectItem value="120">2 horas</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="service_description">Descripción</Label>
-            <Textarea
-              id="service_description"
-              value={formData.description || ''}
-              onChange={(e) => updateFormField('description', e.target.value)}
-              placeholder="Descripción del servicio médico"
-              rows={3}
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="service_is_active"
-              checked={formData.is_active || false}
-              onChange={(e) => updateFormField('is_active', e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <Label htmlFor="service_is_active">Servicio activo</Label>
-          </div>
-        </div>
+        <ServiceForm
+          formData={formData}
+          error={error}
+          institutionName={context?.institution_name || 'Cargando...'}
+          updateFormField={updateFormField}
+        />
       </CrudDialog>
 
       {/* Dialog de Confirmación de Eliminación */}
