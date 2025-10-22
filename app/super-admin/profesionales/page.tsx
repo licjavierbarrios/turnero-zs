@@ -4,16 +4,13 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, UserCheck, UserX, Stethoscope } from 'lucide-react'
+import { Plus, Stethoscope } from 'lucide-react'
+import { ProfessionalForm } from './components/ProfessionalForm'
+import { ProfessionalTableRow } from './components/ProfessionalTableRow'
 
 type Professional = {
   id: string
@@ -364,115 +361,12 @@ export default function SuperAdminProfesionalesPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="first_name">Nombre *</Label>
-                  <Input
-                    id="first_name"
-                    type="text"
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    placeholder="Nombre del profesional"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="last_name">Apellido *</Label>
-                  <Input
-                    id="last_name"
-                    type="text"
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    placeholder="Apellido del profesional"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="institution_id">Institución *</Label>
-                <Select
-                  value={formData.institution_id}
-                  onValueChange={(value) => setFormData({ ...formData, institution_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar institución" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {institutions.map((institution) => (
-                      <SelectItem key={institution.id} value={institution.id}>
-                        {institution.name} - {institution.zone_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="speciality">Especialidad</Label>
-                  <Input
-                    id="speciality"
-                    type="text"
-                    value={formData.speciality}
-                    onChange={(e) => setFormData({ ...formData, speciality: e.target.value })}
-                    placeholder="Ej: Medicina General, Cardiología"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="license_number">Número de Matrícula</Label>
-                  <Input
-                    id="license_number"
-                    type="text"
-                    value={formData.license_number}
-                    onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
-                    placeholder="Número de matrícula profesional"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@ejemplo.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Ej: +54 11 1234-5678"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-                <Label htmlFor="is_active">Profesional activo</Label>
-              </div>
+              <ProfessionalForm
+                formData={formData}
+                error={error}
+                institutions={institutions}
+                onFormChange={(field, value) => setFormData({ ...formData, [field]: value })}
+              />
 
               <div className="flex justify-end space-x-2">
                 <Button
@@ -515,88 +409,21 @@ export default function SuperAdminProfesionalesPage() {
                   <TableHead>Nombre Completo</TableHead>
                   <TableHead>Institución</TableHead>
                   <TableHead>Especialidad</TableHead>
-                  <TableHead>Matrícula</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Teléfono</TableHead>
+                  <TableHead>Fecha de Creación</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {professionals.map((professional) => (
-                  <TableRow key={professional.id}>
-                    <TableCell className="font-medium">
-                      {professional.first_name} {professional.last_name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{professional.institution?.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {professional.institution?.zone?.name || 'Sin zona'}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {professional.speciality || (
-                        <span className="text-muted-foreground">Sin especialidad</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {professional.license_number || (
-                        <span className="text-muted-foreground">Sin matrícula</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {professional.email || (
-                        <span className="text-muted-foreground">Sin email</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {professional.phone || (
-                        <span className="text-muted-foreground">Sin teléfono</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={professional.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }
-                      >
-                        {professional.is_active ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleActive(professional)}
-                          title={professional.is_active ? 'Desactivar' : 'Activar'}
-                        >
-                          {professional.is_active ? (
-                            <UserX className="h-4 w-4" />
-                          ) : (
-                            <UserCheck className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(professional)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteDialog(professional)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <ProfessionalTableRow
+                    key={professional.id}
+                    professional={professional}
+                    onEdit={handleEdit}
+                    onDelete={openDeleteDialog}
+                    onToggleActive={handleToggleActive}
+                  />
                 ))}
               </TableBody>
             </Table>

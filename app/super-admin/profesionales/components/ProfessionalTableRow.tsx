@@ -3,19 +3,41 @@
 import { TableRow, TableCell } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, Stethoscope } from 'lucide-react'
-import type { Professional } from '@/lib/types'
+import { Edit, Trash2, Stethoscope, UserCheck, UserX } from 'lucide-react'
+
+type Professional = {
+  id: string
+  institution_id: string
+  first_name: string
+  last_name: string
+  speciality: string | null
+  license_number: string | null
+  email: string | null
+  phone: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  institution?: {
+    id: string
+    name: string
+    zone?: {
+      name: string
+    } | null
+  }
+}
 
 interface ProfessionalTableRowProps {
   professional: Professional
   onEdit: (professional: Professional) => void
   onDelete: (professional: Professional) => void
+  onToggleActive: (professional: Professional) => void
 }
 
 export function ProfessionalTableRow({
   professional,
   onEdit,
-  onDelete
+  onDelete,
+  onToggleActive
 }: ProfessionalTableRowProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-AR', {
@@ -52,8 +74,30 @@ export function ProfessionalTableRow({
       <TableCell className="text-sm text-gray-500">
         {formatDate(professional.created_at)}
       </TableCell>
+      <TableCell>
+        <Badge
+          className={professional.is_active
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+          }
+        >
+          {professional.is_active ? 'Activo' : 'Inactivo'}
+        </Badge>
+      </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onToggleActive(professional)}
+            title={professional.is_active ? 'Desactivar' : 'Activar'}
+          >
+            {professional.is_active ? (
+              <UserX className="h-4 w-4" />
+            ) : (
+              <UserCheck className="h-4 w-4" />
+            )}
+          </Button>
           <Button
             variant="outline"
             size="sm"

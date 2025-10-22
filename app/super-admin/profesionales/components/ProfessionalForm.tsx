@@ -5,7 +5,12 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import type { Institution } from '@/lib/types'
+
+interface Institution {
+  id: string
+  name: string
+  zone_name: string
+}
 
 interface ProfessionalFormProps {
   formData: {
@@ -16,10 +21,11 @@ interface ProfessionalFormProps {
     license_number: string
     email: string
     phone: string
+    is_active?: boolean
   }
   error: string | null
   institutions: Institution[]
-  onFormChange: (field: string, value: string) => void
+  onFormChange: (field: string, value: string | boolean) => void
 }
 
 export function ProfessionalForm({
@@ -120,6 +126,17 @@ export function ProfessionalForm({
             onChange={(e) => onFormChange('phone', e.target.value)}
           />
         </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="is_active"
+          checked={formData.is_active !== false}
+          onChange={(e) => onFormChange('is_active', e.target.checked)}
+          className="rounded border-gray-300"
+        />
+        <Label htmlFor="is_active">Profesional activo</Label>
       </div>
     </div>
   )
