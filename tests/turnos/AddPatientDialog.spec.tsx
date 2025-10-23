@@ -26,7 +26,7 @@ describe('AddPatientDialog', () => {
       id: 'opt3',
       type: 'professional',
       label: 'Dr. Juan García - Consultorio A',
-      service_id: null,
+      service_id: 's3',
       professional_id: 'prof1',
       room_id: 'room1'
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -56,9 +56,153 @@ export default function QueuePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [callingId, setCallingId] = useState<string | null>(null) // ID del item que está siendo llamado
 
+  const fetchData = useCallback(async () => {
+    try {
+      // Solo mostrar loading completo en la primera carga
+      if (queue.length === 0) {
+        setInitialLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
+
+      // Obtener contexto institucional
+      const context = getInstitutionContext()
+      if (!context) {
+        console.error('No hay contexto institucional')
+        return
+      }
+
+      // Obtener usuario actual
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) {
+        console.error('No hay usuario autenticado')
+        return
+      }
+
+      // Obtener servicios asignados al usuario
+      const { data: userServicesData, error: userServicesError } = await supabase
+        .from('user_service')
+        .select(`
+          service_id,
+          service:service_id (
+            id,
+            name
+          )
+        `)
+        .eq('user_id', authUser.id)
+        .eq('institution_id', context.institution_id)
+        .eq('is_active', true)
+
+      if (userServicesError) throw userServicesError
+
+      const assignedServices = transformUserServices(userServicesData)
+      setUserServices(assignedServices)
+
+      // Obtener fecha del día actual
+      const today = getTodayISO()
+
+      // Obtener todos los servicios de la institución (para el formulario de carga)
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('service')
+        .select('id, name')
+        .eq('institution_id', context.institution_id)
+        .eq('is_active', true)
+        .order('name')
+
+      if (servicesError) throw servicesError
+      setServices(servicesData || [])
+
+      // Obtener asignaciones de profesionales del día actual
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('daily_professional_assignment')
+        .select(`
+          id,
+          professional_id,
+          room_id,
+          professional:professional_id (
+            id,
+            first_name,
+            last_name,
+            speciality
+          ),
+          room:room_id (
+            id,
+            name
+          )
+        `)
+        .eq('institution_id', context.institution_id)
+        .eq('assignment_date', today)
+
+      if (assignmentsError) {
+        console.error('Error al cargar asignaciones:', {
+          message: assignmentsError.message,
+          details: assignmentsError.details,
+          hint: assignmentsError.hint,
+          code: assignmentsError.code
+        })
+        throw assignmentsError
+      }
+
+      // Transformar asignaciones
+      const transformedAssignments = transformProfessionalAssignments(assignmentsData)
+      setProfessionalAssignments(transformedAssignments)
+
+      // Combinar servicios y profesionales en opciones de atención
+      const options = buildAttentionOptions(servicesData, transformedAssignments)
+      setAttentionOptions(options)
+
+      // Obtener cola del día actual con datos completos
+      const { data: queueData, error: queueError } = await supabase
+        .from('daily_queue')
+        .select(`
+          id,
+          order_number,
+          patient_name,
+          patient_dni,
+          service_id,
+          professional_id,
+          room_id,
+          status,
+          created_at,
+          enabled_at,
+          called_at,
+          attended_at,
+          service:service_id (
+            name
+          ),
+          professional:professional_id (
+            first_name,
+            last_name,
+            speciality
+          ),
+          room:room_id (
+            name
+          )
+        `)
+        .eq('institution_id', context.institution_id)
+        .eq('queue_date', today)
+        .order('order_number', { ascending: true })
+
+      if (queueError) throw queueError
+
+      // Transformar datos
+      const transformedQueue = (queueData || []).map(transformQueueItem)
+      setQueue(transformedQueue)
+
+      // Extraer listas únicas de profesionales y consultorios desde la cola
+      setProfessionals(extractUniqueProfessionals(transformedQueue))
+      setRooms(extractUniqueRooms(transformedQueue))
+    } catch (error) {
+      console.error('Error al cargar datos:', error)
+    } finally {
+      setInitialLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [queue.length])
+
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   // Realtime subscription for daily_queue changes
   useEffect(() => {
@@ -216,149 +360,7 @@ export default function QueuePage() {
     setFilteredQueue(filtered)
   }, [selectedServiceFilter, selectedProfessionalFilter, selectedRoomFilter, selectedStatusFilter, queue, userServices])
 
-  const fetchData = async () => {
-    try {
-      // Solo mostrar loading completo en la primera carga
-      if (queue.length === 0) {
-        setInitialLoading(true)
-      } else {
-        setIsRefreshing(true)
-      }
 
-      // Obtener contexto institucional
-      const context = getInstitutionContext()
-      if (!context) {
-        console.error('No hay contexto institucional')
-        return
-      }
-
-      // Obtener usuario actual
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
-        console.error('No hay usuario autenticado')
-        return
-      }
-
-      // Obtener servicios asignados al usuario
-      const { data: userServicesData, error: userServicesError } = await supabase
-        .from('user_service')
-        .select(`
-          service_id,
-          service:service_id (
-            id,
-            name
-          )
-        `)
-        .eq('user_id', authUser.id)
-        .eq('institution_id', context.institution_id)
-        .eq('is_active', true)
-
-      if (userServicesError) throw userServicesError
-
-      const assignedServices = transformUserServices(userServicesData)
-      setUserServices(assignedServices)
-
-      // Obtener fecha del día actual
-      const today = getTodayISO()
-
-      // Obtener todos los servicios de la institución (para el formulario de carga)
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('service')
-        .select('id, name')
-        .eq('institution_id', context.institution_id)
-        .eq('is_active', true)
-        .order('name')
-
-      if (servicesError) throw servicesError
-      setServices(servicesData || [])
-
-      // Obtener asignaciones de profesionales del día actual
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('daily_professional_assignment')
-        .select(`
-          id,
-          professional_id,
-          room_id,
-          professional:professional_id (
-            id,
-            first_name,
-            last_name,
-            speciality
-          ),
-          room:room_id (
-            id,
-            name
-          )
-        `)
-        .eq('institution_id', context.institution_id)
-        .eq('assignment_date', today)
-
-      if (assignmentsError) {
-        console.error('Error al cargar asignaciones:', {
-          message: assignmentsError.message,
-          details: assignmentsError.details,
-          hint: assignmentsError.hint,
-          code: assignmentsError.code
-        })
-        throw assignmentsError
-      }
-
-      // Transformar asignaciones
-      const transformedAssignments = transformProfessionalAssignments(assignmentsData)
-      setProfessionalAssignments(transformedAssignments)
-
-      // Combinar servicios y profesionales en opciones de atención
-      const options = buildAttentionOptions(servicesData, transformedAssignments)
-      setAttentionOptions(options)
-
-      // Obtener cola del día actual con datos completos
-      const { data: queueData, error: queueError } = await supabase
-        .from('daily_queue')
-        .select(`
-          id,
-          order_number,
-          patient_name,
-          patient_dni,
-          service_id,
-          professional_id,
-          room_id,
-          status,
-          created_at,
-          enabled_at,
-          called_at,
-          attended_at,
-          service:service_id (
-            name
-          ),
-          professional:professional_id (
-            first_name,
-            last_name,
-            speciality
-          ),
-          room:room_id (
-            name
-          )
-        `)
-        .eq('institution_id', context.institution_id)
-        .eq('queue_date', today)
-        .order('order_number', { ascending: true })
-
-      if (queueError) throw queueError
-
-      // Transformar datos
-      const transformedQueue = (queueData || []).map(transformQueueItem)
-      setQueue(transformedQueue)
-
-      // Extraer listas únicas de profesionales y consultorios desde la cola
-      setProfessionals(extractUniqueProfessionals(transformedQueue))
-      setRooms(extractUniqueRooms(transformedQueue))
-    } catch (error) {
-      console.error('Error al cargar datos:', error)
-    } finally {
-      setInitialLoading(false)
-      setIsRefreshing(false)
-    }
-  }
 
   const handleAddPatient = async (data: {
     patientName: string

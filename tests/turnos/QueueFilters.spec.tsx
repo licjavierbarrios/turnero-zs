@@ -11,8 +11,8 @@ describe('QueueFilters', () => {
   ]
 
   const mockProfessionals: Professional[] = [
-    { id: 'p1', name: 'Dr. Juan García' },
-    { id: 'p2', name: 'Dra. María López' }
+    { id: 'p1', name: 'Dr. Juan García', speciality: 'Cardiología' },
+    { id: 'p2', name: 'Dra. María López', speciality: 'Pediatría' }
   ]
 
   const mockRooms: Room[] = [

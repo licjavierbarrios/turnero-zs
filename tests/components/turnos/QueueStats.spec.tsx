@@ -16,7 +16,7 @@ describe('QueueStats Component', () => {
   describe('Rendering', () => {
     test('should render stats container', () => {
       const queueItems = createQueueItems(5)
-      const { container } = render(<QueueStats items={queueItems} />)
+      const { container } = render(<QueueStats totalCount={queueItems.length} filteredCount={queueItems.length} />)
 
       expect(container).toBeTruthy()
       // Should have at least some content
@@ -25,7 +25,7 @@ describe('QueueStats Component', () => {
 
     test('should display pending count', () => {
       const queueItems = mockQueueMultiService
-      render(<QueueStats items={queueItems} />)
+      render(<QueueStats totalCount={queueItems.length} filteredCount={queueItems.length} />)
 
       // Should contain text indicating pending items count
       const pendingCount = queueItems.filter(
@@ -35,7 +35,7 @@ describe('QueueStats Component', () => {
     })
 
     test('should handle empty queue', () => {
-      const { container } = render(<QueueStats items={mockQueueEmpty} />)
+      const { container } = render(<QueueStats totalCount={0} filteredCount={0} />)
 
       expect(container).toBeTruthy()
     })
@@ -44,7 +44,7 @@ describe('QueueStats Component', () => {
   describe('Statistics Calculations', () => {
     test('should calculate correct statistics for queue with mixed statuses', () => {
       const queueItems = createQueueItems(10)
-      const { container } = render(<QueueStats items={queueItems} />)
+      const { container } = render(<QueueStats totalCount={queueItems.length} filteredCount={queueItems.length} />)
 
       const pendingCount = queueItems.filter(
         (item) => item.status === 'pendiente'
@@ -70,11 +70,11 @@ describe('QueueStats Component', () => {
 
     test('should update when items prop changes', () => {
       const { rerender } = render(
-        <QueueStats items={createQueueItems(5)} />
+        <QueueStats totalCount={5} filteredCount={5} />
       )
 
       const newItems = createQueueItems(10)
-      rerender(<QueueStats items={newItems} />)
+      rerender(<QueueStats totalCount={10} filteredCount={10} />)
 
       // Component should still render without errors
       expect(screen.queryByText(/error/i)).toBeNull()
@@ -86,7 +86,7 @@ describe('QueueStats Component', () => {
       const queueItems = mockQueueMultiService.filter(
         (item) => item.status === 'pendiente'
       )
-      const { container } = render(<QueueStats items={queueItems} />)
+      const { container } = render(<QueueStats totalCount={queueItems.length} filteredCount={queueItems.length} />)
 
       expect(container).toBeTruthy()
     })
@@ -95,14 +95,14 @@ describe('QueueStats Component', () => {
       const queueItems = mockQueueMultiService.filter(
         (item) => item.status === 'atendido'
       )
-      const { container } = render(<QueueStats items={queueItems} />)
+      const { container } = render(<QueueStats totalCount={queueItems.length} filteredCount={queueItems.length} />)
 
       expect(container).toBeTruthy()
     })
 
     test('should render without crashing with large queue', () => {
       const largeQueue = createQueueItems(100)
-      const { container } = render(<QueueStats items={largeQueue} />)
+      const { container } = render(<QueueStats totalCount={100} filteredCount={100} />)
 
       expect(container).toBeTruthy()
       expect(largeQueue).toHaveLength(100)
@@ -112,7 +112,7 @@ describe('QueueStats Component', () => {
   describe('Accessibility', () => {
     test('should have accessible structure', () => {
       const queueItems = createQueueItems(5)
-      const { container } = render(<QueueStats items={queueItems} />)
+      const { container } = render(<QueueStats totalCount={5} filteredCount={5} />)
 
       // Stats should be in meaningful containers
       expect(container.querySelector('div')).toBeTruthy()
@@ -120,7 +120,7 @@ describe('QueueStats Component', () => {
 
     test('should display readable stat text', () => {
       const queueItems = mockQueueMultiService
-      const { container } = render(<QueueStats items={queueItems} />)
+      const { container } = render(<QueueStats totalCount={queueItems.length} filteredCount={queueItems.length} />)
 
       // Should contain some text content
       expect(container.textContent?.length || 0).toBeGreaterThan(5)
