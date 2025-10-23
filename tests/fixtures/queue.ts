@@ -24,6 +24,7 @@ export const createQueueItem = (overrides?: Partial<QueueItem>): QueueItem => ({
   enabled_at: null,
   called_at: null,
   attended_at: null,
+  created_by: null,
   ...overrides,
 })
 
@@ -89,6 +90,7 @@ export const createQueueItems = (count: number = 10): QueueItem[] => {
       enabled_at: enabledAt,
       called_at: calledAt,
       attended_at: attendedAt,
+      created_by: null,
     })
   }
 
@@ -114,6 +116,7 @@ export const mockQueueItemPending: QueueItem = {
   enabled_at: null,
   called_at: null,
   attended_at: null,
+  created_by: null,
 }
 
 export const mockQueueItemAvailable: QueueItem = {
@@ -132,6 +135,7 @@ export const mockQueueItemAvailable: QueueItem = {
   enabled_at: '2025-10-22T08:12:00Z',
   called_at: null,
   attended_at: null,
+  created_by: null,
 }
 
 export const mockQueueItemCalled: QueueItem = {
@@ -150,6 +154,7 @@ export const mockQueueItemCalled: QueueItem = {
   enabled_at: '2025-10-22T08:22:00Z',
   called_at: '2025-10-22T08:25:00Z',
   attended_at: null,
+  created_by: null,
 }
 
 export const mockQueueItemAttended: QueueItem = {
@@ -168,6 +173,7 @@ export const mockQueueItemAttended: QueueItem = {
   enabled_at: '2025-10-22T08:32:00Z',
   called_at: '2025-10-22T08:35:00Z',
   attended_at: '2025-10-22T09:00:00Z',
+  created_by: null,
 }
 
 /**
@@ -194,6 +200,7 @@ export const mockQueueMultiService: QueueItem[] = [
     enabled_at: null,
     called_at: null,
     attended_at: null,
+    created_by: null,
   },
 ]
 
@@ -221,6 +228,7 @@ export const mockQueueSingle: QueueItem = {
   enabled_at: '2025-10-22T10:02:00Z',
   called_at: '2025-10-22T10:05:00Z',
   attended_at: null,
+  created_by: null,
 }
 
 /**
@@ -242,4 +250,5 @@ export const mockQueueItemLongName: QueueItem = {
   enabled_at: null,
   called_at: null,
   attended_at: null,
+  created_by: null,
 }

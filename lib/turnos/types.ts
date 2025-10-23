@@ -18,6 +18,7 @@ export interface QueueItem {
   enabled_at: string | null
   called_at: string | null
   attended_at: string | null
+  created_by: string | null
 }
 
 export interface Service {

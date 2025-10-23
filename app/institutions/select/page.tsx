@@ -14,7 +14,8 @@ import {
   LogOutIcon,
   ShieldCheckIcon,
   Building2Icon,
-  HomeIcon
+  HomeIcon,
+  Loader2Icon
 } from 'lucide-react'
 
 interface Institution {
@@ -30,45 +31,10 @@ export default function InstitutionSelectPage() {
   const [user, setUser] = useState<any>(null)
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null)
   const router = useRouter()
 
-  const loadUserData = useCallback(async () => {
-    try {
-      // Verificar sesión de Supabase
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-
-      if (authError || !authUser) {
-        router.push('/')
-        return
-      }
-
-      // Obtener datos del usuario
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-
-      if (userError) {
-        router.push('/')
-        return
-      }
-
-      setUser(userData)
-
-      // Cargar instituciones del usuario desde sus membresías
-      await loadUserInstitutions(authUser.id)
-    } catch (error) {
-      console.error('Error en loadUserData:', error)
-      router.push('/')
-    }
-  }, [router])
-
-  useEffect(() => {
-    loadUserData()
-  }, [loadUserData])
-
-  const loadUserInstitutions = async (userId: string) => {
+  const loadUserInstitutions = useCallback(async (userId: string) => {
     try {
       // Obtener membresías activas del usuario
       const { data: memberships, error: membershipError } = await supabase
@@ -115,10 +81,69 @@ export default function InstitutionSelectPage() {
       console.error('Error en loadUserInstitutions:', error)
       setLoading(false)
     }
-  }
+  }, [])
 
-  const selectInstitution = (institution: Institution) => {
-    // Guardar contexto institucional
+  const loadUserData = useCallback(async () => {
+    try {
+      // Verificar sesión de Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !authUser) {
+        router.push('/')
+        return
+      }
+
+      // Obtener datos del usuario
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      if (userError) {
+        router.push('/')
+        return
+      }
+
+      setUser(userData)
+
+      // Cargar instituciones del usuario desde sus membresías
+      await loadUserInstitutions(authUser.id)
+    } catch (error) {
+      console.error('Error en loadUserData:', error)
+      router.push('/')
+    }
+  }, [router, loadUserInstitutions])
+
+  useEffect(() => {
+    // Intentar cargar datos del sessionStorage primero (precargados en login)
+    const cachedUserData = sessionStorage.getItem('user_data')
+    const cachedInstitutions = sessionStorage.getItem('user_institutions')
+
+    if (cachedUserData && cachedInstitutions) {
+      // Datos precargados disponibles - usarlos inmediatamente
+      try {
+        setUser(JSON.parse(cachedUserData))
+        setInstitutions(JSON.parse(cachedInstitutions))
+        setLoading(false)
+        return
+      } catch (e) {
+        console.error('Error parsing cached data:', e)
+      }
+    }
+
+    // Si no hay cache, hacer fallback a las queries originales
+    loadUserData()
+  }, [loadUserData])
+
+  const selectInstitution = useCallback((institution: Institution) => {
+    // Prevenir múltiples clics
+    if (selectedInstitutionId) return
+
+    // Mostrar loading inmediatamente
+    setSelectedInstitutionId(institution.id)
+
+    // Guardar contexto institucional - esto es rápido (síncrono)
     const institutionContext = {
       institution_id: institution.id,
       institution_name: institution.name,
@@ -129,19 +154,25 @@ export default function InstitutionSelectPage() {
 
     localStorage.setItem('institution_context', JSON.stringify(institutionContext))
 
-    // Redirigir según el rol del usuario
-    if (institution.user_role === 'pantalla') {
-      // Usuarios con rol pantalla van directamente a la pantalla pública
-      router.push(`/pantalla/${institution.id}`)
-    } else {
-      // Otros roles van al dashboard
-      router.push('/dashboard')
-    }
-  }
+    // Usar setTimeout de 0ms para permitir que el UI se actualice antes de la navegación
+    // Esto asegura que el usuario vea el estado de loading inmediatamente
+    setTimeout(() => {
+      // Redirigir según el rol del usuario
+      if (institution.user_role === 'pantalla') {
+        // Usuarios con rol pantalla van directamente a la pantalla pública
+        router.push(`/pantalla/${institution.id}`)
+      } else {
+        // Otros roles van al dashboard
+        router.push('/dashboard')
+      }
+    }, 0)
+  }, [selectedInstitutionId, router])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     localStorage.removeItem('institution_context')
+    sessionStorage.removeItem('user_data')
+    sessionStorage.removeItem('user_institutions')
     router.push('/')
   }
 
@@ -231,7 +262,11 @@ export default function InstitutionSelectPage() {
               Bienvenido, {user?.first_name} {user?.last_name}. Selecciona la institución donde deseas trabajar.
             </p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+            disabled={selectedInstitutionId !== null}
+          >
             <LogOutIcon className="h-4 w-4 mr-2" />
             Cerrar Sesión
           </Button>
@@ -254,7 +289,11 @@ export default function InstitutionSelectPage() {
             {institutions.map((institution) => (
               <Card
                 key={institution.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer group"
+                className={`hover:shadow-lg transition-all cursor-pointer group ${
+                  selectedInstitutionId === institution.id
+                    ? 'ring-2 ring-blue-500 opacity-75'
+                    : ''
+                }`}
                 onClick={() => selectInstitution(institution)}
               >
                 <CardHeader>
@@ -294,8 +333,17 @@ export default function InstitutionSelectPage() {
                       e.stopPropagation()
                       selectInstitution(institution)
                     }}
+                    disabled={selectedInstitutionId !== null}
+                    variant={selectedInstitutionId === institution.id ? 'default' : 'default'}
                   >
-                    Acceder como {getRoleLabel(institution.user_role)}
+                    {selectedInstitutionId === institution.id ? (
+                      <>
+                        <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                        Cargando...
+                      </>
+                    ) : (
+                      `Acceder como ${getRoleLabel(institution.user_role)}`
+                    )}
                   </Button>
                 </CardContent>
               </Card>

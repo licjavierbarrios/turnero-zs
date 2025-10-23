@@ -9,6 +9,21 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
 
+interface Institution {
+  id: string
+  name: string
+  type: string
+  zone_name: string
+  address: string
+  user_role: string
+}
+
+interface UserMembershipsResponse {
+  user: any
+  institutions: Institution[]
+  hasMultipleInstitutions: boolean
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,21 +50,62 @@ export default function LoginPage() {
         throw new Error('No se recibió información del usuario')
       }
 
-      // Verificar si es super admin
-      const { data: memberships, error: membershipError } = await supabase
-        .from('membership')
-        .select('role, is_active')
-        .eq('user_id', data.user.id)
-        .eq('is_active', true)
+      // Obtener token de sesión para las siguientes queries
+      const session = await supabase.auth.getSession()
+      if (!session.data.session?.access_token) {
+        throw new Error('No se pudo obtener el token de sesión')
+      }
 
-      const isSuperAdmin = memberships?.some((m: any) => m.role === 'super_admin')
+      // Pre-cargar membresías del usuario usando el nuevo endpoint
+      const response = await fetch('/api/user/memberships', {
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`
+        }
+      })
 
-      // Redirigir según rol
+      if (!response.ok) {
+        throw new Error('Error al cargar membresías')
+      }
+
+      const membershipData: UserMembershipsResponse = await response.json()
+
+      // Guardar datos en sessionStorage para evitar re-queries
+      sessionStorage.setItem('user_data', JSON.stringify(membershipData.user))
+      sessionStorage.setItem('user_institutions', JSON.stringify(membershipData.institutions))
+
+      // Lógica de ruteo inteligente
+      // 1. Si es super_admin → dashboard super-admin
+      const isSuperAdmin = membershipData.institutions.some((inst: any) => inst.user_role === 'super_admin')
       if (isSuperAdmin) {
         router.push('/super-admin/zonas')
-      } else {
-        router.push('/institutions/select')
+        return
       }
+
+      // 2. Si tiene una sola institución → ir directamente a esa institución
+      if (!membershipData.hasMultipleInstitutions && membershipData.institutions.length === 1) {
+        const institution = membershipData.institutions[0]
+        
+        // Guardar contexto institucional
+        const institutionContext = {
+          institution_id: institution.id,
+          institution_name: institution.name,
+          institution_type: institution.type,
+          zone_name: institution.zone_name,
+          user_role: institution.user_role
+        }
+        localStorage.setItem('institution_context', JSON.stringify(institutionContext))
+
+        // Rutear según el rol
+        if (institution.user_role === 'pantalla') {
+          router.push(`/pantalla/${institution.id}`)
+        } else {
+          router.push('/dashboard')
+        }
+        return
+      }
+
+      // 3. Si tiene múltiples instituciones → mostrar selector (con datos precargados)
+      router.push('/institutions/select')
     } catch (error: any) {
       console.error('Login error:', error)
       setError(error.message || 'Email o contraseña incorrectos')
@@ -113,6 +169,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu.email@salud.gov.ar"
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -126,6 +183,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -133,6 +191,7 @@ export default function LoginPage() {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? (
                       <EyeOffIcon className="h-4 w-4" />

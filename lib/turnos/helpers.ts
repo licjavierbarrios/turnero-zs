@@ -1,4 +1,6 @@
 import type { QueueItem } from './types'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 /**
  * Calcula el siguiente número de orden basado en la cola actual.
@@ -79,6 +81,29 @@ export function getTodayISO(): string {
  */
 export function getNowISO(): string {
   return new Date().toISOString()
+}
+
+/**
+ * Formatea una fecha ISO a un formato legible.
+ *
+ * @param dateString - Fecha en formato ISO (ej: "2025-10-20T14:30:00.000Z")
+ * @param formatStr - Formato deseado (ej: "HH:mm", "dd/MM/yyyy", etc.)
+ * @returns Fecha formateada según el formato especificado
+ *
+ * @example
+ * ```typescript
+ * formatDate("2025-10-20T14:30:00.000Z", "HH:mm") // "14:30"
+ * formatDate("2025-10-20T14:30:00.000Z", "dd/MM/yyyy") // "20/10/2025"
+ * ```
+ */
+export function formatDate(dateString: string, formatStr: string = 'HH:mm'): string {
+  try {
+    const date = new Date(dateString)
+    return format(date, formatStr, { locale: es })
+  } catch (error) {
+    console.error('Error formateando fecha:', error)
+    return '--:--'
+  }
 }
 
 /**

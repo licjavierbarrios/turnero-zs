@@ -224,7 +224,8 @@ describe('AddPatientDialog', () => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         patientName: 'Juan Pérez',
         patientDni: '12345678',
-        selectedOptions: ['opt1']
+        selectedOptions: ['opt1'],
+        initialStatus: 'pendiente'
       })
     })
 
@@ -255,7 +256,8 @@ describe('AddPatientDialog', () => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         patientName: 'Juan Pérez',
         patientDni: '12345678',
-        selectedOptions: ['opt1', 'opt2']
+        selectedOptions: ['opt1', 'opt2'],
+        initialStatus: 'pendiente'
       })
     })
 
@@ -387,6 +389,85 @@ describe('AddPatientDialog', () => {
       )
 
       expect(screen.queryByText(/seleccionado/)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Initial Status Toggle', () => {
+    test('should default to pendiente status', async () => {
+      const user = userEvent.setup()
+      render(
+        <AddPatientDialog
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          attentionOptions={mockAttentionOptions}
+          onSubmit={mockOnSubmit}
+        />
+      )
+
+      const nameInput = screen.getByLabelText(/Nombre Completo/)
+      const dniInput = screen.getByLabelText(/DNI/)
+      const cardioCheckbox = screen.getByRole('checkbox', { name: /Cardiología/ })
+
+      await user.type(nameInput, 'Juan Pérez')
+      await user.type(dniInput, '12345678')
+      await user.click(cardioCheckbox)
+
+      const submitButton = screen.getByRole('button', { name: /Cargar Paciente/ })
+      await user.click(submitButton)
+
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          initialStatus: 'pendiente'
+        })
+      )
+    })
+
+    test('should submit with disponible status when toggle is enabled', async () => {
+      const user = userEvent.setup()
+      render(
+        <AddPatientDialog
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          attentionOptions={mockAttentionOptions}
+          onSubmit={mockOnSubmit}
+        />
+      )
+
+      const nameInput = screen.getByLabelText(/Nombre Completo/)
+      const dniInput = screen.getByLabelText(/DNI/)
+      const cardioCheckbox = screen.getByRole('checkbox', { name: /Cardiología/ })
+
+      await user.type(nameInput, 'Juan Pérez')
+      await user.type(dniInput, '12345678')
+      await user.click(cardioCheckbox)
+
+      // Find and click the toggle switch
+      const switches = screen.getAllByRole('switch')
+      if (switches.length > 0) {
+        await user.click(switches[0])
+      }
+
+      const submitButton = screen.getByRole('button', { name: /Cargar Paciente/ })
+      await user.click(submitButton)
+
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          initialStatus: 'disponible'
+        })
+      )
+    })
+
+    test('should display Estado Inicial del Paciente section', () => {
+      render(
+        <AddPatientDialog
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          attentionOptions={mockAttentionOptions}
+          onSubmit={mockOnSubmit}
+        />
+      )
+
+      expect(screen.getByText('Estado Inicial del Paciente')).toBeInTheDocument()
     })
   })
 

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ interface AddPatientDialogProps {
     patientName: string
     patientDni: string
     selectedOptions: string[]
+    initialStatus: 'pendiente' | 'disponible'
   }) => Promise<void>
 }
 
@@ -52,6 +54,7 @@ export function AddPatientDialog({
   const [patientName, setPatientName] = useState('')
   const [patientDni, setPatientDni] = useState('')
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
+  const [isHabilitado, setIsHabilitado] = useState(false) // false = pendiente, true = disponible
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,13 +67,15 @@ export function AddPatientDialog({
     await onSubmit({
       patientName,
       patientDni,
-      selectedOptions
+      selectedOptions,
+      initialStatus: isHabilitado ? 'disponible' : 'pendiente'
     })
 
     // Limpiar formulario
     setPatientName('')
     setPatientDni('')
     setSelectedOptions([])
+    setIsHabilitado(false)
   }
 
   const handleCancel = () => {
@@ -78,19 +83,20 @@ export function AddPatientDialog({
     setPatientName('')
     setPatientDni('')
     setSelectedOptions([])
+    setIsHabilitado(false)
     onOpenChange(false)
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Cargar Nuevo Paciente</DialogTitle>
           <DialogDescription>
             Copie los datos del paciente desde el HSI
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-4">
           <div className="space-y-2">
             <Label htmlFor="patient_name">Nombre Completo *</Label>
             <Input
@@ -194,13 +200,43 @@ export function AddPatientDialog({
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              Cancelar
-            </Button>
-            <Button type="submit">Cargar Paciente</Button>
+          {/* Toggle para estado inicial del paciente */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-base font-semibold">Estado Inicial del Paciente</Label>
+                <p className="text-sm text-muted-foreground">
+                  {isHabilitado
+                    ? 'El paciente se cargará como "Disponible" (habilitado) para atención inmediata'
+                    : 'El paciente se cargará como "Pendiente" (requiere habilitación posterior)'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-medium ${isHabilitado ? 'text-green-600' : 'text-amber-600'}`}>
+                  {isHabilitado ? '✓ Disponible' : '⟳ Pendiente'}
+                </span>
+                <Switch
+                  checked={isHabilitado}
+                  onCheckedChange={setIsHabilitado}
+                />
+              </div>
+            </div>
           </div>
         </form>
+
+        {/* Footer fijo con botones */}
+        <div className="flex justify-end gap-2 border-t pt-4 mt-4">
+          <Button type="button" variant="outline" onClick={handleCancel}>
+            Cancelar
+          </Button>
+          <Button onClick={() => {
+            // Trigger submit del formulario
+            const form = document.querySelector('form') as HTMLFormElement
+            form?.requestSubmit()
+          }}>
+            Cargar Paciente
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   )

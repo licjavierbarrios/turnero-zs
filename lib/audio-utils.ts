@@ -24,10 +24,12 @@ export function initAudioContext(): void {
     }
   }
 
-  // Precargar el audio de notificación
+  // Precargar el audio de notificación desde API endpoint
   if (!notificationAudio) {
-    notificationAudio = new Audio('/sounds/dingdong.mp3')
+    notificationAudio = new Audio('/api/audio?file=dingdong.mp3')
     notificationAudio.preload = 'auto'
+    // No esperar a que cargue, solo precargarlo en background
+    notificationAudio.load()
   }
 }
 

@@ -27,55 +27,55 @@ const navigation = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: HomeIcon,
-    roles: ['admin', 'administrativo', 'medico', 'enfermeria'] // Todos menos pantalla
+    roles: ['admin', 'administrativo', 'medico', 'enfermeria']
   },
   {
     name: 'Turnos',
     href: '/turnos',
     icon: ClockIcon,
-    roles: ['admin', 'administrativo', 'medico', 'enfermeria'] // Admin, administrativo, médicos y enfermería
+    roles: ['admin', 'administrativo', 'medico', 'enfermeria']
   },
   {
     name: 'Agenda',
     href: '/agenda',
     icon: CalendarIcon,
-    roles: ['admin', 'administrativo', 'medico'] // Admin, administrativo y médicos
+    roles: ['admin', 'administrativo', 'medico']
   },
   {
     name: 'Asignaciones',
     href: '/asignaciones',
     icon: UserIcon,
-    roles: ['admin', 'administrativo'] // Admin y administrativo asignan consultorios
+    roles: ['admin', 'administrativo']
   },
   {
     name: 'Profesionales',
     href: '/profesionales',
     icon: UsersIcon,
-    roles: ['admin'] // Solo admin gestiona profesionales
+    roles: ['admin']
   },
   {
     name: 'Servicios',
     href: '/servicios',
     icon: HeartHandshakeIcon,
-    roles: ['admin'] // Solo admin gestiona servicios
+    roles: ['admin']
   },
   {
     name: 'Consultorios',
     href: '/consultorios',
     icon: MapPinIcon,
-    roles: ['admin'] // Solo admin gestiona consultorios
+    roles: ['admin']
   },
   {
     name: 'Reportes',
     href: '/reportes',
     icon: BarChart3Icon,
-    roles: ['admin', 'administrativo'] // Admin y administrativo ven reportes
+    roles: ['admin', 'administrativo']
   },
   {
     name: 'Configuración',
     href: '/configuracion',
     icon: SettingsIcon,
-    roles: ['admin'] // Solo admin configura TTS
+    roles: ['admin']
   },
 ]
 
@@ -100,7 +100,9 @@ export default function DashboardLayout({
       if (authError || !authUser) {
         // Sesión expirada o inválida - limpiar localStorage
         localStorage.removeItem('institution_context')
-        await supabase.auth.signOut() // Asegurar que la sesión se limpie completamente
+        sessionStorage.removeItem('user_data')
+        sessionStorage.removeItem('user_institutions')
+        await supabase.auth.signOut()
         router.push('/')
         return
       }
@@ -115,6 +117,8 @@ export default function DashboardLayout({
       if (userError) {
         // Error al obtener datos - probablemente sesión expirada
         localStorage.removeItem('institution_context')
+        sessionStorage.removeItem('user_data')
+        sessionStorage.removeItem('user_institutions')
         await supabase.auth.signOut()
         router.push('/')
         return
@@ -136,12 +140,30 @@ export default function DashboardLayout({
       console.error('Error en loadLayoutData:', error)
       // En caso de cualquier error, limpiar y redirigir
       localStorage.removeItem('institution_context')
+      sessionStorage.removeItem('user_data')
+      sessionStorage.removeItem('user_institutions')
       await supabase.auth.signOut()
       router.push('/')
     }
   }, [router])
 
   useEffect(() => {
+    // Intentar cargar datos del sessionStorage primero (precargados en login)
+    const cachedUserData = sessionStorage.getItem('user_data')
+    const contextData = localStorage.getItem('institution_context')
+
+    if (cachedUserData && contextData) {
+      // Datos precargados disponibles - usarlos inmediatamente
+      try {
+        setUser(JSON.parse(cachedUserData))
+        setInstitutionContext(JSON.parse(contextData))
+        return
+      } catch (e) {
+        console.error('Error parsing cached data:', e)
+      }
+    }
+
+    // Si no hay cache o falló el parse, hacer fallback a las queries originales
     loadLayoutData()
   }, [loadLayoutData])
 
@@ -150,8 +172,10 @@ export default function DashboardLayout({
       // Cerrar sesión en Supabase
       await supabase.auth.signOut()
 
-      // Limpiar localStorage
+      // Limpiar localStorage y sessionStorage
       localStorage.removeItem('institution_context')
+      sessionStorage.removeItem('user_data')
+      sessionStorage.removeItem('user_institutions')
 
       // Redirigir a la página de inicio
       router.push('/')
@@ -159,6 +183,8 @@ export default function DashboardLayout({
       console.error('Error al cerrar sesión:', error)
       // Aún así intentar limpiar y redirigir
       localStorage.removeItem('institution_context')
+      sessionStorage.removeItem('user_data')
+      sessionStorage.removeItem('user_institutions')
       router.push('/')
     }
   }

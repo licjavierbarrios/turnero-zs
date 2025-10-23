@@ -34,14 +34,15 @@ import {
 
 export default function QueuePage() {
   const { hasAccess, loading: permissionLoading } = useRequirePermission('/turnos')
-  const [queue, setQueue] = useState<QueueItem[]>([])
-  const [filteredQueue, setFilteredQueue] = useState<QueueItem[]>([])
+  const [queue, setQueue] = useState<any[]>([])
+  const [filteredQueue, setFilteredQueue] = useState<any[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
   const [professionalAssignments, setProfessionalAssignments] = useState<ProfessionalAssignment[]>([])
   const [attentionOptions, setAttentionOptions] = useState<AttentionOption[]>([])
   const [userServices, setUserServices] = useState<Service[]>([]) // Servicios asignados al usuario
+  const [currentUserId, setCurrentUserId] = useState<string>('') // ID del usuario actual para permisos
 
   // Filtros
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('ALL')
@@ -78,6 +79,8 @@ export default function QueuePage() {
         console.error('No hay usuario autenticado')
         return
       }
+
+      setCurrentUserId(authUser.id)
 
       // Obtener servicios asignados al usuario
       const { data: userServicesData, error: userServicesError } = await supabase
@@ -151,7 +154,7 @@ export default function QueuePage() {
       const options = buildAttentionOptions(servicesData, transformedAssignments)
       setAttentionOptions(options)
 
-      // Obtener cola del día actual con datos completos
+      // Obtener cola del día actual con datos completos - INCLUIR created_by
       const { data: queueData, error: queueError } = await supabase
         .from('daily_queue')
         .select(`
@@ -167,6 +170,7 @@ export default function QueuePage() {
           enabled_at,
           called_at,
           attended_at,
+          created_by,
           service:service_id (
             name
           ),
@@ -246,6 +250,7 @@ export default function QueuePage() {
                 enabled_at,
                 called_at,
                 attended_at,
+                created_by,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
                 room:room_id (name)
@@ -291,6 +296,7 @@ export default function QueuePage() {
                 enabled_at,
                 called_at,
                 attended_at,
+                created_by,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
                 room:room_id (name)
@@ -366,8 +372,9 @@ export default function QueuePage() {
     patientName: string
     patientDni: string
     selectedOptions: string[]
+    initialStatus: 'pendiente' | 'disponible'
   }) => {
-    const { patientName, patientDni, selectedOptions } = data
+    const { patientName, patientDni, selectedOptions, initialStatus } = data
 
     try {
       const context = getInstitutionContext()
@@ -385,7 +392,7 @@ export default function QueuePage() {
 
       // 1️⃣ Generar items optimistas (uno por cada opción seleccionada)
       const baseOrderNumber = getNextOrderNumber(queue)
-      const optimisticItems: QueueItem[] = []
+      const optimisticItems: any[] = []
 
       for (let i = 0; i < selectedOptions.length; i++) {
         const optionId = selectedOptions[i]
@@ -402,7 +409,18 @@ export default function QueuePage() {
           a => a.professional_id === option.professional_id
         )
 
-        const optimisticItem: QueueItem = {
+        // Preparar los datos del estado inicial
+        const statusData = initialStatus === 'disponible'
+          ? {
+              status: 'disponible',
+              enabled_at: now
+            }
+          : {
+              status: 'pendiente',
+              enabled_at: null
+            }
+
+        const optimisticItem: any = {
           id: generateTempId(i),
           order_number: baseOrderNumber + i,
           patient_name: patientName,
@@ -413,11 +431,11 @@ export default function QueuePage() {
           professional_name: assignment?.professional_name || null,
           room_id: option.room_id,
           room_name: assignment?.room_name || null,
-          status: 'pendiente',
+          ...statusData,
           created_at: now,
-          enabled_at: null,
           called_at: null,
-          attended_at: null
+          attended_at: null,
+          created_by: userId
         }
 
         optimisticItems.push(optimisticItem)
@@ -456,8 +474,13 @@ export default function QueuePage() {
           patient_dni: patientDni,
           institution_id: context.institution_id,
           queue_date: today,
-          status: 'pendiente',
+          status: initialStatus,
           created_by: userId
+        }
+
+        // Si se carga como disponible, agregar enabled_at
+        if (initialStatus === 'disponible') {
+          queueEntry.enabled_at = now
         }
 
         // Si es un servicio, agregar service_id
@@ -647,13 +670,15 @@ export default function QueuePage() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {filteredQueue.map((item) => (
+          {filteredQueue.map((item: any) => (
             <PatientCard
               key={item.id}
               item={item}
               isOptimistic={item.id.startsWith('temp-')}
               callingId={callingId}
               onUpdateStatus={updateStatus}
+              currentUserId={currentUserId}
+              createdBy={item.created_by}
             />
           ))}
         </div>

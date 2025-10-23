@@ -39,7 +39,8 @@ export function transformQueueItem(raw: any): QueueItem {
     created_at: raw.created_at,
     enabled_at: raw.enabled_at,
     called_at: raw.called_at,
-    attended_at: raw.attended_at
+    attended_at: raw.attended_at,
+    created_by: raw.created_by || null
   }
 }
 
