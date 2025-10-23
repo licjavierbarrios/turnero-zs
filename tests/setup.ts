@@ -121,6 +121,14 @@ global.SpeechSynthesisUtterance = class MockSpeechSynthesisUtterance {
   }
 } as any
 
+// Mock de ResizeObserver (para componentes Radix UI)
+global.ResizeObserver = class ResizeObserver {
+  constructor(callback: ResizeObserverCallback) {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as any
+
 // Suprimir warnings específicos en tests
 const originalError = console.error
 const originalWarn = console.warn
