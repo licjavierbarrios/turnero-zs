@@ -62,3 +62,22 @@ export interface StatusConfig {
 }
 
 export type QueueStatus = QueueItem['status']
+
+/**
+ * Profesional asignado al usuario actual
+ * Se usa para filtrar la cola y limitar lo que el usuario puede ver
+ */
+export interface UserProfessionalAssignment {
+  professional_id: string
+  professional_name: string
+  speciality: string | null
+}
+
+/**
+ * Servicio asignado al usuario actual
+ * Se usa para filtrar la cola y limitar lo que el usuario puede ver
+ */
+export interface UserServiceAssignment {
+  service_id: string
+  service_name: string
+}

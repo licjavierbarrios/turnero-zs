@@ -2,6 +2,8 @@
 
 Sistema multi-zona de gestión de turnos para centros de salud argentinos (CAPS/hospitales).
 
+> **⚠️ IMPORTANTE**: Se ha implementado una refactorización de roles y permisos. Ver `RESUMEN-CAMBIO-ROLES-Y-PERMISOS.md`
+
 ## 🎯 Objetivos
 
 - ↓ 25-40% tiempo de espera en 3 meses

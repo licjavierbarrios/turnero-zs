@@ -1,4 +1,4 @@
-import type { QueueItem, ProfessionalAssignment, AttentionOption, Service, Professional, Room } from './types'
+import type { QueueItem, ProfessionalAssignment, AttentionOption, Service, Professional, Room, UserProfessionalAssignment } from './types'
 
 /**
  * Transforma datos crudos de Supabase a QueueItem tipado.
@@ -100,6 +100,33 @@ export function transformUserServices(rawData: any[]): Service[] {
     .map((us: any) => ({
       id: (us.service as any).id,
       name: (us.service as any).name
+    }))
+}
+
+/**
+ * Transforma profesionales asignados al usuario desde Supabase.
+ *
+ * @param rawData - Datos crudos de user_professional con joins
+ * @returns Array de UserProfessionalAssignment tipadas
+ *
+ * @example
+ * ```typescript
+ * const { data } = await supabase
+ *   .from('user_professional')
+ *   .select('professional_id, professional:professional_id (id, first_name, last_name, speciality)')
+ *   .eq('user_id', userId)
+ *   .eq('is_active', true)
+ *
+ * const userProfessionals = transformUserProfessionals(data)
+ * ```
+ */
+export function transformUserProfessionals(rawData: any[]): UserProfessionalAssignment[] {
+  return (rawData || [])
+    .filter((up: any) => up.professional)
+    .map((up: any) => ({
+      professional_id: (up.professional as any).id,
+      professional_name: `${(up.professional as any).first_name} ${(up.professional as any).last_name}`,
+      speciality: (up.professional as any).speciality || null
     }))
 }
 

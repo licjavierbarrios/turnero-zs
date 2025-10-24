@@ -132,6 +132,23 @@ export interface Membership {
   institution?: Institution;
 }
 
+export interface UserProfessional {
+  id: string;
+  user_id: string;
+  professional_id: string;
+  institution_id: string;
+  professional_role: 'medico' | 'enfermeria' | 'otro';
+  is_active: boolean;
+  assigned_at: string;
+  assigned_by?: string;
+  created_at: string;
+  updated_at: string;
+  // Relaciones
+  user?: User;
+  professional?: Professional;
+  institution?: Institution;
+}
+
 export interface Appointment {
   id: string;
   patient_id: string;

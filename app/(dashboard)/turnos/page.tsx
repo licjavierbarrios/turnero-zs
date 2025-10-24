@@ -14,7 +14,7 @@ import { PatientCard } from '@/components/turnos/PatientCard'
 import { AddPatientDialog } from '@/components/turnos/AddPatientDialog'
 import { QueueFilters } from '@/components/turnos/QueueFilters'
 import { statusConfig } from '@/lib/turnos/config'
-import type { QueueItem, Service, Professional, Room, ProfessionalAssignment, AttentionOption } from '@/lib/turnos/types'
+import type { QueueItem, Service, Professional, Room, ProfessionalAssignment, AttentionOption, UserProfessionalAssignment } from '@/lib/turnos/types'
 import {
   getNextOrderNumber,
   generateTempId,
@@ -26,6 +26,7 @@ import {
   transformQueueItem,
   transformProfessionalAssignments,
   transformUserServices,
+  transformUserProfessionals,
   buildAttentionOptions,
   extractUniqueProfessionals,
   extractUniqueRooms,
@@ -42,6 +43,7 @@ export default function QueuePage() {
   const [professionalAssignments, setProfessionalAssignments] = useState<ProfessionalAssignment[]>([])
   const [attentionOptions, setAttentionOptions] = useState<AttentionOption[]>([])
   const [userServices, setUserServices] = useState<Service[]>([]) // Servicios asignados al usuario
+  const [userProfessionals, setUserProfessionals] = useState<UserProfessionalAssignment[]>([]) // Profesionales asignados al usuario
   const [currentUserId, setCurrentUserId] = useState<string>('') // ID del usuario actual para permisos
 
   // Filtros
@@ -100,6 +102,30 @@ export default function QueuePage() {
 
       const assignedServices = transformUserServices(userServicesData)
       setUserServices(assignedServices)
+
+      // Obtener profesionales asignados al usuario
+      const { data: userProfessionalsData, error: userProfessionalsError } = await supabase
+        .from('user_professional')
+        .select(`
+          professional_id,
+          professional:professional_id (
+            id,
+            first_name,
+            last_name,
+            speciality
+          )
+        `)
+        .eq('user_id', authUser.id)
+        .eq('institution_id', context.institution_id)
+        .eq('is_active', true)
+
+      if (userProfessionalsError) {
+        console.warn('Error al cargar profesionales asignados:', userProfessionalsError)
+        // No es error fatal, continuamos sin asignaciones de profesional
+      }
+
+      const assignedProfessionals = userProfessionalsData ? transformUserProfessionals(userProfessionalsData) : []
+      setUserProfessionals(assignedProfessionals)
 
       // Obtener fecha del día actual
       const today = getTodayISO()
@@ -329,17 +355,40 @@ export default function QueuePage() {
   useEffect(() => {
     let filtered = [...queue]
 
-    // FILTRO AUTOMÁTICO: Si el usuario tiene servicios asignados, solo mostrar esos servicios
+    // FILTRO AUTOMÁTICO: Según el rol del usuario, filtrar por asignaciones
     // (a menos que sea admin/administrativo que pueden ver todo)
     const contextData = localStorage.getItem('institution_context')
     if (contextData) {
       const context = JSON.parse(contextData)
       const userRole = context.user_role
 
-      // Si NO es admin ni administrativo, Y tiene servicios asignados
-      if (userRole !== 'admin' && userRole !== 'administrativo' && userServices.length > 0) {
-        const userServiceIds = userServices.map(s => s.id)
-        filtered = filtered.filter(item => userServiceIds.includes(item.service_id))
+      // ROLES DE GESTIÓN: ven TODO
+      if (userRole === 'admin' || userRole === 'administrativo') {
+        // No aplicar filtro, verán todos los pacientes
+      }
+      // ROLES CON ASIGNACIONES: filtrar por asignaciones
+      else {
+        let hasAsignations = false
+
+        // Si el usuario está asignado a profesionales específicos (médico)
+        if (userProfessionals.length > 0) {
+          hasAsignations = true
+          const userProfessionalIds = userProfessionals.map(p => p.professional_id)
+          filtered = filtered.filter(item => userProfessionalIds.includes(item.professional_id))
+        }
+
+        // Si el usuario está asignado a servicios específicos (enfermería)
+        if (userServices.length > 0) {
+          hasAsignations = true
+          const userServiceIds = userServices.map(s => s.id)
+          filtered = filtered.filter(item => userServiceIds.includes(item.service_id))
+        }
+
+        // Si NO tiene asignaciones y NO es admin: NO VER NADA
+        // (Seguridad: un usuario sin asignaciones no debe ver la cola)
+        if (!hasAsignations) {
+          filtered = []
+        }
       }
     }
 
@@ -364,7 +413,7 @@ export default function QueuePage() {
     }
 
     setFilteredQueue(filtered)
-  }, [selectedServiceFilter, selectedProfessionalFilter, selectedRoomFilter, selectedStatusFilter, queue, userServices])
+  }, [selectedServiceFilter, selectedProfessionalFilter, selectedRoomFilter, selectedStatusFilter, queue, userServices, userProfessionals])
 
 
 

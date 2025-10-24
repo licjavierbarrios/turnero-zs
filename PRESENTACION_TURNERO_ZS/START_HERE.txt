@@ -1,0 +1,236 @@
+================================================================================
+                  BIENVENIDO A LA PRESENTACION TURNERO ZS
+================================================================================
+
+Si no sabes por dónde empezar, ESTA es la guía rápida.
+
+================================================================================
+                           3 PASOS INICIALES
+================================================================================
+
+PASO 1: Abre la Presentación PowerPoint
+────────────────────────────────────────
+Archivo: Turnero_ZS_Presentacion.pptx
+
+Qué hacer:
+1. Haz doble clic en el archivo
+2. Se abre en PowerPoint (o LibreOffice si no tienes Word)
+3. Personaliza la portada con tu institución
+4. Revisa las 27 diapositivas
+5. Esta es tu PRESENTACIÓN FINAL
+
+Tiempo: 10 minutos
+
+
+PASO 2: Lee el Índice
+─────────────────────
+Archivo: INDEX.md
+
+Qué hacer:
+1. Abre este archivo (con Notepad o editor de texto)
+2. Lee completamente (es la guía de inicio)
+3. Entiende la estructura de carpetas
+4. Conoce qué archivos tienes
+
+Tiempo: 15 minutos
+
+
+PASO 3: Lee la Guía de Grabación de Videos
+───────────────────────────────────────────
+Archivo: GUIA_VIDEOS.md
+
+Qué hacer:
+1. Abre este archivo
+2. LEE COMPLETAMENTE (es muy importante)
+3. Entiende qué videos necesitas grabar
+4. Aprende cómo grabar cada uno
+5. Prepárate para empezar a grabar
+
+Tiempo: 30 minutos
+
+================================================================================
+                            DESPUÉS DE LEER
+================================================================================
+
+Los siguientes pasos son:
+
+1. Instala OBS Studio (herramienta para grabar - es GRATUITA)
+   → Descarga desde: https://obsproject.com/
+
+2. Sigue GUIA_VIDEOS.md para grabar los 19 videos
+   → Videos van en la carpeta: videos_demo/
+
+3. Integra los videos en PowerPoint
+   → Opción A: Insert → Video (en PowerPoint)
+   → Opción B: Ejecuta: python3 insert_videos_pptx.py
+
+4. Practica tu presentación 2-3 veces
+
+5. ¡Presenta con confianza!
+
+================================================================================
+                        ARCHIVOS Y CARPETAS
+================================================================================
+
+ARCHIVOS PRINCIPALES:
+- Turnero_ZS_Presentacion.pptx    → Tu presentación (ABRE ESTO PRIMERO)
+- INDEX.md                         → Índice completo y guía de inicio
+- PRESENTACION.md                  → Contenido detallado de cada slide
+- GUIA_VIDEOS.md                   → Instrucciones para grabar videos
+- RESUMEN_PRESENTACION.md          → Resumen ejecutivo completo
+- README_PRESENTACION.txt          → Resumen rápido en texto
+
+CARPETAS:
+- videos_demo/                     → Aquí copias los 19 videos que grabes
+- archivos_edicion/                → Para recursos de edición (opcional)
+- notas_presentador/               → Para tus notas personales
+- assets/                          → Para logos e imágenes
+
+SCRIPTS (avanzado):
+- create_presentation.py           → Regenerar PowerPoint si es necesario
+- insert_videos_pptx.py            → Insertar videos automáticamente
+
+================================================================================
+                        ORDEN DE LECTURA RECOMENDADO
+================================================================================
+
+1. START_HERE.txt (este archivo)            ← Estás aquí
+2. INDEX.md                                 ← Luego lee esto
+3. Abre Turnero_ZS_Presentacion.pptx       ← Abre la presentación
+4. GUIA_VIDEOS.md                          ← Lee esto antes de grabar
+5. PRESENTACION.md                         ← Referencia mientras presentas
+
+================================================================================
+                        INFORMACION RAPIDA
+================================================================================
+
+¿Cuántos videos necesito grabar?
+→ 19 videos (7-8 minutos total)
+
+¿Cuáles son los más importantes?
+→ Video 07 (Toggle - feature nueva)
+→ Video 12 (Audio TTS - diferenciador)
+→ Video 17 (Realtime sync - diferenciador)
+
+¿Qué herramienta uso para grabar?
+→ OBS Studio (GRATUITA y profesional)
+→ Descarga: https://obsproject.com/
+
+¿Cuánto tiempo total me toma todo?
+→ Lectura: 1 hora
+→ Grabación: 3-5 horas
+→ Integración: 30 minutos
+→ Práctica: 1-2 horas
+→ TOTAL: 5-9 horas (distribuido en 5-7 días)
+
+¿Cuánto dura la presentación?
+→ 15-20 minutos (incluyendo videos)
+
+¿Tengo que hacer todo solo?
+→ Sí, pero cada paso tiene instrucciones detalladas en INDEX.md y GUIA_VIDEOS.md
+
+================================================================================
+                        CHECKLIST DE INICIO
+================================================================================
+
+Antes de empezar:
+☐ Abre este archivo (START_HERE.txt)
+☐ Lee INDEX.md
+☐ Abre Turnero_ZS_Presentacion.pptx
+☐ Personaliza portada con tu institución
+☐ Lee GUIA_VIDEOS.md completamente
+☐ Instala OBS Studio
+☐ Prepara datos de prueba (usuarios, pacientes, etc.)
+
+Mientras grabas:
+☐ Sigue GUIA_VIDEOS.md paso-a-paso
+☐ Graba videos en carpeta videos_demo/
+☐ Nombra videos correctamente (01-..., 02-..., etc.)
+☐ Haz backup de videos en USB + cloud
+
+Antes de presentar:
+☐ Integra videos en PowerPoint
+☐ Prueba reproducción de todos los videos
+☐ Verifica audio (especialmente video 12)
+☐ Practica presentación 2-3 veces
+☐ Verifica timing (15-20 minutos total)
+
+================================================================================
+                        3 VIDEOS CRÍTICOS
+================================================================================
+
+VIDEO 07 - Toggle Estado Inicial (tu FEATURE NUEVA)
+────────────────────────────────────────────────────
+Duración: 15-25 segundos
+Qué mostrar: Toggle cambiando de "Pendiente" (ámbar) a "Disponible" (verde)
+Por qué es importante: Este es tu diferenciador - la novedad que propones
+Tips: Pausa 3 segundos en cada estado para que se vea bien
+
+VIDEO 12 - Llamar Paciente (con AUDIO TTS)
+────────────────────────────────────────────
+Duración: 25-40 segundos
+Qué mostrar: Audio TTS anunciando "Paciente [nombre], consultorio [número]"
+Por qué es importante: Demuestra automatización + accesibilidad
+Tips: Deja que se escuche COMPLETO el audio (~11 segundos)
+
+VIDEO 17 - Sincronización Realtime
+─────────────────────────────────────
+Duración: 25-35 segundos
+Qué mostrar: Cambios en Dashboard reflejándose INSTANTÁNEAMENTE en Pantalla
+Por qué es importante: Es el diferenciador técnico clave
+Tips: Grabación side-by-side, muestra cambios rápidos y claros
+
+================================================================================
+                        PRÓXIMO PASO
+================================================================================
+
+→ Abre el archivo: INDEX.md
+→ Lee completamente
+→ Sigue sus instrucciones
+
+¡Vamos! 🚀
+
+================================================================================
+                      PREGUNTAS FRECUENTES RÁPIDAS
+================================================================================
+
+P: ¿Necesito técnico de video?
+R: No, cada paso tiene instrucciones. OBS Studio es fácil de aprender.
+
+P: ¿Puedo usar mi teléfono para grabar?
+R: No recomendado. Mejor usar OBS Studio en computadora.
+
+P: ¿Qué pasa si algo sale mal?
+R: Revisa GUIA_VIDEOS.md - tiene tips para resolver problemas.
+
+P: ¿Necesito narración en los videos?
+R: Opcional. Los videos pueden ser sin voz - solo acciones.
+
+P: ¿Cuál es el video más importante?
+R: Video 12 (audio TTS). Es tu diferenciador técnico más visible.
+
+P: ¿Puedo presentar sin todos los videos?
+R: Puedes, pero pierdes impacto. Mínimo: videos 07, 12, 17.
+
+P: ¿Tengo que personalizar el PowerPoint?
+R: Al mínimo: cambiar institución en portada y datos de contacto.
+
+P: ¿Cuánto espacio necesito para 19 videos?
+R: ~1-2 GB en total. Asegúrate tener espacio disponible.
+
+P: ¿Dónde descargo OBS?
+R: https://obsproject.com/ (totalmente gratuito)
+
+================================================================================
+                        ¡LISTO PARA COMENZAR!
+================================================================================
+
+Tienes TODO lo que necesitas en esta carpeta.
+
+Próximo paso: Abre INDEX.md y sigue las instrucciones.
+
+¡Mucho éxito en tu presentación! 🎉
+
+================================================================================
+                          Hecho con Claude Code
+================================================================================
