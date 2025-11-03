@@ -29,7 +29,7 @@ export const createMembershipsByUser = (
   institutionIds: string[],
   roles?: UserRole[]
 ): Membership[] => {
-  const defaultRoles: UserRole[] = ['admin', 'administrativo', 'medico', 'enfermeria', 'pantalla']
+  const defaultRoles: UserRole[] = ['admin', 'administrativo', 'profesional', 'servicio', 'pantalla']
 
   return institutionIds.map((instId, idx) =>
     createMembership({
@@ -49,7 +49,7 @@ export const createMembershipsByInstitution = (
   userIds: string[],
   roles?: UserRole[]
 ): Membership[] => {
-  const defaultRoles: UserRole[] = ['admin', 'administrativo', 'medico', 'enfermeria', 'pantalla']
+  const defaultRoles: UserRole[] = ['admin', 'administrativo', 'profesional', 'servicio', 'pantalla']
 
   return userIds.map((userId, idx) =>
     createMembership({
@@ -92,13 +92,13 @@ export const mockMembershipAdministrativo: Membership = {
 }
 
 /**
- * Membresía - Médico
+ * Membresía - Profesional
  */
 export const mockMembershipDoctor: Membership = {
   id: 'membership-doctor-1',
   user_id: mockUserDoctor.id,
   institution_id: mockHospitalRegional.id,
-  role: 'medico',
+  role: 'profesional',
   is_active: true,
   created_at: '2025-01-08T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
@@ -107,13 +107,13 @@ export const mockMembershipDoctor: Membership = {
 }
 
 /**
- * Membresía - Enfermería
+ * Membresía - Servicio
  */
 export const mockMembershipNurse: Membership = {
   id: 'membership-nurse-1',
   user_id: mockUserNurse.id,
   institution_id: mockHospitalRegional.id,
-  role: 'enfermeria',
+  role: 'servicio',
   is_active: true,
   created_at: '2025-01-08T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
@@ -143,7 +143,7 @@ export const mockMembershipInactive: Membership = {
   id: 'membership-inactive-1',
   user_id: 'user-inactive-1',
   institution_id: mockHospitalRegional.id,
-  role: 'medico',
+  role: 'profesional',
   is_active: false,
   created_at: '2025-02-01T08:00:00Z',
   updated_at: '2025-10-20T14:00:00Z',

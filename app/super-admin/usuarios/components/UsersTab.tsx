@@ -26,7 +26,7 @@ type Membership = {
   id: string
   user_id: string
   institution_id: string
-  role: 'super_admin' | 'admin' | 'administrativo' | 'medico' | 'enfermeria' | 'pantalla'
+  role: 'super_admin' | 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
   is_active: boolean
   created_at: string
   updated_at: string
@@ -52,8 +52,8 @@ const roleLabels = {
   super_admin: 'Super Admin',
   admin: 'Administrador',
   administrativo: 'Administrativo',
-  medico: 'Médico',
-  enfermeria: 'Enfermería',
+  profesional: 'Profesional',
+  servicio: 'Servicio',
   pantalla: 'Pantalla'
 }
 

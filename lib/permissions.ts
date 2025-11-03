@@ -3,15 +3,15 @@
  * Define qué roles tienen acceso a cada ruta del dashboard
  */
 
-export type UserRole = 'admin' | 'administrativo' | 'medico' | 'enfermeria' | 'pantalla'
+export type UserRole = 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
 
 /**
  * Mapa de rutas y los roles que tienen acceso a ellas
  */
 export const routePermissions: Record<string, UserRole[]> = {
-  '/dashboard': ['admin', 'administrativo', 'medico', 'enfermeria'],
-  '/turnos': ['admin', 'administrativo', 'medico', 'enfermeria'],
-  '/agenda': ['admin', 'administrativo', 'medico'],
+  '/dashboard': ['admin', 'administrativo', 'profesional', 'servicio'],
+  '/turnos': ['admin', 'administrativo', 'profesional', 'servicio'],
+  '/agenda': ['admin', 'administrativo', 'profesional'],
   '/asignaciones': ['admin', 'administrativo'],
   '/profesionales': ['admin'],
   '/servicios': ['admin'],

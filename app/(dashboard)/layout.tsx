@@ -27,19 +27,19 @@ const navigation = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: HomeIcon,
-    roles: ['admin', 'administrativo', 'medico', 'enfermeria']
+    roles: ['admin', 'administrativo', 'profesional', 'servicio']
   },
   {
     name: 'Turnos',
     href: '/turnos',
     icon: ClockIcon,
-    roles: ['admin', 'administrativo', 'medico', 'enfermeria']
+    roles: ['admin', 'administrativo', 'profesional', 'servicio']
   },
   {
     name: 'Agenda',
     href: '/agenda',
     icon: CalendarIcon,
-    roles: ['admin', 'administrativo', 'medico']
+    roles: ['admin', 'administrativo', 'profesional']
   },
   {
     name: 'Asignaciones',

@@ -11,8 +11,8 @@ import { routePermissions, type UserRole, getAllowedRoutes } from '@/lib/permiss
 const roleNames: Record<UserRole, string> = {
   admin: 'Administrador',
   administrativo: 'Administrativo',
-  medico: 'Médico',
-  enfermeria: 'Enfermería',
+  profesional: 'Profesional',
+  servicio: 'Servicio',
   pantalla: 'Pantalla Pública',
 }
 

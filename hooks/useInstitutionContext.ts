@@ -10,7 +10,7 @@ export interface InstitutionContext {
   institution_type: 'caps' | 'hospital_seccional' | 'hospital_distrital' | 'hospital_regional'
   user_id: string
   user_email: string
-  user_role: 'admin' | 'administrativo' | 'medico' | 'enfermeria' | 'pantalla'
+  user_role: 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
   membership_id: string
 }
 
@@ -34,12 +34,22 @@ export interface UseInstitutionContextResult {
   isAdministrativo: boolean
 
   /**
-   * Indica si el usuario tiene rol de médico
+   * Indica si el usuario tiene rol de profesional
+   */
+  isProfessional: boolean
+
+  /**
+   * Indica si el usuario tiene rol de servicio
+   */
+  isService: boolean
+
+  /**
+   * Indica si el usuario tiene rol de médico (deprecated - mapea a profesional)
    */
   isMedico: boolean
 
   /**
-   * Indica si el usuario tiene rol de enfermería
+   * Indica si el usuario tiene rol de enfermería (deprecated - mapea a servicio)
    */
   isEnfermeria: boolean
 
@@ -127,13 +137,24 @@ export function useInstitutionContext(): UseInstitutionContextResult {
     [context]
   )
 
+  const isProfessional = useMemo(
+    () => context?.user_role === 'profesional',
+    [context]
+  )
+
+  const isService = useMemo(
+    () => context?.user_role === 'servicio',
+    [context]
+  )
+
+  // Backward compatibility: map old names to new roles
   const isMedico = useMemo(
-    () => context?.user_role === 'medico',
+    () => context?.user_role === 'profesional',
     [context]
   )
 
   const isEnfermeria = useMemo(
-    () => context?.user_role === 'enfermeria',
+    () => context?.user_role === 'servicio',
     [context]
   )
 
@@ -192,6 +213,8 @@ export function useInstitutionContext(): UseInstitutionContextResult {
     context,
     isAdmin,
     isAdministrativo,
+    isProfessional,
+    isService,
     isMedico,
     isEnfermeria,
     isPantalla,

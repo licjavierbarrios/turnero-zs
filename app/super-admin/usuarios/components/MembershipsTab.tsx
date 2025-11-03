@@ -23,7 +23,7 @@ type Membership = {
   id: string
   user_id: string
   institution_id: string
-  role: 'super_admin' | 'admin' | 'administrativo' | 'medico' | 'enfermeria' | 'pantalla'
+  role: 'super_admin' | 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
   is_active: boolean
   created_at: string
   updated_at: string
@@ -50,8 +50,8 @@ const roleLabels = {
   super_admin: 'Super Admin',
   admin: 'Administrador',
   administrativo: 'Administrativo',
-  medico: 'Médico',
-  enfermeria: 'Enfermería',
+  profesional: 'Profesional',
+  servicio: 'Servicio',
   pantalla: 'Pantalla'
 }
 
@@ -59,8 +59,8 @@ const roleColors = {
   super_admin: 'bg-purple-100 text-purple-800',
   admin: 'bg-red-100 text-red-800',
   administrativo: 'bg-blue-100 text-blue-800',
-  medico: 'bg-green-100 text-green-800',
-  enfermeria: 'bg-yellow-100 text-yellow-800',
+  profesional: 'bg-green-100 text-green-800',
+  servicio: 'bg-yellow-100 text-yellow-800',
   pantalla: 'bg-orange-100 text-orange-800'
 }
 

@@ -24,8 +24,8 @@ export type UserRole =
   | 'super_admin'
   | 'admin'
   | 'administrativo'
-  | 'medico'
-  | 'enfermeria'
+  | 'profesional'
+  | 'servicio'
   | 'pantalla';
 
 // ============================================================================
@@ -347,8 +347,8 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   super_admin: 'Super Administrador',
   admin: 'Administrador',
   administrativo: 'Administrativo',
-  medico: 'Médico',
-  enfermeria: 'Enfermería',
+  profesional: 'Profesional',
+  servicio: 'Servicio',
   pantalla: 'Pantalla',
 };
 
@@ -366,7 +366,7 @@ export const USER_ROLE_COLORS: Record<UserRole, string> = {
   super_admin: 'bg-purple-100 text-purple-800',
   admin: 'bg-blue-100 text-blue-800',
   administrativo: 'bg-green-100 text-green-800',
-  medico: 'bg-indigo-100 text-indigo-800',
-  enfermeria: 'bg-pink-100 text-pink-800',
+  profesional: 'bg-indigo-100 text-indigo-800',
+  servicio: 'bg-pink-100 text-pink-800',
   pantalla: 'bg-gray-100 text-gray-800',
 };
