@@ -6,7 +6,8 @@
       "mcp__serena__list_dir",
       "Bash(npx:*)",
       "mcp__playwright__browser_press_key",
-      "mcp__filesystem__edit_file"
+      "mcp__filesystem__edit_file",
+      "mcp__filesystem__list_directory"
     ]
   },
   "enableAllProjectMcpServers": true,
