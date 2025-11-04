@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Building2 } from 'lucide-react'
+import { Plus, Building2, X } from 'lucide-react'
 import type { Institution, InstitutionType, Zone } from '@/lib/types'
 import { InstitutionForm } from './components/InstitutionForm'
 import { InstitutionTableRow } from './components/InstitutionTableRow'
@@ -24,6 +25,7 @@ export default function SuperAdminInstitucionesPage() {
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingInstitution, setEditingInstitution] = useState<InstitutionWithZone | null>(null)
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     zone_id: '',
@@ -266,8 +268,13 @@ export default function SuperAdminInstitucionesPage() {
     })
   }
 
+  // Filtrar instituciones por zona seleccionada
+  const filteredInstitutions = selectedZoneId
+    ? institutions.filter(inst => inst.zone_id === selectedZoneId)
+    : institutions
+
   // Agrupar instituciones por zona
-  const institutionsByZone = institutions.reduce((acc, inst) => {
+  const institutionsByZone = filteredInstitutions.reduce((acc, inst) => {
     const zoneName = inst.zone?.name || 'Sin zona'
     if (!acc[zoneName]) acc[zoneName] = []
     acc[zoneName].push(inst)
@@ -288,8 +295,8 @@ export default function SuperAdminInstitucionesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-gray-900">Instituciones de Salud</h1>
           <p className="text-gray-500 mt-2">
             Gestión de CAPS, hospitales y centros de salud
@@ -348,10 +355,39 @@ export default function SuperAdminInstitucionesPage() {
       {/* Instituciones Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Listado de Instituciones</CardTitle>
-          <CardDescription>
-            Administra las instituciones de salud del sistema
-          </CardDescription>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex-1">
+              <CardTitle>Listado de Instituciones</CardTitle>
+              <CardDescription>
+                Administra las instituciones de salud del sistema
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-56">
+              <Select value={selectedZoneId || 'all'} onValueChange={(value) => setSelectedZoneId(value === 'all' ? null : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por zona..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las zonas</SelectItem>
+                  {zones.map((zone) => (
+                    <SelectItem key={zone.id} value={zone.id}>
+                      {zone.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedZoneId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedZoneId(null)}
+                  className="h-10 px-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {institutions.length === 0 ? (
@@ -377,6 +413,30 @@ export default function SuperAdminInstitucionesPage() {
                 </Button>
               )}
             </div>
+          ) : filteredInstitutions.length === 0 ? (
+            <div className="text-center py-12">
+              <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No hay instituciones en esta zona
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Selecciona otra zona o crea una nueva institución
+              </p>
+              <Button
+                onClick={() => setSelectedZoneId(null)}
+                variant="outline"
+                className="mr-2"
+              >
+                Ver todas las zonas
+              </Button>
+              <Button
+                onClick={() => setIsDialogOpen(true)}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Institución
+              </Button>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -390,7 +450,7 @@ export default function SuperAdminInstitucionesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {institutions.map((institution) => (
+                {filteredInstitutions.map((institution) => (
                   <InstitutionTableRow
                     key={institution.id}
                     institution={institution}
