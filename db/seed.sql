@@ -80,11 +80,11 @@ INSERT INTO membership (user_id, institution_id, role) VALUES
   -- Administrativa en CAPS Villa Esperanza
   ('550e8400-e29b-41d4-a716-446655440402', '550e8400-e29b-41d4-a716-446655440011', 'administrativo'),
 
-  -- Médico en CAPS Villa Esperanza
-  ('550e8400-e29b-41d4-a716-446655440403', '550e8400-e29b-41d4-a716-446655440011', 'medico'),
+  -- Profesional en CAPS Villa Esperanza
+  ('550e8400-e29b-41d4-a716-446655440403', '550e8400-e29b-41d4-a716-446655440011', 'profesional'),
 
-  -- Enfermera en CAPS Villa Esperanza
-  ('550e8400-e29b-41d4-a716-446655440404', '550e8400-e29b-41d4-a716-446655440011', 'enfermeria');
+  -- Servicio en CAPS Villa Esperanza
+  ('550e8400-e29b-41d4-a716-446655440404', '550e8400-e29b-41d4-a716-446655440011', 'servicio');
 
 -- Plantillas de horarios (lunes a viernes)
 INSERT INTO slot_template (professional_id, service_id, room_id, day_of_week, start_time, end_time, slot_duration_minutes) VALUES

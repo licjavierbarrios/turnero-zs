@@ -207,10 +207,10 @@ export default function DashboardPage() {
         return 'Administrador'
       case 'administrativo':
         return 'Administrativo'
-      case 'medico':
-        return 'Médico'
-      case 'enfermeria':
-        return 'Enfermería'
+      case 'profesional':
+        return 'Profesional'
+      case 'servicio':
+        return 'Servicio'
       case 'pantalla':
         return 'Pantalla'
       default:
@@ -222,9 +222,9 @@ export default function DashboardPage() {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800'
-      case 'medico':
+      case 'profesional':
         return 'bg-blue-100 text-blue-800'
-      case 'enfermeria':
+      case 'servicio':
         return 'bg-green-100 text-green-800'
       case 'administrativo':
         return 'bg-purple-100 text-purple-800'

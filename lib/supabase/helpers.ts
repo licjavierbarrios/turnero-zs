@@ -53,7 +53,7 @@ export function getInstitutionContext(): {
   institution_type: 'caps' | 'hospital_seccional' | 'hospital_distrital' | 'hospital_regional'
   user_id: string
   user_email: string
-  user_role: 'admin' | 'administrativo' | 'medico' | 'enfermeria' | 'pantalla'
+  user_role: 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
   membership_id: string
   [key: string]: any
 } | null {

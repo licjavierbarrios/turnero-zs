@@ -29,7 +29,7 @@ type Membership = {
   id: string
   user_id: string
   institution_id: string
-  role: 'admin' | 'administrativo' | 'medico' | 'enfermeria' | 'pantalla'
+  role: 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
   is_active: boolean
   created_at: string
   updated_at: string
@@ -50,16 +50,16 @@ type Institution = {
 const roleLabels = {
   admin: 'Administrador',
   administrativo: 'Administrativo',
-  medico: 'Médico',
-  enfermeria: 'Enfermería',
+  profesional: 'Profesional',
+  servicio: 'Servicio',
   pantalla: 'Pantalla'
 }
 
 const roleColors = {
   admin: 'bg-red-100 text-red-800',
   administrativo: 'bg-blue-100 text-blue-800',
-  medico: 'bg-green-100 text-green-800',
-  enfermeria: 'bg-purple-100 text-purple-800',
+  profesional: 'bg-green-100 text-green-800',
+  servicio: 'bg-purple-100 text-purple-800',
   pantalla: 'bg-orange-100 text-orange-800'
 }
 
@@ -741,8 +741,8 @@ export default function UsuariosPage() {
                         <SelectContent>
                           <SelectItem value="admin">Administrador</SelectItem>
                           <SelectItem value="administrativo">Administrativo</SelectItem>
-                          <SelectItem value="medico">Médico</SelectItem>
-                          <SelectItem value="enfermeria">Enfermería</SelectItem>
+                          <SelectItem value="profesional">Profesional</SelectItem>
+                          <SelectItem value="servicio">Servicio</SelectItem>
                           <SelectItem value="pantalla">Pantalla</SelectItem>
                         </SelectContent>
                       </Select>

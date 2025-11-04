@@ -137,7 +137,7 @@ export interface UserProfessional {
   user_id: string;
   professional_id: string;
   institution_id: string;
-  professional_role: 'medico' | 'enfermeria' | 'otro';
+  professional_role: 'profesional' | 'servicio' | 'otro';
   is_active: boolean;
   assigned_at: string;
   assigned_by?: string;

@@ -31,6 +31,7 @@ export default function InstitutionSelectPage() {
   const [user, setUser] = useState<any>(null)
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null)
   const router = useRouter()
 
@@ -58,13 +59,13 @@ export default function InstitutionSelectPage() {
         .eq('is_active', true)
 
       if (membershipError) {
-        console.error('Error al cargar membresías:', membershipError)
+        setError(`Error al cargar instituciones: ${membershipError.message}`)
         setLoading(false)
         return
       }
 
       // Transformar a formato Institution
-      const userInstitutions: Institution[] = memberships
+      const userInstitutions: Institution[] = (memberships || [])
         .filter((m: any) => m.institution) // Solo membresías con institución válida
         .map((m: any) => ({
           id: m.institution.id,
@@ -76,9 +77,10 @@ export default function InstitutionSelectPage() {
         }))
 
       setInstitutions(userInstitutions)
+      setError(null)
       setLoading(false)
-    } catch (error) {
-      console.error('Error en loadUserInstitutions:', error)
+    } catch (error: any) {
+      setError(`Error inesperado: ${error.message}`)
       setLoading(false)
     }
   }, [])
@@ -88,7 +90,13 @@ export default function InstitutionSelectPage() {
       // Verificar sesión de Supabase
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
-      if (authError || !authUser) {
+      if (authError) {
+        setError(`Error de autenticación: ${authError.message}`)
+        setLoading(false)
+        return
+      }
+
+      if (!authUser) {
         router.push('/')
         return
       }
@@ -101,7 +109,8 @@ export default function InstitutionSelectPage() {
         .single()
 
       if (userError) {
-        router.push('/')
+        setError(`Error al obtener datos del usuario: ${userError.message}`)
+        setLoading(false)
         return
       }
 
@@ -109,9 +118,9 @@ export default function InstitutionSelectPage() {
 
       // Cargar instituciones del usuario desde sus membresías
       await loadUserInstitutions(authUser.id)
-    } catch (error) {
-      console.error('Error en loadUserData:', error)
-      router.push('/')
+    } catch (error: any) {
+      setError(`Error inesperado: ${error.message}`)
+      setLoading(false)
     }
   }, [router, loadUserInstitutions])
 
@@ -128,7 +137,7 @@ export default function InstitutionSelectPage() {
         setLoading(false)
         return
       } catch (e) {
-        console.error('Error parsing cached data:', e)
+        // Error parsing cached data, fallback to loading from BD
       }
     }
 
@@ -212,10 +221,10 @@ export default function InstitutionSelectPage() {
         return 'Administrador'
       case 'administrativo':
         return 'Administrativo'
-      case 'medico':
-        return 'Médico'
-      case 'enfermeria':
-        return 'Enfermería'
+      case 'profesional':
+        return 'Profesional'
+      case 'servicio':
+        return 'Servicio'
       case 'pantalla':
         return 'Pantalla'
       default:
@@ -227,9 +236,9 @@ export default function InstitutionSelectPage() {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800'
-      case 'medico':
+      case 'profesional':
         return 'bg-blue-100 text-blue-800'
-      case 'enfermeria':
+      case 'servicio':
         return 'bg-green-100 text-green-800'
       case 'administrativo':
         return 'bg-purple-100 text-purple-800'
@@ -245,6 +254,31 @@ export default function InstitutionSelectPage() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Cargando instituciones...</p>
         </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8">
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Ha ocurrido un error al cargar tus instituciones. Por favor, intenta nuevamente.
+              </p>
+              <Button 
+                onClick={() => router.push('/')}
+                className="w-full"
+              >
+                Volver al Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
