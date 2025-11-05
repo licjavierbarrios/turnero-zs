@@ -26,15 +26,15 @@ export default function SuperAdminDashboard() {
     try {
       setLoading(true)
 
-      // Fetch zones
+      // Fetch zones (exclude 'Sistema')
       const { data: zones } = await supabase
         .from('zone')
-        .select('id')
+        .select('id, name')
 
-      // Fetch institutions
+      // Fetch institutions (exclude 'sistema-admin')
       const { data: institutions } = await supabase
         .from('institution')
-        .select('id, type')
+        .select('id, type, slug')
 
       // Fetch users
       const { data: users } = await supabase
@@ -46,12 +46,16 @@ export default function SuperAdminDashboard() {
         .from('professional')
         .select('id')
 
-      const capsCount = institutions?.filter((i: any) => i.type === 'caps').length || 0
-      const hospitalsCount = institutions?.filter((i: any) => i.type !== 'caps').length || 0
+      // Filter out system zones and institutions
+      const visibleZones = zones?.filter((z: any) => z.name !== 'Sistema') || []
+      const visibleInstitutions = institutions?.filter((i: any) => i.slug !== 'sistema-admin') || []
+
+      const capsCount = visibleInstitutions?.filter((i: any) => i.type === 'caps').length || 0
+      const hospitalsCount = visibleInstitutions?.filter((i: any) => i.type !== 'caps').length || 0
 
       setStats({
-        totalZones: zones?.length || 0,
-        totalInstitutions: institutions?.length || 0,
+        totalZones: visibleZones?.length || 0,
+        totalInstitutions: visibleInstitutions?.length || 0,
         totalUsers: users?.length || 0,
         totalProfessionals: professionals?.length || 0,
         capsCount,
@@ -212,7 +216,7 @@ export default function SuperAdminDashboard() {
               </div>
             )}
 
-            {stats.totalZones > 0 && stats.totalInstitutions === 0 && (
+            {stats.totalZones > 0 && stats.totalInstitutions <= 0 && (
               <div className="flex items-start space-x-3">
                 <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
                 <div>

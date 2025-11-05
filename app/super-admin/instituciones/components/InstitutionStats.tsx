@@ -13,10 +13,13 @@ interface InstitutionStatsProps {
 }
 
 export function InstitutionStats({ institutions }: InstitutionStatsProps) {
-  const capsCount = institutions.filter(i => i.type === 'caps').length
-  const hospitalsCount = institutions.filter(i => i.type !== 'caps').length
+  // Excluir institución del sistema
+  const visibleInstitutions = institutions.filter(i => i.slug !== 'sistema-admin')
+  
+  const capsCount = visibleInstitutions.filter(i => i.type === 'caps').length
+  const hospitalsCount = visibleInstitutions.filter(i => i.type !== 'caps').length
 
-  const institutionsByZone = institutions.reduce((acc, inst) => {
+  const institutionsByZone = visibleInstitutions.reduce((acc, inst) => {
     const zoneName = inst.zone?.name || 'Sin zona'
     if (!acc[zoneName]) acc[zoneName] = []
     acc[zoneName].push(inst)
@@ -33,7 +36,7 @@ export function InstitutionStats({ institutions }: InstitutionStatsProps) {
           <Building2 className="h-4 w-4 text-purple-600" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{institutions.length}</div>
+          <div className="text-2xl font-bold">{visibleInstitutions.length}</div>
         </CardContent>
       </Card>
 

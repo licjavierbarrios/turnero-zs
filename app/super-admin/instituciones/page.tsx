@@ -268,10 +268,11 @@ export default function SuperAdminInstitucionesPage() {
     })
   }
 
-  // Filtrar instituciones por zona seleccionada
+  // Filtrar instituciones: excluir sistema y filtrar por zona si es necesario
+  const visibleInstitutions = institutions.filter(inst => inst.slug !== 'sistema-admin')
   const filteredInstitutions = selectedZoneId
-    ? institutions.filter(inst => inst.zone_id === selectedZoneId)
-    : institutions
+    ? visibleInstitutions.filter(inst => inst.zone_id === selectedZoneId)
+    : visibleInstitutions
 
   // Agrupar instituciones por zona
   const institutionsByZone = filteredInstitutions.reduce((acc, inst) => {
@@ -350,7 +351,7 @@ export default function SuperAdminInstitucionesPage() {
       </div>
 
       {/* Stats Cards */}
-      <InstitutionStats institutions={institutions} />
+      <InstitutionStats institutions={visibleInstitutions} />
 
       {/* Instituciones Table */}
       <Card>
@@ -390,7 +391,7 @@ export default function SuperAdminInstitucionesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {institutions.length === 0 ? (
+          {visibleInstitutions.length === 0 ? (
             <div className="text-center py-12">
               <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -470,23 +471,20 @@ export default function SuperAdminInstitucionesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar eliminación de institución</AlertDialogTitle>
             <AlertDialogDescription>
-              {deletingInstitution && (
-                <>
-                  ¿Estás seguro de que deseas eliminar la institución <strong>{deletingInstitution.name}</strong>?
-                  <br /><br />
-                  <strong>Esto eliminará también todos los recursos relacionados:</strong>
-                  <ul className="list-disc list-inside mt-2">
-                    <li>Profesionales asignados</li>
-                    <li>Consultorios y servicios</li>
-                    <li>Turnos y eventos de atención</li>
-                    <li>Membresías de usuarios</li>
-                  </ul>
-                  <br />
-                  <strong>Esta acción no se puede deshacer.</strong>
-                </>
-              )}
+              {deletingInstitution && `¿Estás seguro de que deseas eliminar la institución "${deletingInstitution.name}"? Esta acción no se puede deshacer.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deletingInstitution && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+              <p className="font-semibold text-red-900 mb-2">Esto eliminará también:</p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-red-800">
+                <li>Profesionales asignados</li>
+                <li>Consultorios y servicios</li>
+                <li>Turnos y eventos de atención</li>
+                <li>Membresías de usuarios</li>
+              </ul>
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">

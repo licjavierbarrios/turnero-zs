@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -170,6 +170,18 @@ export function useCrudOperation<T extends { id: string }>({
       setIsLoading(false)
     }
   }, [tableName, selectFields, filterConditions, transformFn, onError])
+
+  /**
+   * Efecto para cargar datos automáticamente al montar el componente
+   * Solo ejecuta una vez para evitar bucles infinitos
+   */
+  useEffect(() => {
+    if (autoFetch) {
+      fetchAll()
+    }
+    // Intencionalmente vacío: solo ejecutar al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   /**
    * Carga un item específico por ID

@@ -8,7 +8,7 @@ export interface UserMembership {
   institution_id: string
   role: string
   institution_name?: string
-  zone_name?: string
+  zone_name?: string | undefined
 }
 
 export function useUserMembership() {
@@ -31,20 +31,10 @@ export function useUserMembership() {
         // Buscar membresía del usuario
         const { data: membership, error: membershipError } = await supabase
           .from('membership')
-          .select(`
-            user_id,
-            institution_id,
-            role,
-            institution:institution_id (
-              name,
-              zone:zone_id (
-                name
-              )
-            )
-          `)
+          .select('user_id, institution_id, role')
           .eq('user_id', user.id)
           .eq('is_active', true)
-          .single()
+          .maybeSingle()
 
         if (membershipError) {
           if (membershipError.code === 'PGRST116') {
@@ -61,9 +51,7 @@ export function useUserMembership() {
           const membershipData: UserMembership = {
             user_id: membership.user_id,
             institution_id: membership.institution_id,
-            role: membership.role,
-            institution_name: (membership.institution as any)?.name,
-            zone_name: (membership.institution as any)?.zone?.name
+            role: membership.role
           }
           setUserMembership(membershipData)
         }
