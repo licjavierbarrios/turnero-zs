@@ -474,11 +474,11 @@ export default function QueuePage() {
           order_number: baseOrderNumber + i,
           patient_name: patientName,
           patient_dni: patientDni,
-          service_id: option.service_id || '',
+          service_id: option.service_id || null,
           service_name: serviceName,
-          professional_id: option.professional_id,
+          professional_id: option.professional_id || null,
           professional_name: assignment?.professional_name || null,
-          room_id: option.room_id,
+          room_id: option.room_id || null,
           room_name: assignment?.room_name || null,
           ...statusData,
           created_at: now,
@@ -507,14 +507,12 @@ export default function QueuePage() {
 
         if (!option) continue
 
-        // Obtener siguiente número de orden REAL del servidor
-        const { data: nextNumber, error: rpcError } = await supabase
-          .rpc('get_next_order_number', {
-            p_institution_id: context.institution_id,
-            p_date: today
-          })
-
-        if (rpcError) throw rpcError
+        // Calcular el siguiente número de orden basado en la cola actual
+        const maxOrderNumber = queue.reduce((max, item) => {
+          const num = parseInt(String(item.order_number)) || 0
+          return num > max ? num : max
+        }, 0)
+        const nextNumber = maxOrderNumber + i + 1
 
         // Preparar datos del registro
         const queueEntry: any = {
@@ -538,9 +536,11 @@ export default function QueuePage() {
         }
 
         // Si es un profesional, agregar professional_id y room_id
+        // service_id se deja NULL cuando es solo profesional
         if (option.type === 'professional') {
           queueEntry.professional_id = option.professional_id
           queueEntry.room_id = option.room_id
+          // NO asignar service_id - quedará NULL
         }
 
         const { error: insertError } = await supabase

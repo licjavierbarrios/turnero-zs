@@ -29,6 +29,10 @@ interface PublicAppointment {
   status: string
   called_at?: string
   queue_date: string
+  // Professional/Consultorio fields (when service_id is null)
+  professional_name?: string
+  room_name?: string
+  is_professional_assignment?: boolean
 }
 
 interface Institution {
@@ -186,6 +190,12 @@ export default function PantallaPublicaPage({
     const firstName = nameParts[0] || ''
     const lastName = nameParts.slice(1).join(' ') || ''
 
+    // For professional assignments, announce the consultorio/room name
+    // For service assignments, announce the service name
+    const announcementText = currentCall.is_professional_assignment
+      ? (currentCall.room_name || 'Consultorio')
+      : currentCall.service_name
+
     return [{
       id: currentCall.id,
       appointment_id: currentCall.id,
@@ -196,10 +206,10 @@ export default function PantallaPublicaPage({
           last_name: lastName
         },
         room: {
-          name: '' // daily_queue doesn't have room
+          name: '' // daily_queue doesn't have room in this context
         },
         service: {
-          name: currentCall.service_name
+          name: announcementText
         }
       }
     }]
@@ -340,7 +350,17 @@ export default function PantallaPublicaPage({
           status,
           called_at,
           queue_date,
+          service_id,
+          professional_id,
+          room_id,
           service:service_id (
+            name
+          ),
+          professional:professional_id (
+            first_name,
+            last_name
+          ),
+          room:room_id (
             name
           )
         `)
@@ -351,15 +371,37 @@ export default function PantallaPublicaPage({
 
       if (error) throw error
 
-      const formattedAppointments: PublicAppointment[] = data?.map((item: any) => ({
-        id: item.id,
-        order_number: item.order_number,
-        patient_name: item.patient_name,
-        service_name: item.service?.name || '',
-        status: item.status,
-        called_at: item.called_at,
-        queue_date: item.queue_date
-      })) || []
+      const formattedAppointments: PublicAppointment[] = data?.map((item: any) => {
+        // Determine if this is a professional assignment (no service_id)
+        const isProfessionalAssignment = !item.service_id && item.professional_id
+
+        // Get professional name if assigned
+        const professionalName = item.professional
+          ? `${item.professional.first_name} ${item.professional.last_name}`.trim()
+          : ''
+
+        // Get room name
+        const roomName = item.room?.name || ''
+
+        // For professional assignments, use "Consultorio X - Professional Name" format
+        // For service assignments, use the service name
+        const serviceName = isProfessionalAssignment
+          ? (roomName ? `${roomName} - ${professionalName}` : professionalName)
+          : (item.service?.name || '')
+
+        return {
+          id: item.id,
+          order_number: item.order_number,
+          patient_name: item.patient_name,
+          service_name: serviceName,
+          status: item.status,
+          called_at: item.called_at,
+          queue_date: item.queue_date,
+          professional_name: professionalName,
+          room_name: roomName,
+          is_professional_assignment: isProfessionalAssignment
+        }
+      }) || []
 
       setAppointments(formattedAppointments)
 

@@ -204,6 +204,13 @@ export function UserProfessionalsTab({
     }
 
     try {
+      // Obtener los datos del usuario para guardarlos en el registro profesional
+      const selectedUser = users.find(u => u.id === formData.user_id)
+      if (!selectedUser && !editingProfessional) {
+        setError('Usuario no encontrado')
+        return
+      }
+
       if (editingProfessional) {
         // Update professional
         const { error: updateError } = await supabase
@@ -225,7 +232,7 @@ export function UserProfessionalsTab({
           description: "El profesional se ha actualizado correctamente.",
         })
       } else {
-        // Create professional
+        // Create professional - guardar también first_name, last_name y email del usuario
         const { error: insertError } = await supabase
           .from('professional')
           .insert({
@@ -234,6 +241,9 @@ export function UserProfessionalsTab({
             professional_type: formData.professional_type,
             speciality: formData.speciality || null,
             license_number: formData.license_number || null,
+            first_name: selectedUser!.first_name,
+            last_name: selectedUser!.last_name,
+            email: selectedUser!.email,
             is_active: true
           })
 
