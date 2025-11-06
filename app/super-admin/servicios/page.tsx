@@ -6,20 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableCell } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Stethoscope } from 'lucide-react'
+import { Briefcase } from 'lucide-react'
 import { FilterBar } from './components/FilterBar'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-interface Professional {
+interface Service {
   id: string
   institution_id: string
-  first_name: string
-  last_name: string
-  speciality: string | null
-  license_number: string | null
-  email: string | null
-  phone: string | null
+  name: string
+  description: string | null
+  duration_minutes: number | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -44,8 +41,8 @@ interface Institution {
   zone_id: string
 }
 
-export default function SuperAdminProfesionalesPage() {
-  const [professionals, setProfessionals] = useState<Professional[]>([])
+export default function SuperAdminServiciosPage() {
+  const [services, setServices] = useState<Service[]>([])
   const [zones, setZones] = useState<Zone[]>([])
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,6 +52,7 @@ export default function SuperAdminProfesionalesPage() {
   const [selectedZone, setSelectedZone] = useState('')
   const [selectedInstitution, setSelectedInstitution] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+
 
   useEffect(() => {
     loadData()
@@ -85,9 +83,9 @@ export default function SuperAdminProfesionalesPage() {
       if (institutionsError) throw institutionsError
       setInstitutions(institutionsData || [])
 
-      // Cargar profesionales
-      const { data: professionalsData, error: professionalsError } = await supabase
-        .from('professional')
+      // Cargar servicios
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('service')
         .select(`
           *,
           institution:institution_id (
@@ -99,10 +97,10 @@ export default function SuperAdminProfesionalesPage() {
             )
           )
         `)
-        .order('last_name', { ascending: true })
+        .order('name', { ascending: true })
 
-      if (professionalsError) throw professionalsError
-      setProfessionals(professionalsData || [])
+      if (servicesError) throw servicesError
+      setServices(servicesData || [])
     } catch (err) {
       console.error('Error loading data:', err)
       setError('Error al cargar los datos')
@@ -111,10 +109,10 @@ export default function SuperAdminProfesionalesPage() {
     }
   }
 
-  // Filtrar profesionales
-  const filteredProfessionals = professionals.filter((prof) => {
+  // Filtrar servicios
+  const filteredServices = services.filter((service) => {
     // Buscar la institución en el array de instituciones
-    const institution = institutions.find((inst) => inst.id === prof.institution_id)
+    const institution = institutions.find((inst) => inst.id === service.institution_id)
 
     // Normalizar 'all' a string vacío
     const normalizedSelectedInstitution = selectedInstitution === 'all' ? '' : selectedInstitution
@@ -122,14 +120,11 @@ export default function SuperAdminProfesionalesPage() {
     const matchesZone =
       !selectedZone || institution?.zone_id === selectedZone
     const matchesInstitution =
-      !normalizedSelectedInstitution || prof.institution_id === normalizedSelectedInstitution
+      !normalizedSelectedInstitution || service.institution_id === normalizedSelectedInstitution
     const matchesSearch =
       !searchTerm ||
-      `${prof.first_name} ${prof.last_name}`
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      prof.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      prof.speciality?.toLowerCase().includes(searchTerm.toLowerCase())
+      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.description?.toLowerCase().includes(searchTerm.toLowerCase())
 
     return matchesZone && matchesInstitution && matchesSearch
   })
@@ -150,11 +145,11 @@ export default function SuperAdminProfesionalesPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Stethoscope className="h-8 w-8" />
-          Gestión de Profesionales
+          <Briefcase className="h-8 w-8" />
+          Gestión de Servicios
         </h1>
         <p className="text-muted-foreground mt-1">
-          Consulta el listado de profesionales de la salud del sistema
+          Consulta el listado de servicios ofrecidos por las instituciones
         </p>
       </div>
 
@@ -180,18 +175,18 @@ export default function SuperAdminProfesionalesPage() {
       {/* Tabla */}
       <Card>
         <CardHeader>
-          <CardTitle>Profesionales Registrados</CardTitle>
+          <CardTitle>Servicios Registrados</CardTitle>
           <CardDescription>
-            Total: {filteredProfessionals.length} profesional(es)
+            Total: {filteredServices.length} servicio(s)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredProfessionals.length === 0 ? (
+          {filteredServices.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                {professionals.length === 0
-                  ? 'No hay profesionales registrados en el sistema.'
-                  : 'No hay profesionales que coincidan con los filtros seleccionados.'}
+                {services.length === 0
+                  ? 'No hay servicios registrados en el sistema.'
+                  : 'No hay servicios que coincidan con los filtros seleccionados.'}
               </p>
             </div>
           ) : (
@@ -199,10 +194,9 @@ export default function SuperAdminProfesionalesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre Completo</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Especialidad</TableHead>
-                    <TableHead>Matrícula</TableHead>
+                    <TableHead>Nombre del Servicio</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Duración (minutos)</TableHead>
                     <TableHead>Institución</TableHead>
                     <TableHead>Zona</TableHead>
                     <TableHead>Fecha de Creación</TableHead>
@@ -210,40 +204,43 @@ export default function SuperAdminProfesionalesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProfessionals.map((professional) => (
-                    <TableRow key={professional.id}>
-                      <TableCell className="font-medium">
-                        {professional.first_name} {professional.last_name}
-                      </TableCell>
-                      <TableCell>
-                        {professional.email || '-'}
-                      </TableCell>
-                      <TableCell>
-                        {professional.speciality || '-'}
-                      </TableCell>
-                      <TableCell>
-                        {professional.license_number || '-'}
-                      </TableCell>
-                      <TableCell>
-                        {professional.institution?.name || '-'}
-                      </TableCell>
-                      <TableCell>
-                        {professional.institution?.zone?.name || '-'}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {format(
-                          new Date(professional.created_at),
-                          'd MMM yyyy',
-                          { locale: es }
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={professional.is_active ? 'default' : 'secondary'}>
-                          {professional.is_active ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredServices.map((service) => {
+                    const institution = institutions.find((inst) => inst.id === service.institution_id)
+                    return (
+                      <TableRow key={service.id}>
+                        <TableCell className="font-medium">
+                          {service.name}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                          {service.description || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {service.duration_minutes || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {service.institution?.name || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const zone = zones.find((z) => z.id === institution?.zone_id)
+                            return zone?.name || '-'
+                          })()}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(
+                            new Date(service.created_at),
+                            'd MMM yyyy',
+                            { locale: es }
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={service.is_active ? 'default' : 'secondary'}>
+                            {service.is_active ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -13,7 +13,8 @@ import {
   LogOutIcon,
   ShieldCheckIcon,
   BarChart3Icon,
-  Stethoscope
+  Stethoscope,
+  Briefcase
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Zonas Sanitarias', href: '/super-admin/zonas', icon: MapPinIcon },
   { name: 'Instituciones', href: '/super-admin/instituciones', icon: BuildingIcon },
   { name: 'Profesionales', href: '/super-admin/profesionales', icon: Stethoscope },
+  { name: 'Servicios', href: '/super-admin/servicios', icon: Briefcase },
   { name: 'Usuarios', href: '/super-admin/usuarios', icon: UsersIcon },
   { name: 'Métricas Globales', href: '/super-admin/metricas', icon: BarChart3Icon },
 ]

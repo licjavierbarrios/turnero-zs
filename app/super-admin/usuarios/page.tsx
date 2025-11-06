@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2, User, Shield, Eye, EyeOff, Activity } from 'lucide-react'
 import { UserServicesTab } from '@/components/UserServicesTab'
+import { UserProfessionalsTab } from '@/components/UserProfessionalsTab'
 import { UsersTab } from './components/UsersTab'
 import { MembershipsTab } from './components/MembershipsTab'
 
@@ -107,7 +108,7 @@ export default function SuperAdminUsuariosPage() {
   const [services, setServices] = useState<Service[]>([])
   const [userServices, setUserServices] = useState<UserService[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'users' | 'memberships' | 'services'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'memberships' | 'professionals' | 'services'>('users')
 
   // User form state
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
@@ -766,6 +767,17 @@ export default function SuperAdminUsuariosPage() {
           Membresías
         </button>
         <button
+          onClick={() => setActiveTab('professionals')}
+          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
+            activeTab === 'professionals'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Activity className="inline mr-2 h-4 w-4" />
+          Profesionales
+        </button>
+        <button
           onClick={() => setActiveTab('services')}
           className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
             activeTab === 'services'
@@ -1255,6 +1267,15 @@ export default function SuperAdminUsuariosPage() {
             onDeleteMembership={openDeleteMembershipDialog}
           />
         </>
+      )}
+
+      {/* Professionals Tab */}
+      {activeTab === 'professionals' && (
+        <UserProfessionalsTab
+          users={users}
+          zones={zones}
+          institutions={institutions}
+        />
       )}
 
       {/* Services Tab */}

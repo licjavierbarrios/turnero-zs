@@ -69,12 +69,19 @@ Solo puedes hacer commit si el usuario dice explícitamente:
 - **⚠️ Appointments (FUTURO)**: Turnos programados - NO IMPLEMENTADO AÚN
 - **Call Events & Attendance Events** for complete traceability
 
-### User Roles
-- `admin`: System administrators
+### User Roles (via membership table)
+- `super_admin`: Super administrador global
+- `admin`: System administrators per institution
 - `administrativo`: Administrative staff
-- `medico`: Healthcare professionals
-- `enfermeria`: Nursing staff
+- `profesional`: Healthcare provider (attends patients) - LINK to professional table
+- `servicio`: Service/department staff (nursing, lab, etc)
 - `pantalla`: Public display operators
+
+**IMPORTANT ARCHITECTURE:**
+- Un USUARIO puede tener 1+ ROLES en distintas instituciones (via membership)
+- Un USUARIO asignado como `profesional` DEBE tener un record en tabla `professional`
+- Un USUARIO asignado como `servicio` DEBE tener un record en tabla `service_staff`
+- NO confundir: usuarios ≠ profesionales. Un usuario es una cuenta, un profesional es un rol.
 
 ### Institution Types
 - `caps`: Primary care centers
@@ -116,13 +123,63 @@ The MVP excludes patient mobile apps, HSI integration, and emergency/bed managem
 
 ## Key Implementation Notes
 
+### Queue Management (ACTIVO)
 - ⚠️ **SIEMPRE usa `daily_queue` para turnos del día, NO `appointment`**
 - ⚠️ **Estados correctos**: pendiente → disponible → llamado → atendido (NO esperando/en_consulta)
 - ⚠️ **Estructura de paciente**: `patient_name` (string completo), NO `patient_first_name/last_name`
 - ⚠️ **Número de orden**: `order_number` (001, 002, 003...), muéstralo en pantalla
-- Use Spanish for user-facing text and database content (Argentine healthcare context)
 - Implement real-time updates via Supabase channels for public displays (table: `daily_queue`)
-- Ensure proper RLS policies for multi-institutional access
-- Consider accessibility requirements for public displays
 - Plan for concurrent slot booking scenarios
 - **Si ves código usando `appointment`, MÁRCALO como TODO: IMPLEMENTACIÓN FUTURA**
+
+### Users & Professionals Architecture (NUEVA)
+**Estructura:**
+```
+users (tabla base - autenticación y datos personales)
+  ├─→ membership (roles por institución)
+  │   ├─ role = 'profesional' → debe tener professional_id
+  │   ├─ role = 'servicio' → debe tener service_staff record
+  │   └─ role = 'admin/administrativo/pantalla' → sin requisitos especiales
+  │
+  ├─→ professional (SOLO si es profesional que atiende)
+  │   ├─ user_id (UNIQUE, link a users)
+  │   ├─ professional_type (médico, enfermero, nutricionista, etc)
+  │   ├─ speciality (cardiología, pediatría, etc)
+  │   ├─ license_number (matrícula)
+  │   └─→ professional_room_preference (consultorio preferente, OPCIONAL)
+  │   └─→ daily_professional_assignment (asignación HOY a consultorio)
+  │
+  └─→ service_staff (SOLO si es personal de servicio)
+      ├─ user_id
+      └─ staff_type (administrativo, enfermería, laboratorio, etc)
+```
+
+**Flujos Principales:**
+1. **Crear usuario como PROFESIONAL:**
+   - Crear registro en `users`
+   - Crear membresía con role = 'profesional'
+   - Crear registro en `professional` con user_id
+   - OPCIONALMENTE crear preferencia de consultorio
+
+2. **Asignar consultorio A PROFESIONAL:**
+   - Usar tabla `daily_professional_assignment` (NOT `professional_room_preference`)
+   - `professional_room_preference` = preferencia (dónde le gusta estar)
+   - `daily_professional_assignment` = asignación REAL para HOY
+   - Una fila por día = un profesional puede cambiar de consultorio cada día
+
+3. **Crear usuario como SERVICIO:**
+   - Crear registro en `users`
+   - Crear membresía con role = 'servicio'
+   - Crear registro en `service_staff` con user_id
+   - Asignar a `user_service` (servicio específico como Control de Enfermería)
+
+**CRITICAL TABLES FOR PROFESSIONALS:**
+- `professional` → metadata del profesional (especialidad, matrícula, user_id)
+- `professional_room_preference` → consultorio PREFERENTE (opcional, puede ser NULL)
+- `daily_professional_assignment` → asignación REAL para un día específico
+- NO confundir: preferencia ≠ asignación
+
+### General Implementation
+- Use Spanish for user-facing text and database content (Argentine healthcare context)
+- Ensure proper RLS policies for multi-institutional access
+- Consider accessibility requirements for public displays

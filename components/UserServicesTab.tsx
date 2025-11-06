@@ -138,14 +138,17 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
     }
   }, [userSearch, users])
 
-  // Filter institutions by zone
+  // Filter institutions by zone (excluding Sistema institutions)
   useEffect(() => {
     if (formData.zone_id === '') {
       setFilteredInstitutions([])
     } else {
       const zoneName = zones.find(z => z.id === formData.zone_id)?.name
       setFilteredInstitutions(
-        institutions.filter(i => i.zone_name === zoneName)
+        institutions.filter(i =>
+          i.zone_name === zoneName &&
+          i.name !== 'Administración del Sistema'
+        )
       )
     }
   }, [formData.zone_id, institutions, zones])
@@ -222,6 +225,7 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
           )
         `)
         .eq('is_active', true)
+        .neq('institution.name', 'Administración del Sistema')
         .order('name', { ascending: true })
 
       if (error) throw error
@@ -475,11 +479,13 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
                       <SelectValue placeholder="Seleccionar zona" />
                     </SelectTrigger>
                     <SelectContent>
-                      {zones.map((zone) => (
-                        <SelectItem key={zone.id} value={zone.id}>
-                          {zone.name}
-                        </SelectItem>
-                      ))}
+                      {zones
+                        .filter(z => z.name !== 'Sistema')
+                        .map((zone) => (
+                          <SelectItem key={zone.id} value={zone.id}>
+                            {zone.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -579,11 +585,13 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Todas las zonas</SelectItem>
-                {zones.map((zone) => (
-                  <SelectItem key={zone.id} value={zone.name}>
-                    {zone.name}
-                  </SelectItem>
-                ))}
+                {zones
+                  .filter(z => z.name !== 'Sistema')
+                  .map((zone) => (
+                    <SelectItem key={zone.id} value={zone.name}>
+                      {zone.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -601,7 +609,10 @@ export function UserServicesTab({ users, zones, institutions }: UserServicesTabP
               <SelectContent>
                 <SelectItem value="ALL">Todas las instituciones</SelectItem>
                 {institutions
-                  .filter(i => selectedZone === 'ALL' || i.zone_name === selectedZone)
+                  .filter(i =>
+                    (selectedZone === 'ALL' || i.zone_name === selectedZone) &&
+                    i.name !== 'Administración del Sistema'
+                  )
                   .map((institution) => (
                     <SelectItem key={institution.id} value={institution.name}>
                       {institution.name}
