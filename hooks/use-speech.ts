@@ -22,7 +22,11 @@ interface UseSpeechReturn {
 }
 
 /**
- * Hook personalizado para Text-to-Speech usando Web Speech API
+ * Hook personalizado para Text-to-Speech
+ *
+ * Usa dos estrategias:
+ * 1. Web Speech API (para navegadores de escritorio con soporte)
+ * 2. Google Translate TTS API (para Android TV y navegadores sin Web Speech)
  *
  * @param options - Opciones de configuración de la voz
  * @returns Funciones y estado para controlar el TTS
@@ -47,13 +51,20 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
   const [volume, setVolume] = useState(initialVolume)
 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const hasWebSpeechRef = useRef(false)
 
   // Verificar si el navegador soporta Web Speech API
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      setSupported(true)
-    } else {
-      console.warn('Web Speech API no está soportada en este navegador')
+    if (typeof window !== 'undefined') {
+      if ('speechSynthesis' in window) {
+        hasWebSpeechRef.current = true
+        setSupported(true)
+      } else {
+        // Sin Web Speech API, usar Google Translate TTS
+        hasWebSpeechRef.current = false
+        setSupported(true) // Seguimos soportando via servidor
+      }
     }
   }, [])
 
@@ -63,11 +74,14 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel()
       }
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
     }
   }, [])
 
-  const speak = useCallback((text: string) => {
-    if (!supported || !enabled) {
+  const speakWithWebSpeech = useCallback((text: string) => {
+    if (!hasWebSpeechRef.current || !enabled) {
       return
     }
 
@@ -85,20 +99,75 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
     utterance.onerror = (event) => {
       // Silenciar error "not-allowed" que es común cuando TTS no fue iniciado por usuario
       if (event.error !== 'not-allowed') {
-        console.error('Error en TTS:', event)
+        console.error('Error en TTS (Web Speech):', event)
       }
       setSpeaking(false)
     }
 
     utteranceRef.current = utterance
     window.speechSynthesis.speak(utterance)
-  }, [supported, enabled, lang, rate, pitch, volume])
+  }, [enabled, lang, rate, pitch, volume])
+
+  const speakWithServerTTS = useCallback((text: string) => {
+    if (!enabled) {
+      return
+    }
+
+    setSpeaking(true)
+
+    // Detener audio anterior si existe
+    if (audioRef.current) {
+      audioRef.current.pause()
+    }
+
+    // Construir URL con parámetros
+    const ttsUrl = new URL('/api/tts', typeof window !== 'undefined' ? window.location.origin : '')
+    ttsUrl.searchParams.set('text', text)
+    ttsUrl.searchParams.set('lang', lang === 'es-AR' ? 'es' : lang) // Google Translate usa 'es' no 'es-AR'
+
+    // Crear elemento de audio
+    const audio = new Audio(ttsUrl.toString())
+    audio.volume = volume
+
+    audio.onplay = () => setSpeaking(true)
+    audio.onended = () => setSpeaking(false)
+    audio.onerror = (event) => {
+      console.error('Error en TTS (Server):', event)
+      setSpeaking(false)
+    }
+
+    audioRef.current = audio
+    audio.play().catch((error) => {
+      // Silenciar errores de autoplay que son normales en algunos navegadores
+      if (error.name !== 'NotAllowedError') {
+        console.warn('Error reproduciendo TTS:', error)
+      }
+      setSpeaking(false)
+    })
+  }, [enabled, lang, volume])
+
+  const speak = useCallback((text: string) => {
+    if (!supported || !enabled) {
+      return
+    }
+
+    // Usar Web Speech API si está disponible, si no usar servidor
+    if (hasWebSpeechRef.current) {
+      speakWithWebSpeech(text)
+    } else {
+      speakWithServerTTS(text)
+    }
+  }, [supported, enabled, speakWithWebSpeech, speakWithServerTTS])
 
   const cancel = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
-      setSpeaking(false)
     }
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+    setSpeaking(false)
   }, [])
 
   return {
