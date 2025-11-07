@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Toaster } from '@/components/ui/toaster'
+import { ToasterProvider } from '@/components/ToasterProvider'
 
 export const metadata: Metadata = {
   title: 'Turnero ZS - Sistema de Gestión de Turnos',
@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="es">
       <body className="antialiased">
         {children}
-        <Toaster />
+        <ToasterProvider />
       </body>
     </html>
   )

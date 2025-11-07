@@ -1,8 +1,21 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { UserRole } from './lib/types'
+import { getClientCountry, getClientIP } from './lib/headers'
 
 export async function middleware(request: NextRequest) {
+  // ============================================================================
+  // LOGGING DE SECURITY PARA ENDPOINTS /api/*
+  // ============================================================================
+  const path = request.nextUrl.pathname
+  if (path.startsWith('/api/')) {
+    const country = getClientCountry(request)
+    const ip = getClientIP(request)
+    const method = request.method
+
+    // Log de todos los requests a API (útil para debugging y auditoría)
+    console.log(`[API] ${method} ${path} | Country: ${country} | IP: ${ip}`)
+  }
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -60,12 +73,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const path = request.nextUrl.pathname
+  // Variables locales para protección de rutas
+  const currentPath = request.nextUrl.pathname
 
   // ============================================================================
   // PROTECCIÓN DE RUTAS /super-admin/*
   // ============================================================================
-  if (path.startsWith('/super-admin')) {
+  if (currentPath.startsWith('/super-admin')) {
     // TEMPORAL: Permitir acceso sin verificación para debugging
     console.log('🔍 Middleware: Acceso a /super-admin, usuario:', user?.id)
     return response
@@ -87,13 +101,13 @@ export async function middleware(request: NextRequest) {
     '/configuracion',
   ]
 
-  const isDashboardRoute = dashboardRoutes.some(route => path.startsWith(route))
+  const isDashboardRoute = dashboardRoutes.some(route => currentPath.startsWith(route))
 
   if (isDashboardRoute) {
     // Si no hay usuario, redirigir a login (página principal)
     if (!user) {
       const redirectUrl = new URL('/', request.url)
-      redirectUrl.searchParams.set('redirectTo', path)
+      redirectUrl.searchParams.set('redirectTo', currentPath)
       return NextResponse.redirect(redirectUrl)
     }
 
@@ -104,7 +118,7 @@ export async function middleware(request: NextRequest) {
   // ============================================================================
   // RUTA RAÍZ / (LOGIN)
   // ============================================================================
-  if (path === '/') {
+  if (currentPath === '/') {
     // Si ya está autenticado, redirigir según su rol
     if (user) {
       // Verificar si es super admin

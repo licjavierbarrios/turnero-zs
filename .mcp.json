@@ -1,14 +1,5 @@
 {
   "mcpServers": {
-    "mcp-docker-gateway": {
-      "type": "stdio",
-      "command": "docker",
-      "args": ["mcp", "gateway", "run"]
-    },
-    "shadcn": {
-      "command": "npx",
-      "args": ["shadcn@latest", "mcp"]
-    },
     "serena": {
       "type": "stdio",
       "command": "C:\\Users\\Sistemas\\.local\\bin\\uvx.exe",
@@ -44,6 +35,19 @@
       "env": {
         "SUPABASE_ACCESS_TOKEN": "sbp_cfa584d197107215353f56427d528a1d6557ae4e"
       }
+    },
+    "mcp-docker-gateway": {
+      "disabled": true,
+      "type": "stdio",
+      "command": "docker",
+      "args": ["mcp", "gateway", "run"],
+      "_comment": "Desactivado: solo necesario para testing visual/browser automation"
+    },
+    "shadcn": {
+      "disabled": true,
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"],
+      "_comment": "Desactivado: solo necesario cuando añadas componentes UI nuevos"
     }
   }
 }
