@@ -29,6 +29,9 @@ interface PublicAppointment {
   status: string
   called_at?: string
   queue_date: string
+  // Raw IDs for screen filter
+  service_id?: string | null
+  room_id?: string | null
   // Professional/Consultorio fields (when service_id is null)
   professional_name?: string
   room_name?: string
@@ -50,6 +53,26 @@ interface CallEvent {
   appointment_id: string
   called_at: string
   call_number: number
+}
+
+function applyScreenFilter(
+  items: PublicAppointment[],
+  mode: 'all' | 'exclude' | 'include',
+  serviceIds: string[],
+  roomIds: string[]
+): PublicAppointment[] {
+  if (mode === 'all') return items
+
+  return items.filter(item => {
+    const matchesService = item.service_id ? serviceIds.includes(item.service_id) : null
+    const matchesRoom = item.room_id ? roomIds.includes(item.room_id) : null
+
+    if (mode === 'include') {
+      return matchesService === true || matchesRoom === true
+    }
+    // exclude
+    return matchesService !== false && matchesRoom !== false
+  })
 }
 
 const statusColors = {
@@ -89,6 +112,12 @@ export default function PantallaPublicaPage({
 
   // Template/Layout state
   const [currentTemplate, setCurrentTemplate] = useState<any>(null)
+
+  // Screen filter state (when slug is a screen UUID instead of institution slug)
+  const [screenName, setScreenName] = useState<string | null>(null)
+  const [screenMode, setScreenMode] = useState<'all' | 'exclude' | 'include'>('all')
+  const [screenServiceIds, setScreenServiceIds] = useState<string[]>([])
+  const [screenRoomIds, setScreenRoomIds] = useState<string[]>([])
 
   // Load template from localStorage on mount
   useEffect(() => {
@@ -296,10 +325,49 @@ export default function PantallaPublicaPage({
     }
   }, [])
 
-  // Fetch institution data
+  // Fetch institution data (with optional screen token lookup)
   useEffect(() => {
     const fetchInstitution = async () => {
       try {
+        // First: try to resolve slug as a screen UUID token
+        const { data: screenData } = await supabase
+          .from('screen')
+          .select('id, name, mode, institution_id')
+          .eq('id', slug)
+          .eq('is_active', true)
+          .single()
+
+        let institutionId: string
+
+        if (screenData) {
+          // Slug is a screen token → load filter config
+          institutionId = screenData.institution_id
+          setScreenName(screenData.name)
+          setScreenMode(screenData.mode as 'all' | 'exclude' | 'include')
+
+          if (screenData.mode !== 'all') {
+            const { data: configItems } = await supabase
+              .from('screen_config_item')
+              .select('item_type, item_id')
+              .eq('screen_id', screenData.id)
+
+            const items: { item_type: string; item_id: string }[] = configItems || []
+            setScreenServiceIds(items.filter(i => i.item_type === 'service').map(i => i.item_id))
+            setScreenRoomIds(items.filter(i => i.item_type === 'room').map(i => i.item_id))
+          }
+        } else {
+          // Fallback: resolve slug as institution slug or UUID
+          const { data: instData, error: instError } = await supabase
+            .from('institution')
+            .select('id')
+            .or(`slug.eq.${slug},id.eq.${slug}`)
+            .single()
+
+          if (instError) throw instError
+          institutionId = instData.id
+        }
+
+        // Fetch full institution data
         const { data, error } = await supabase
           .from('institution')
           .select(`
@@ -311,12 +379,11 @@ export default function PantallaPublicaPage({
               name
             )
           `)
-          .or(`slug.eq.${slug},id.eq.${slug}`)
+          .eq('id', institutionId)
           .single()
 
         if (error) throw error
 
-        // Fix the zone structure from Supabase
         const institutionData: Institution = {
           id: data.id,
           name: data.name,
@@ -397,16 +464,26 @@ export default function PantallaPublicaPage({
           status: item.status,
           called_at: item.called_at,
           queue_date: item.queue_date,
+          service_id: item.service_id ?? null,
+          room_id: item.room_id ?? null,
           professional_name: professionalName,
           room_name: roomName,
           is_professional_assignment: isProfessionalAssignment
         }
       }) || []
 
-      setAppointments(formattedAppointments)
+      // Apply screen filter if this is a screen-token URL
+      const filteredAppointments = applyScreenFilter(
+        formattedAppointments,
+        screenMode,
+        screenServiceIds,
+        screenRoomIds
+      )
+
+      setAppointments(filteredAppointments)
 
       // Find current call (most recent 'llamado' status)
-      const currentCalledAppointment = formattedAppointments.find(apt => apt.status === 'llamado')
+      const currentCalledAppointment = filteredAppointments.find(apt => apt.status === 'llamado')
       setCurrentCall(currentCalledAppointment || null)
 
       setLoading(false)
@@ -525,9 +602,16 @@ export default function PantallaPublicaPage({
                 className="h-12 w-auto"
               />
               <div>
-                <h1 className="text-3xl font-bold text-blue-900">
-                  {institution?.name || 'Centro de Salud'}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold text-blue-900">
+                    {institution?.name || 'Centro de Salud'}
+                  </h1>
+                  {screenName && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                      {screenName}
+                    </span>
+                  )}
+                </div>
                 {institution?.zone && (
                   <p className="text-blue-700 mt-1">{institution.zone.name}</p>
                 )}

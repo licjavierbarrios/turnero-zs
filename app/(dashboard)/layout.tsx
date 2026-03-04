@@ -18,7 +18,8 @@ import {
   LogOutIcon,
   BuildingIcon,
   ShieldIcon,
-  SettingsIcon
+  SettingsIcon,
+  MonitorIcon
 } from 'lucide-react'
 
 // Definición de navegación con roles permitidos
@@ -70,6 +71,12 @@ const navigation = [
     href: '/reportes',
     icon: BarChart3Icon,
     roles: ['admin', 'administrativo']
+  },
+  {
+    name: 'Pantallas',
+    href: '/pantallas',
+    icon: MonitorIcon,
+    roles: ['admin']
   },
   {
     name: 'Configuración',
