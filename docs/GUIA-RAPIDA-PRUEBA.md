@@ -12,10 +12,11 @@ Hacer en este orden. Cada paso depende del anterior.
 ### Checklist general
 
 - [ ] 1. Crear la institución CPS B° EVITA
-- [ ] 2. Crear los consultorios
-- [ ] 3. Crear los servicios
-- [ ] 4. Cargar los profesionales
-- [ ] 5. Crear usuarios del sistema y asignar roles
+- [ ] 2. Crear el usuario admin del CPS ← **necesario antes de continuar**
+- [ ] 3. Crear los consultorios
+- [ ] 4. Crear los servicios
+- [ ] 5. Cargar los profesionales
+- [ ] 6. Crear el resto de usuarios del sistema y asignar roles
 
 ---
 
@@ -35,9 +36,28 @@ Hacer en este orden. Cada paso depende del anterior.
 
 ---
 
-### Paso 2 — Crear los consultorios
+### Paso 2 — Crear el usuario admin del CPS
 
-**Dónde:** Iniciar sesión como admin del CPS → `/consultorios`
+> ⚠️ Hacer esto antes de los pasos siguientes. Los pasos 3, 4 y 5 requieren estar logueado como admin del CPS.
+
+**Dónde:** `/super-admin/usuarios`
+
+1. Pestaña **Usuarios** → **Nuevo Usuario**
+   - Nombre, apellido, email, contraseña
+   - Guardar
+   - Ej: admin@evita.com - pass: evita456
+2. Pestaña **Membresías** → **Nueva Membresía**
+   - Usuario: el que recién creaste
+   - Institución: CPS B° EVITA
+   - Rol: `admin` = 'Administrador'
+   - Guardar
+3. Cerrar sesión de super_admin e iniciar sesión con la cuenta admin recién creada
+
+---
+
+### Paso 3 — Crear los consultorios
+
+**Dónde:** (logueado como admin del CPS) → `/consultorios`
 
 Cargar uno por uno. Ejemplos:
 - Consultorio 1
@@ -52,7 +72,7 @@ Cargar uno por uno. Ejemplos:
 
 ---
 
-### Paso 3 — Crear los servicios
+### Paso 4 — Crear los servicios
 
 **Dónde:** `/servicios`
 
@@ -72,7 +92,7 @@ Cargar todos los servicios que ofrece el CPS. Ejemplos:
 
 ---
 
-### Paso 4 — Cargar los profesionales
+### Paso 5 — Cargar los profesionales
 
 **Dónde:** `/profesionales`
 
@@ -88,16 +108,16 @@ Cargar uno por uno. Por cada profesional completar:
 
 ---
 
-### Paso 5 — Crear usuarios y asignar roles
+### Paso 6 — Crear el resto de usuarios y asignar roles
 
 Ver **PARTE 2** para el detalle de cada tipo de usuario.
 
+> El admin ya fue creado en el Paso 2. Acá se crean los demás.
+
 **Orden sugerido:**
-1. Primero crear los **admin** (necesitan acceso para configurar cosas)
-2. Luego **administrativos** (quienes cargan pacientes día a día)
-3. Luego **profesionales** con cuenta (los que van a usar el sistema)
-4. Luego **servicio** (enfermería, laboratorio, etc.)
-5. Por último **pantalla** (el usuario para la TV de sala de espera)
+1. **Administrativos** (quienes cargan pacientes día a día)
+2. **Profesionales** con cuenta (los que van a usar el sistema)
+3. **Servicio** (enfermería, laboratorio, etc.)
 
 ---
 
@@ -111,7 +131,10 @@ Ver **PARTE 2** para el detalle de cada tipo de usuario.
 | `administrativo` | Recepcionista, ventanilla | Cargar pacientes, asignar consultorios, llamar turnos |
 | `profesional` | Médicos, psicólogos, nutricionistas | Ver su propia cola, llamar sus pacientes |
 | `servicio` | Enfermería, laboratorio, vacunación | Ver y gestionar su propia cola de servicio |
-| `pantalla` | Nadie (es para la TV) | Solo ve la pantalla pública de llamados |
+
+> ⚠️ **`admin` ≠ `administrativo`** — Son roles distintos con nombres parecidos:
+> - **admin** = jefe/coordinador que configura el sistema (pocas personas, quizás solo una)
+> - **administrativo** = personal de recepción que opera el sistema día a día (pueden ser varios)
 
 ---
 
@@ -161,16 +184,33 @@ Para personal que gestiona un servicio específico (ej: enfermería):
 
 ---
 
-### Caso especial: Usuario PANTALLA
+### Pantallas públicas para la TV (sin usuario)
 
-El usuario `pantalla` es el que se deja logueado en la TV de sala de espera.
+Las TVs de sala de espera **no necesitan usuario ni login**. Cada pantalla tiene una URL única que se abre directo en el navegador.
 
-1. Seguir los **Pasos A y B** con rol `pantalla`
-2. En la TV, ingresar con esas credenciales
-3. El sistema lleva automáticamente a la pantalla pública del CPS
-4. Dejar el navegador abierto todo el día
+**Crear una pantalla:**
 
-> Credenciales sugeridas para la TV: `pantalla@cps-evita.com` / contraseña simple que no olvidés.
+1. Logueado como admin, ir a `/pantallas`
+2. Click en **Nueva pantalla**
+3. Poner un nombre descriptivo (ej: `Admisión`, `Laboratorio`, `Sala de espera general`)
+4. Guardar
+5. Click en el ícono de **copiar URL** — se copia algo como `https://sistema.com/pantalla/xxxxxxxx-xxxx-...`
+6. Abrir esa URL en la TV y dejar el navegador abierto
+
+**Configurar qué turnos muestra (opcional):**
+
+1. En `/pantallas`, click en el ícono de configuración (⚙️) de la pantalla
+2. Elegir el modo:
+   - **Mostrar todo** — todos los turnos de la institución (por defecto)
+   - **Todo excepto...** — todos menos los servicios/consultorios que destildés
+   - **Solo seleccionados** — solo los servicios/consultorios que tildés
+3. Guardar
+
+> 💡 **Ejemplo:** Crear pantalla "Admisión" en modo *Todo excepto Laboratorio*, y pantalla "Laboratorio" en modo *Solo Laboratorio*. Cada TV muestra solo lo que le corresponde.
+
+> 💡 La pantalla muestra su nombre en un badge en el encabezado, para identificarla de un vistazo.
+
+> La URL original `/pantalla/[slug-institución]` sigue funcionando y muestra todo (útil como respaldo).
 
 ---
 
@@ -186,7 +226,9 @@ El usuario `pantalla` es el que se deja logueado en la TV de sala de espera.
 | Cargar profesionales | `/profesionales` | admin |
 | Asignar consultorio del día | `/asignaciones` | administrativo |
 | Cargar pacientes / llamar turnos | `/turnos` | administrativo |
-| Pantalla pública | `/pantalla/[slug]` | pantalla (TV) |
+| Crear y configurar pantallas de TV | `/pantallas` | admin |
+| Pantalla pública (URL única por pantalla) | `/pantalla/[uuid-pantalla]` | TV (sin login) |
+| Pantalla pública (toda la institución) | `/pantalla/[slug-institución]` | TV (sin login) |
 | Reportes | `/reportes` | admin / administrativo |
 
 ---
