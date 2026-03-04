@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DeleteConfirmation } from '@/components/crud/DeleteConfirmation'
 import { useToast } from '@/hooks/use-toast'
 import { useRequirePermission } from '@/hooks/use-permissions'
-import { CalendarIcon, Plus, Trash2, Building2, UserCheck, CheckCircle2 } from 'lucide-react'
+import { CalendarIcon, Plus, Trash2, Building2, UserCheck, CheckCircle2, ClockIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { getTodayISO, formatFullName } from '@/lib/supabase/helpers'
@@ -35,6 +35,8 @@ interface Assignment {
   room_id: string
   institution_id: string
   assignment_date: string
+  start_time?: string | null
+  end_time?: string | null
   professional_name?: string
   professional_speciality?: string | null
   room_name?: string
@@ -102,10 +104,8 @@ export default function AsignacionesPage() {
     }
   })
 
-  const handleAddAssignment = async (professionalId: string, roomId: string) => {
+  const handleAddAssignment = async (professionalId: string, roomId: string, startTime: string, endTime: string) => {
     try {
-      const { data: authData } = await supabase.auth.getUser()
-
       const { error } = await supabase
         .from('daily_professional_assignment')
         .insert({
@@ -113,14 +113,15 @@ export default function AsignacionesPage() {
           room_id: roomId,
           institution_id: institutionId,
           assignment_date: today,
-          created_by: authData.user?.id
+          start_time: startTime,
+          end_time: endTime
         })
 
       if (error) {
         if (error.code === '23505') {
           toast({
             title: 'Error',
-            description: 'Este profesional ya tiene una asignación para hoy',
+            description: 'Este profesional ya tiene una asignación en ese horario',
             variant: 'destructive'
           })
         } else {
@@ -149,9 +150,7 @@ export default function AsignacionesPage() {
     await crudHandleDelete()
   }
 
-  // Profesionales que ya están asignados hoy
-  const assignedProfessionalIds = assignments.map(a => a.professional_id)
-  // Consultorios ocupados hoy
+  // Consultorios ocupados hoy (para marcarlos visualmente)
   const occupiedRoomIds = assignments.map(a => a.room_id)
 
   if (permissionLoading || isLoading) {
@@ -207,7 +206,6 @@ export default function AsignacionesPage() {
         <CardContent>
           <AssignmentForm
             institutionId={institutionId}
-            assignedProfessionalIds={assignedProfessionalIds}
             occupiedRoomIds={occupiedRoomIds}
             onSubmit={handleAddAssignment}
             isLoading={isSaving}
@@ -251,7 +249,7 @@ export default function AsignacionesPage() {
                           <p className="font-semibold text-lg">
                             {assignment.professional_name}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {assignment.professional_speciality && (
                               <Badge variant="secondary" className="text-xs">
                                 {assignment.professional_speciality}
@@ -262,6 +260,12 @@ export default function AsignacionesPage() {
                               <Building2 className="h-3 w-3 mr-1" />
                               {assignment.room_name}
                             </Badge>
+                            {assignment.start_time && assignment.end_time && (
+                              <Badge variant="outline" className="text-xs">
+                                <ClockIcon className="h-3 w-3 mr-1" />
+                                {assignment.start_time.slice(0, 5)} - {assignment.end_time.slice(0, 5)}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>

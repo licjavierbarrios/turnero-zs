@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import { formatFullName } from '@/lib/supabase/helpers'
@@ -21,15 +22,13 @@ interface Room {
 
 interface AssignmentFormProps {
   institutionId: string
-  assignedProfessionalIds: string[]
   occupiedRoomIds: string[]
-  onSubmit: (professionalId: string, roomId: string) => void
+  onSubmit: (professionalId: string, roomId: string, startTime: string, endTime: string) => void
   isLoading?: boolean
 }
 
 export function AssignmentForm({
   institutionId,
-  assignedProfessionalIds,
   occupiedRoomIds,
   onSubmit,
   isLoading = false
@@ -38,6 +37,8 @@ export function AssignmentForm({
   const [rooms, setRooms] = useState<Room[]>([])
   const [selectedProfessional, setSelectedProfessional] = useState('')
   const [selectedRoom, setSelectedRoom] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -68,19 +69,21 @@ export function AssignmentForm({
     fetchData()
   }, [institutionId])
 
-  const availableProfessionals = professionals.filter(p => !assignedProfessionalIds.includes(p.id))
-
   const handleSubmit = () => {
-    if (selectedProfessional && selectedRoom) {
-      onSubmit(selectedProfessional, selectedRoom)
+    if (selectedProfessional && selectedRoom && startTime && endTime) {
+      onSubmit(selectedProfessional, selectedRoom, startTime, endTime)
       setSelectedProfessional('')
       setSelectedRoom('')
+      setStartTime('')
+      setEndTime('')
     }
   }
 
+  const isValid = selectedProfessional && selectedRoom && startTime && endTime && startTime < endTime
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="space-y-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="space-y-2 lg:col-span-2">
         <label className="text-sm font-medium">Profesional</label>
         <Select
           value={selectedProfessional}
@@ -91,18 +94,12 @@ export function AssignmentForm({
             <SelectValue placeholder="Seleccionar profesional" />
           </SelectTrigger>
           <SelectContent>
-            {availableProfessionals.length === 0 ? (
-              <div className="p-2 text-sm text-muted-foreground">
-                Todos los profesionales ya están asignados
-              </div>
-            ) : (
-              availableProfessionals.map((prof) => (
-                <SelectItem key={prof.id} value={prof.id}>
-                  {formatFullName(prof.first_name, prof.last_name)}
-                  {prof.speciality && ` - ${prof.speciality}`}
-                </SelectItem>
-              ))
-            )}
+            {professionals.map((prof) => (
+              <SelectItem key={prof.id} value={prof.id}>
+                {formatFullName(prof.first_name, prof.last_name)}
+                {prof.speciality && ` - ${prof.speciality}`}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -115,7 +112,7 @@ export function AssignmentForm({
           disabled={loading || isLoading}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Seleccionar consultorio" />
+            <SelectValue placeholder="Consultorio" />
           </SelectTrigger>
           <SelectContent>
             {rooms.map((room) => (
@@ -128,10 +125,31 @@ export function AssignmentForm({
         </Select>
       </div>
 
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Horario</label>
+        <div className="flex gap-1 items-center">
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            disabled={loading || isLoading}
+            className="w-full"
+          />
+          <span className="text-muted-foreground text-sm">a</span>
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            disabled={loading || isLoading}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       <div className="flex items-end">
         <Button
           onClick={handleSubmit}
-          disabled={!selectedProfessional || !selectedRoom || isLoading}
+          disabled={!isValid || isLoading}
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
