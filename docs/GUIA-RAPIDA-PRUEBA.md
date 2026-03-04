@@ -1,468 +1,219 @@
-# Guía Rápida - Probar Turnero ZS en Local
+# Guía de Carga del Sistema — Referencia del Administrador
 
-Pasos para levantar y probar el proyecto completo en tu máquina local.
-
-## 📋 Prerequisitos
-
-- Node.js 18.17 o superior instalado
-- Cuenta de Supabase (gratuita)
-- Git instalado
-
-## 🚀 Paso 1: Configurar Supabase
-
-### 1.1 Crear Proyecto en Supabase
-
-1. Ir a [supabase.com](https://supabase.com)
-2. Login/Registrarse
-3. Click en "New Project"
-4. Completar:
-   - **Name**: turnero-zs-local
-   - **Database Password**: (guardar en un lugar seguro)
-   - **Region**: Seleccionar el más cercano
-5. Click "Create new project"
-6. **Esperar 2-3 minutos** mientras se crea el proyecto
-
-### 1.2 Obtener Credenciales
-
-1. En el dashboard de Supabase, ir a **Settings** → **API**
-2. Copiar:
-   - **Project URL**: `https://xxxxx.supabase.co`
-   - **anon public key**: `eyJhbGci...` (un token largo)
-3. Guardar estas credenciales
-
-### 1.3 Ejecutar Scripts SQL
-
-En Supabase Dashboard, ir a **SQL Editor** y ejecutar en orden:
-
-**Script 1: Schema Base**
-```sql
--- Copiar TODO el contenido de: db/schema.sql
--- Pegar aquí y ejecutar (botón RUN)
-```
-
-**Script 2: RLS Policies**
-```sql
--- Copiar TODO el contenido de: db/policies.sql
--- Pegar aquí y ejecutar (botón RUN)
-```
-
-**Script 3: Setup Super Admin**
-```sql
--- Copiar TODO el contenido de: db/SETUP-SUPER-ADMIN-COMPLETO.sql
--- Pegar aquí y ejecutar (botón RUN)
-```
-
-**Script 4: Funciones RLS Actualizadas**
-```sql
--- Copiar TODO el contenido de: db/update-rls-functions-super-admin.sql
--- Pegar aquí y ejecutar (botón RUN)
-```
-
-### 1.4 Habilitar Email Auth
-
-1. En Supabase Dashboard, ir a **Authentication** → **Providers**
-2. Buscar **Email**
-3. Verificar que esté **ENABLED** (verde)
-4. Si no está habilitado, hacer click en **Email** y habilitar
-
-### 1.5 Crear Usuario Super Admin
-
-**En SQL Editor de Supabase:**
-
-```sql
--- 1. Crear usuario en auth
-INSERT INTO auth.users (
-  instance_id,
-  id,
-  aud,
-  role,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  created_at,
-  updated_at,
-  confirmation_token,
-  email_change,
-  email_change_token_new,
-  recovery_token
-) VALUES (
-  '00000000-0000-0000-0000-000000000000',
-  gen_random_uuid(),
-  'authenticated',
-  'authenticated',
-  'admin@turnero.com',
-  crypt('admin123', gen_salt('bf')),
-  NOW(),
-  '{"provider":"email","providers":["email"]}',
-  '{"name":"Super Admin"}',
-  NOW(),
-  NOW(),
-  '',
-  '',
-  '',
-  ''
-);
-
--- 2. Obtener el ID del usuario recién creado
-SELECT id, email FROM auth.users WHERE email = 'admin@turnero.com';
--- Copiar el ID que aparece (algo como: 12345678-1234-1234-1234-123456789012)
-
--- 3. Crear membership (reemplazar USER_ID con el ID copiado)
-INSERT INTO public.membership (
-  user_id,
-  institution_id,
-  role,
-  is_active
-) VALUES (
-  'USER_ID_AQUI',  -- Reemplazar con el ID del paso anterior
-  '00000000-0000-0000-0000-000000000001',
-  'super_admin',
-  true
-);
-```
-
-## 💻 Paso 2: Configurar Proyecto Local
-
-### 2.1 Clonar el Repositorio (si no lo tienes)
-
-```bash
-git clone https://github.com/licjavierbarrios/turnero-zs.git
-cd turnero-zs
-```
-
-### 2.2 Instalar Dependencias
-
-```bash
-npm install
-```
-
-### 2.3 Configurar Variables de Entorno
-
-1. Copiar el archivo de ejemplo:
-```bash
-cp .env.local.example .env.local
-```
-
-2. Editar `.env.local` con tus credenciales de Supabase:
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
-```
-
-### 2.4 Levantar el Servidor
-
-```bash
-npm run dev
-```
-
-Deberías ver:
-```
-▲ Next.js 15.5.2
-- Local:        http://localhost:3000
-- Ready in 2.3s
-```
-
-## 🧪 Paso 3: Probar el Sistema
-
-### 3.1 Login como Super Admin
-
-1. Abrir: http://localhost:3000
-2. Login con:
-   - **Email**: `admin@turnero.com`
-   - **Password**: `admin123`
-3. Deberías ver el dashboard
-
-### 3.2 Crear una Zona (Como Super Admin)
-
-1. Ir a `/super-admin/zonas`
-2. Click en **"Nueva Zona"**
-3. Completar:
-   - **Nombre**: Zona Norte
-   - **Descripción**: Zona Norte de la Ciudad
-4. Guardar
-5. ✅ Debería aparecer en la lista
-
-### 3.3 Crear una Institución (Como Super Admin)
-
-1. Ir a `/super-admin/instituciones`
-2. Click en **"Nueva Institución"**
-3. Completar:
-   - **Nombre**: CAPS San Martín
-   - **Tipo**: CAPS
-   - **Zona**: Seleccionar "Zona Norte"
-   - **Dirección**: Av. San Martín 1234
-   - **Slug**: Se genera automáticamente
-4. Guardar
-5. ✅ Debería aparecer en la lista
-
-### 3.4 Crear un Usuario Admin de Institución (Como Super Admin)
-
-**IMPORTANTE**: El super_admin NO gestiona profesionales. Primero debe crear un admin para la institución.
-
-1. Ir a `/super-admin/usuarios`
-2. En pestaña **"Usuarios"**, click **"Nuevo Usuario"**
-3. Completar:
-   - **Nombre**: María
-   - **Apellido**: López
-   - **Email**: admin.caps@turnero.com
-   - **Password**: admin123
-4. Guardar
-5. En pestaña **"Membresías"**, click **"Nueva Membresía"**
-6. Completar:
-   - **Usuario**: María López
-   - **Institución**: CAPS San Martín
-   - **Rol**: Administrador
-7. Guardar
-8. ✅ Ahora María López puede gestionar CAPS San Martín
-
-### 3.5 Login como Admin de Institución
-
-**IMPORTANTE**: A partir de aquí, las siguientes tareas las hace el **admin de la institución**, NO el super_admin.
-
-1. **Logout** del super_admin
-2. Login con:
-   - **Email**: admin.caps@turnero.com
-   - **Password**: admin123
-3. Seleccionar institución: **CAPS San Martín**
-4. ✅ Deberías ver el dashboard de la institución
-
-### 3.6 Crear un Profesional (Como Admin)
-
-1. Ir a `/profesionales`
-2. Click en **"Nuevo Profesional"**
-3. Completar:
-   - **Nombre**: Juan
-   - **Apellido**: Pérez
-   - **Especialidad**: Medicina General
-   - **Matrícula**: 12345
-   - **Institución**: CAPS San Martín (se selecciona automáticamente)
-   - **Estado**: Activo
-4. Guardar
-5. ✅ Debería aparecer en la lista
-
-### 3.7 Crear un Servicio (Como Admin)
-
-1. Ir a `/servicios`
-2. Click en **"Nuevo Servicio"**
-3. Completar:
-   - **Nombre**: Medicina General
-   - **Duración**: 15 minutos
-   - **Institución**: CAPS San Martín (se selecciona automáticamente)
-   - **Estado**: Activo
-4. Guardar
-5. ✅ Debería aparecer en la lista
-
-### 3.8 Crear un Consultorio (Como Admin)
-
-1. Ir a `/consultorios`
-2. Click en **"Nuevo Consultorio"**
-3. Completar:
-   - **Nombre**: Consultorio 1
-   - **Institución**: CAPS San Martín (se selecciona automáticamente)
-   - **Estado**: Activo
-4. Guardar
-5. ✅ Debería aparecer en la lista
-
-### 3.9 Crear una Plantilla de Horarios (Como Admin)
-
-1. Ir a `/horarios`
-2. Click en **"Nueva Plantilla"**
-3. Completar:
-   - **Profesional**: Dr. Juan Pérez
-   - **Servicio**: Medicina General
-   - **Consultorio**: Consultorio 1
-   - **Día**: Lunes
-   - **Hora Inicio**: 08:00
-   - **Hora Fin**: 12:00
-4. Ver **"Turnos calculados"**: Debería mostrar **16 turnos**
-5. Guardar
-6. ✅ Debería aparecer en la lista
-
-### 3.10 Crear un Paciente (Como Admin o Administrativo)
-
-1. Ir a `/pacientes`
-2. Click en **"Nuevo Paciente"**
-3. Completar:
-   - **Nombre**: Pedro
-   - **Apellido**: González
-   - **DNI**: 12345678
-   - **Fecha de Nacimiento**: 01/01/1980
-4. Guardar
-5. ✅ Debería aparecer en la lista
-
-### 3.11 Asignar un Turno (Como Admin o Administrativo)
-
-1. Ir a `/turnos-disponibles`
-2. Seleccionar **Fecha**: Próximo lunes
-3. Deberías ver slots **verdes (disponibles)**
-4. Click en **"Asignar Turno"** en un slot
-5. En el diálogo:
-   - Buscar: Pedro (o 12345678)
-   - Seleccionar: Pedro González
-   - Notas: Primera consulta
-6. Click **"Asignar Turno"**
-7. ✅ Confirmación: "Turno asignado correctamente"
-8. El slot debería cambiar a **rojo (ocupado)**
-
-### 3.12 Gestionar el Turno (Como Admin, Administrativo o Médico)
-
-1. Ir a `/turnos`
-2. Deberías ver el turno de **Pedro González**
-3. Probar el flujo:
-   - Click **"Marcar Esperando"** → Estado cambia a ESPERANDO (azul)
-   - Click **"Llamar Paciente"** → Estado cambia a LLAMADO (púrpura)
-   - Click **"Iniciar Consulta"** → Estado cambia a EN CONSULTA (verde)
-   - Click **"Finalizar"** → Estado cambia a FINALIZADO (gris)
-4. ✅ Todos los cambios deberían funcionar
-
-### 3.13 Probar Pantalla Pública
-
-1. Ir a `/pantalla`
-2. Click en **"CAPS San Martín"**
-3. La URL será: `/pantalla/caps-san-martin`
-4. ✅ Debería mostrar una pantalla de llamados
-5. Crear un turno y llamarlo desde `/turnos`
-6. ✅ La pantalla debería actualizarse automáticamente (Realtime)
-
-### 3.14 Ver Reportes (Como Admin)
-
-1. Ir a `/reportes`
-2. Seleccionar:
-   - **Período**: Hoy
-3. Deberías ver:
-   - **Resumen**: Métricas generales
-   - **Profesionales**: Estadísticas del Dr. Pérez
-   - **Servicios**: Estadísticas de Medicina General
-   - **Tendencias**: Gráficos
-4. Click en **"Exportar CSV"**
-5. ✅ Se descarga un archivo CSV
-
-### 3.15 Ver Dashboard (Como Admin)
-
-1. Ir a `/dashboard`
-2. Deberías ver:
-   - Turnos de hoy
-   - Turnos pendientes
-   - Profesionales activos
-   - Últimos turnos
-3. ✅ Todos los datos deberían ser reales (no hardcodeados)
-
-## ✅ Checklist de Verificación
-
-Marcar cada item que funcione correctamente:
-
-**Como Super Admin:**
-- [ ] Login con super_admin
-- [ ] Acceso a `/super-admin`
-- [ ] Crear zona en `/super-admin/zonas`
-- [ ] Crear institución en `/super-admin/instituciones`
-- [ ] Crear usuario en `/super-admin/usuarios`
-- [ ] Asignar membresía de admin en `/super-admin/usuarios`
-
-**Como Admin de Institución:**
-- [ ] Login con admin
-- [ ] Seleccionar institución
-- [ ] Crear profesional en `/profesionales`
-- [ ] Crear servicio en `/servicios`
-- [ ] Crear consultorio en `/consultorios`
-- [ ] Crear plantilla de horarios en `/horarios`
-- [ ] Ver "Turnos calculados" correctamente
-- [ ] Crear paciente en `/pacientes`
-- [ ] Asignar turno en `/turnos-disponibles`
-- [ ] Slot cambia de verde a rojo
-- [ ] Gestionar flujo completo (pendiente → finalizado) en `/turnos`
-- [ ] Pantalla pública muestra llamados en `/pantalla/[slug]`
-- [ ] Pantalla pública se actualiza en tiempo real
-- [ ] Reportes muestran datos en `/reportes`
-- [ ] Exportar CSV funciona
-- [ ] Dashboard muestra datos reales en `/dashboard`
-
-## 🆘 Problemas Comunes
-
-### "Could not fetch user"
-
-**Causa**: Variables de entorno mal configuradas
-
-**Solución**:
-1. Verificar `.env.local`
-2. Reiniciar el servidor (`Ctrl+C` y `npm run dev`)
-
-### "permission denied for table"
-
-**Causa**: RLS policies no ejecutadas
-
-**Solución**:
-Ejecutar `db/policies.sql` en Supabase SQL Editor
-
-### No aparecen turnos en `/turnos-disponibles`
-
-**Causa**: No hay plantillas de horarios
-
-**Solución**:
-1. Verificar que existe: profesional + servicio + consultorio + plantilla
-2. Click en "Regenerar Turnos"
-
-### Login falla
-
-**Causa**: Usuario super admin no creado correctamente
-
-**Solución**:
-1. Ejecutar query para verificar:
-```sql
-SELECT u.email, m.role
-FROM auth.users u
-JOIN public.membership m ON m.user_id = u.id
-WHERE u.email = 'admin@turnero.com';
-```
-2. Debería mostrar: `admin@turnero.com | super_admin`
-
-## 🎯 Flujo Completo Exitoso
-
-Si todo funciona, deberías poder:
-
-**Como Super Admin:**
-1. ✅ Login como super_admin
-2. ✅ Crear zona sanitaria
-3. ✅ Crear institución en esa zona
-4. ✅ Crear usuario admin para la institución
-5. ✅ Asignar membresía de admin al usuario
-
-**Como Admin de Institución:**
-6. ✅ Login como admin
-7. ✅ Crear profesional, servicio, consultorio
-8. ✅ Crear plantilla de horarios
-9. ✅ Crear paciente
-10. ✅ Asignar turno desde slots disponibles
-11. ✅ Gestionar flujo de atención (pendiente → esperando → llamado → en consulta → finalizado)
-12. ✅ Ver actualización en tiempo real en pantalla pública
-13. ✅ Ver reportes con datos reales
-14. ✅ Exportar datos a CSV
-
-## 📝 Próximos Pasos
-
-Después de probar el sistema:
-
-1. **Crear más datos de prueba** (más profesionales, servicios, turnos)
-2. **Probar con diferentes roles** (crear usuario admin, administrativo, médico)
-3. **Probar escenarios complejos** (cancelaciones, ausencias, múltiples instituciones)
-4. **Revisar las guías**:
-   - `docs/GUIA-ADMINISTRADOR.md` - Para uso avanzado
-   - `docs/GUIA-USUARIO.md` - Para personal operativo
-   - `docs/DEPLOYMENT.md` - Para deployment en producción
-
-## 🚀 Deploy a Producción
-
-Cuando estés listo para producción:
-
-1. Revisar `docs/CHECKLIST.md`
-2. Seguir `docs/DEPLOYMENT.md`
-3. Usar Vercel para hosting
-4. Configurar Supabase de producción (separado de desarrollo)
+Referencia personal para recordar el orden y los pasos de carga de datos en el sistema.
+**No es guía de instalación ni técnica.**
 
 ---
 
-**¿Algún problema?** Revisar:
-- `docs/DEPLOYMENT.md` → Sección Troubleshooting
-- `docs/GUIA-ADMINISTRADOR.md` → Problemas Comunes
+## PARTE 1: Carga Inicial del CPS B° EVITA
+
+Hacer en este orden. Cada paso depende del anterior.
+
+### Checklist general
+
+- [ ] 1. Crear la institución CPS B° EVITA
+- [ ] 2. Crear los consultorios
+- [ ] 3. Crear los servicios
+- [ ] 4. Cargar los profesionales
+- [ ] 5. Crear usuarios del sistema y asignar roles
+
+---
+
+### Paso 1 — Crear la institución
+
+**Dónde:** `/super-admin/instituciones`
+
+1. Click en **Nueva Institución**
+2. Completar:
+   - **Nombre**: CPS B° EVITA
+   - **Tipo**: CAPS
+   - **Zona**: Zona Sanitaria III
+   - **Dirección**: (dirección real)
+   - **Teléfono**: (teléfono real)
+   - **Slug**: se genera automático (ej: `cps-bo-evita`) — se usa en la URL de la pantalla pública
+3. Guardar
+
+---
+
+### Paso 2 — Crear los consultorios
+
+**Dónde:** Iniciar sesión como admin del CPS → `/consultorios`
+
+Cargar uno por uno. Ejemplos:
+- Consultorio 1
+- Consultorio 2
+- Consultorio 3
+- Sala de Enfermería
+- Sala de Vacunación
+- Sala de Laboratorio
+- (los que correspondan)
+
+> 💡 Los consultorios se asignan diariamente a los profesionales. No hace falta asignarlos acá, solo crearlos.
+
+---
+
+### Paso 3 — Crear los servicios
+
+**Dónde:** `/servicios`
+
+Cargar todos los servicios que ofrece el CPS. Ejemplos:
+
+| Servicio | Duración sugerida |
+|----------|------------------|
+| Enfermería | 15 min |
+| Laboratorio | 15 min |
+| Vacunación | 10 min |
+| Odontología | 30 min |
+| Nutrición | 30 min |
+| Salud Mental | 45 min |
+| (agregar los que correspondan) | |
+
+> ⚠️ Los servicios son los que aparecen para elegir al cargar un turno. Cuantos más servicios, más opciones tendrán los administrativos.
+
+---
+
+### Paso 4 — Cargar los profesionales
+
+**Dónde:** `/profesionales`
+
+Cargar uno por uno. Por cada profesional completar:
+- Nombre y Apellido
+- Especialidad (ej: Médico Clínico, Psicólogo, Nutricionista)
+- Matrícula
+- Email y teléfono (opcional)
+
+> 💡 Los profesionales en esta sección son el **registro clínico** (quién atiende). La cuenta de acceso al sistema se crea por separado en el Paso 5.
+>
+> Un profesional puede existir sin cuenta de acceso (si no va a usar el sistema directamente). Pero si necesita acceder para ver su agenda o llamar pacientes, también necesita usuario.
+
+---
+
+### Paso 5 — Crear usuarios y asignar roles
+
+Ver **PARTE 2** para el detalle de cada tipo de usuario.
+
+**Orden sugerido:**
+1. Primero crear los **admin** (necesitan acceso para configurar cosas)
+2. Luego **administrativos** (quienes cargan pacientes día a día)
+3. Luego **profesionales** con cuenta (los que van a usar el sistema)
+4. Luego **servicio** (enfermería, laboratorio, etc.)
+5. Por último **pantalla** (el usuario para la TV de sala de espera)
+
+---
+
+## PARTE 2: Cómo Cargar Cada Tipo de Usuario
+
+### Roles disponibles
+
+| Rol | Para quién | Qué puede hacer |
+|-----|-----------|-----------------|
+| `admin` | Coordinador/jefe de la institución | Todo: configurar, crear usuarios, ver reportes |
+| `administrativo` | Recepcionista, ventanilla | Cargar pacientes, asignar consultorios, llamar turnos |
+| `profesional` | Médicos, psicólogos, nutricionistas | Ver su propia cola, llamar sus pacientes |
+| `servicio` | Enfermería, laboratorio, vacunación | Ver y gestionar su propia cola de servicio |
+| `pantalla` | Nadie (es para la TV) | Solo ve la pantalla pública de llamados |
+
+---
+
+### Cómo crear cualquier usuario (pasos base)
+
+**Dónde:** `/super-admin/usuarios`
+
+**Paso A — Crear la cuenta:**
+1. Ir a pestaña **Usuarios**
+2. Click en **Nuevo Usuario**
+3. Completar: nombre, apellido, email, contraseña
+4. Guardar
+
+**Paso B — Asignar membresía (rol):**
+1. Ir a pestaña **Membresías**
+2. Click en **Nueva Membresía**
+3. Seleccionar:
+   - **Usuario**: el que recién creaste
+   - **Institución**: CPS B° EVITA
+   - **Rol**: el que corresponda (ver tabla arriba)
+4. Guardar
+
+---
+
+### Caso especial: Usuario con rol PROFESIONAL
+
+Un profesional necesita dos cosas: cuenta de acceso + registro clínico vinculado.
+
+1. Seguir los **Pasos A y B** con rol `profesional`
+2. Ir a `/profesionales`
+3. Verificar que el profesional ya existe (del Paso 4)
+4. Editar el profesional y **vincular su usuario** (campo Usuario)
+
+> Si el profesional no necesita acceder al sistema (no va a llamar sus propios turnos), solo hacer el Paso 4 sin crear cuenta.
+
+---
+
+### Caso especial: Usuario con rol SERVICIO
+
+Para personal que gestiona un servicio específico (ej: enfermería):
+
+1. Seguir los **Pasos A y B** con rol `servicio`
+2. Ir a pestaña **Asignaciones de Servicios** en `/super-admin/usuarios`
+3. Asignar al usuario el servicio que gestiona (ej: Enfermería)
+
+> Esto define qué servicios ve ese usuario en la pantalla de turnos.
+
+---
+
+### Caso especial: Usuario PANTALLA
+
+El usuario `pantalla` es el que se deja logueado en la TV de sala de espera.
+
+1. Seguir los **Pasos A y B** con rol `pantalla`
+2. En la TV, ingresar con esas credenciales
+3. El sistema lleva automáticamente a la pantalla pública del CPS
+4. Dejar el navegador abierto todo el día
+
+> Credenciales sugeridas para la TV: `pantalla@cps-evita.com` / contraseña simple que no olvidés.
+
+---
+
+## PARTE 3: Referencia Rápida de Rutas
+
+| Qué hacer | Dónde ir | Quién lo hace |
+|-----------|----------|---------------|
+| Crear institución | `/super-admin/instituciones` | super_admin |
+| Crear zona sanitaria | `/super-admin/zonas` | super_admin |
+| Crear/ver usuarios y roles | `/super-admin/usuarios` | super_admin |
+| Crear consultorios | `/consultorios` | admin |
+| Crear servicios | `/servicios` | admin |
+| Cargar profesionales | `/profesionales` | admin |
+| Asignar consultorio del día | `/asignaciones` | administrativo |
+| Cargar pacientes / llamar turnos | `/turnos` | administrativo |
+| Pantalla pública | `/pantalla/[slug]` | pantalla (TV) |
+| Reportes | `/reportes` | admin / administrativo |
+
+---
+
+## PARTE 4: Recordatorio — Operación Diaria
+
+Una vez cargado todo lo anterior, cada día el flujo es:
+
+```
+1. Administrativo entra al sistema
+2. Va a /asignaciones → carga qué profesional atiende en qué consultorio y horario
+3. Empiezan a llegar pacientes
+4. Por cada paciente → /turnos → Agregar Paciente
+   - Si es para un servicio (Laboratorio, Vacunación, Enfermería): seleccionar servicio
+   - Si es para un profesional: cargar turno en Enfermería + turno con el profesional
+5. Cuando está listo para ser llamado → Marcar Disponible
+6. Cuando el servicio/profesional está listo → Llamar
+7. La pantalla de la sala de espera se actualiza automáticamente
+```
+
+---
+
+## PARTE 5: Cosas que Solo Hace el Super Admin (yo)
+
+- Crear y editar zonas sanitarias
+- Crear y editar instituciones
+- Crear cuentas de usuario y asignar roles
+- Ver métricas globales de todas las instituciones (`/super-admin/metricas`)
+
+> Todo lo demás (profesionales, servicios, consultorios, turnos) lo gestiona el **admin de la institución** o el **administrativo**.

@@ -1,322 +1,294 @@
 # Guía del Usuario - Turnero ZS
 
-Guía práctica para personal administrativo, médico y de enfermería.
+Guía práctica para personal administrativo, profesionales y personal de servicios del CPS B° EVITA - Zona Sanitaria III.
 
-## 🎯 Para Quién es Esta Guía
+---
 
-- **Personal Administrativo**: Gestión de turnos y atención al paciente
-- **Médicos y Enfermeros**: Gestión de sus propias agendas
-- **Personal de Pantalla**: Operación de pantallas públicas
+## 👥 Para Quién es Esta Guía
+
+| Rol | Tareas principales |
+|-----|-------------------|
+| **Administrativo** | Asignar consultorios, cargar pacientes en la cola, llamar turnos |
+| **Profesional / Servicio** | Ver y gestionar la cola de su servicio o consultorio |
+| **Pantalla** | Operar la pantalla pública de llamados |
+| **Admin** | Configuración general del sistema |
+
+---
 
 ## 🔐 Inicio de Sesión
 
-### Primera vez
+1. Abrir el navegador e ir a la URL del sistema
+2. Ingresar email y contraseña proporcionados por el administrador
+3. El sistema redirige automáticamente según tu rol
 
-1. Recibir credenciales del administrador:
-   - Email de usuario
-   - Contraseña temporal
-2. Acceder a la URL del sistema
-3. Ingresar email y contraseña
-4. **Recomendado**: Cambiar contraseña en el primer acceso
+> Si el sistema muestra "sin permisos", contactar al administrador para verificar tu rol.
 
-### Acceso Regular
+---
 
-1. Ir a la URL del sistema
-2. Ingresar email y contraseña
-3. El sistema muestra el dashboard de tu institución
+## 📋 Conceptos Clave
 
-## 🏠 Dashboard
+### Dos tipos de turno
 
-Al ingresar verás:
+El sistema maneja dos tipos de turno, con flujos diferentes:
 
-- **Turnos de Hoy**: Cantidad total programados
-- **Turnos Pendientes**: Aún no atendidos
-- **Profesionales Activos**: En tu institución
-- **Servicios Disponibles**: Tipos de atención
-- **Turnos Recientes**: Últimas actividades
-- **Acciones Rápidas**: Botones para funciones principales
+**Turno de Servicio**
+- Para servicios que no requieren profesional asignado: Enfermería, Laboratorio, Vacunación, etc.
+- No necesita consultorio — el paciente va directamente al sector del servicio
+- Ejemplos:
+  - Pedro Páez quiere vacunarse → turno al servicio **Vacunación**
+  - Marcos Juárez necesita análisis → turno al servicio **Laboratorio**
+  - Julia Cobos necesita tomarse la presión → turno al servicio **Enfermería**
 
-## 📅 Gestión de Turnos (Personal Administrativo)
+**Turno de Profesional**
+- Para pacientes que requieren atención de un médico, psicólogo, nutricionista, etc.
+- Requiere que el profesional tenga **consultorio asignado** para ese día
+- Por normativa del Ministerio de Salud Pública, todo paciente que pide turno con un profesional **también debe tener turno en Enfermería** (para registro en el HSI)
+- Ejemplo: Juan Pérez solicita turno con el Dr. García → se le carga turno en **Enfermería** + turno con **Dr. García**
 
-### Asignar un Turno Nuevo
-
-1. Click en "Gestionar Turnos" o ir a `/turnos-disponibles`
-2. Seleccionar la fecha deseada
-3. Ver los horarios disponibles:
-   - **Verde**: Horario disponible
-   - **Rojo**: Horario ocupado
-4. Click en "Asignar Turno" en un slot verde
-5. En el diálogo:
-   - **Buscar paciente**: Por nombre o DNI
-   - **Seleccionar paciente** de la lista
-   - **Agregar notas** (opcional): Ej. "Primera consulta", "Control"
-6. Click en "Asignar Turno"
-7. ✅ Confirmación: "Turno asignado correctamente"
-
-**Ejemplo Práctico:**
-```
-Paciente: María González (DNI 12.345.678)
-Profesional: Dr. Juan Pérez
-Servicio: Medicina General
-Fecha: Lunes 15/01/2025
-Hora: 09:00
-Consultorio: Consultorio 1
-```
-
-### Buscar Pacientes
-
-**Si el paciente ya existe:**
-1. En "Asignar Turno", escribir nombre o DNI en el buscador
-2. Seleccionar de la lista
-3. Continuar con la asignación
-
-**Si el paciente NO existe:**
-1. Primero ir a `/pacientes`
-2. Click en "Nuevo Paciente"
-3. Completar datos:
-   - Nombre y Apellido
-   - DNI
-   - Fecha de Nacimiento
-   - Teléfono (opcional)
-4. Guardar
-5. Volver a asignar turno
-
-## 🔄 Flujo de Atención
-
-### Estados del Turno
+### Estados de un turno
 
 ```
-1. PENDIENTE     → El turno fue asignado, paciente aún no llegó
-2. ESPERANDO     → Paciente llegó y está en sala de espera
-3. LLAMADO       → Paciente está siendo llamado (aparece en pantalla)
-4. EN CONSULTA   → Paciente está siendo atendido
-5. FINALIZADO    → Consulta completada
-6. CANCELADO     → Turno cancelado por el paciente
-7. AUSENTE       → Paciente no se presentó
+PENDIENTE  →  DISPONIBLE  →  LLAMADO  →  ATENDIDO
+                                  ↓
+                               CANCELADO
 ```
 
-### Gestión del Día (Paso a Paso)
+| Estado | Color | Significado | ¿Aparece en pantalla? |
+|--------|-------|-------------|----------------------|
+| **Pendiente** | Gris | Cargado, pero aún no visible para llamar | No |
+| **Disponible** | Verde | Listo para ser llamado | Sí |
+| **Llamado** | Violeta (pulsa) | Paciente siendo llamado activamente | Sí (animado) |
+| **Atendido** | Azul | Ya fue atendido | No |
+| **Cancelado** | Rojo | Turno cancelado | No |
 
-#### Inicio del Día
+---
 
-1. Ir a `/turnos`
-2. Ver lista de turnos del día ordenados por hora
-3. Verificar que todos los turnos estén en estado "Pendiente"
+## 🌅 Inicio del Día — Administrativo
 
-#### Cuando Llega un Paciente
+Antes de recibir pacientes, los administrativos deben completar este paso obligatorio:
 
-1. Buscar el turno del paciente
-2. Click en "Marcar Esperando"
-3. El turno cambia a estado **ESPERANDO** (azul)
+### Paso 1: Asignar profesionales a consultorios
 
-#### Cuando el Profesional Está Listo
+> ⚠️ Sin este paso, **no se pueden cargar turnos para profesionales**.
 
-1. Buscar el siguiente turno en estado "Esperando"
-2. Click en "Llamar Paciente"
-3. El turno cambia a estado **LLAMADO** (púrpura)
-4. **La pantalla pública muestra el llamado automáticamente**
+1. Ir a **Asignaciones** (`/asignaciones`)
+2. Por cada profesional que atiende hoy, completar:
+   - **Profesional**: seleccionar de la lista
+   - **Consultorio**: seleccionar el consultorio asignado
+   - **Horario**: indicar hora de inicio y fin (ej: 09:00 a 11:00)
+3. Click en **Asignar**
 
-#### Durante la Consulta
-
-1. El profesional hace click en "Iniciar Consulta"
-2. El turno cambia a estado **EN CONSULTA** (verde)
-
-#### Al Finalizar la Consulta
-
-1. El profesional hace click en "Finalizar"
-2. El turno cambia a estado **FINALIZADO** (gris)
-
-#### Si el Paciente No Viene
-
-- Si cancela antes: Click en "Cancelar"
-- Si no se presenta: Click en "Ausente"
-
-### Ejemplo de Jornada
-
+**Ejemplo de carga matutina:**
 ```
-08:00 - Paciente Juan Pérez llega → ESPERANDO
-08:05 - Dr. López listo → LLAMAR PACIENTE → LLAMADO
-08:07 - Paciente entra → INICIAR CONSULTA → EN CONSULTA
-08:22 - Consulta finaliza → FINALIZAR → FINALIZADO
-
-08:30 - Paciente María González llega → ESPERANDO
-08:35 - Dr. López listo → LLAMAR PACIENTE → LLAMADO
-08:37 - Paciente entra → INICIAR CONSULTA → EN CONSULTA
-...
+Dra. Morales   → Consultorio 3   → 09:00 a 11:00
+Dr. García     → Consultorio 1   → 08:00 a 12:00
+Lic. Romero    → Consultorio 2   → 09:00 a 13:00
 ```
+
+> 💡 Si un profesional atiende en dos turnos (mañana y tarde en distintos consultorios), se carga como dos asignaciones separadas. Los administrativos de tarde cargan las asignaciones de tarde.
+
+---
+
+## 👤 Cargar un Paciente en la Cola
+
+Una vez realizadas las asignaciones, se pueden cargar pacientes.
+
+### Turno de Servicio (Laboratorio, Vacunación, Enfermería, etc.)
+
+1. Ir a **Turnos** (`/turnos`)
+2. Click en **+ Agregar Paciente**
+3. Completar:
+   - **Nombre completo** del paciente
+   - **DNI** (opcional pero recomendado)
+   - **Tipo**: seleccionar **Servicio**
+   - **Servicio**: Laboratorio / Vacunación / Enfermería / etc.
+4. Elegir estado inicial:
+   - **Pendiente**: si el paciente aún no llegó o está esperando su turno
+   - **Disponible**: si el paciente ya está listo para ser llamado
+5. Click en **Guardar**
+
+### Turno de Profesional
+
+1. Ir a **Turnos** (`/turnos`)
+2. Primero, cargar el turno de **Enfermería**:
+   - Click en **+ Agregar Paciente**
+   - Tipo: **Servicio** → Servicio: **Enfermería**
+   - Estado según corresponda
+   - Guardar
+3. Luego, cargar el turno del **profesional**:
+   - Click en **+ Agregar Paciente**
+   - Tipo: **Profesional**
+   - Seleccionar el profesional (solo aparecen los que tienen consultorio asignado hoy)
+   - Estado según corresponda
+   - Guardar
+
+> 💡 Ambos turnos se pueden cargar al mismo tiempo. El médico verificará en el HSI si el paciente pasó por Enfermería.
+
+> ⚠️ Si el profesional **no aparece en la lista**, es porque no tiene consultorio asignado. Ir primero a `/asignaciones`.
+
+---
+
+## 📞 Llamar un Turno
+
+### Cambiar estado a Disponible
+
+Cuando el paciente está en la sala de espera y listo para ser llamado:
+
+1. Buscar el turno en la lista
+2. Click en **Marcar Disponible**
+3. El turno aparece en la pantalla pública
+
+### Llamar al Paciente
+
+Cuando el servicio o profesional está listo para atender:
+
+1. Buscar el turno en estado **Disponible**
+2. Click en **Llamar**
+3. El turno aparece en la pantalla pública con animación y sonido
+4. La pantalla muestra:
+   - Para servicios: `Paciente: Pedro Páez → Vacunación`
+   - Para profesionales: `Paciente: Juan Pérez → Dr. García - Consultorio 1`
+
+### Marcar como Atendido
+
+Cuando el paciente fue atendido:
+
+1. Buscar el turno en estado **Llamado**
+2. Click en **Atendido**
+3. El turno desaparece de la pantalla pública
+
+### Cancelar un Turno
+
+Si el paciente no se presenta o cancela:
+
+1. Buscar el turno
+2. Click en **Cancelar**
+
+---
 
 ## 🖥️ Pantalla Pública
 
-### Configurar la Pantalla
+### Configurar (hacer una sola vez por dispositivo)
 
-**Solo hacer una vez:**
+1. En la TV o PC de sala de espera, abrir el navegador
+2. Ir a `/pantalla/[nombre-institucion]`
+3. Dejar el navegador abierto todo el día — **no cerrar ni recargar**
+4. La pantalla se actualiza automáticamente en tiempo real
 
-1. En una PC/TV dedicada, abrir navegador
-2. Ir a `/pantalla`
-3. Seleccionar la institución
-4. El navegador mostrará la pantalla completa
-5. **No cerrar el navegador** - dejar funcionando todo el día
+### Qué muestra
 
-### Qué Muestra la Pantalla
+- Turnos en estado **Llamado**: nombre del paciente, destino (servicio o profesional + consultorio), con animación pulsante
+- Turnos en estado **Disponible**: cola de espera visible
+- Hora actual
+- Nombre de la institución
 
-La pantalla se actualiza automáticamente y muestra:
+### Cambiar la vista
 
-- **Turnos siendo llamados**: Nombre, consultorio
-- **Cola de espera**: Próximos turnos
-- **Hora actual**
-- **Información de la institución**
+La pantalla tiene diferentes modos de visualización. Click en **Cambiar Vista** (esquina superior derecha) para seleccionar:
+- **Vista Lista**: todos los servicios en lista vertical
+- **Vista Completa**: grilla 2x2
+- **Grilla Grande**: grilla 3x2 (pantallas grandes)
+- **Carrusel**: rotación automática entre servicios
 
-**Importante**: No se necesita recargar manualmente, se actualiza sola.
+---
 
-## 👨‍⚕️ Para Médicos y Enfermeros
+## 🔄 Ejemplo de Jornada Completa
 
-### Ver Mi Agenda
+### 7:00 hs — Inicio turno mañana
 
-1. Ir a `/horarios` o `/turnos`
-2. Ver tus turnos asignados
-3. Gestionar el estado según el flujo de atención
+```
+1. Administrativo ingresa al sistema
+2. Va a /asignaciones
+3. Carga:
+   - Dr. García → Consultorio 1 → 08:00 a 12:00
+   - Dra. Morales → Consultorio 3 → 09:00 a 11:00
+```
 
-### Gestionar Mis Turnos
+### 7:30 hs — Llegan primeros pacientes
 
-**Durante la consulta:**
-1. Ver lista de mis turnos del día
-2. Cuando estoy listo para el siguiente paciente:
-   - Click en "Llamar Paciente"
-3. Cuando el paciente entra:
-   - Click en "Iniciar Consulta"
-4. Al terminar:
-   - Click en "Finalizar"
+```
+Paciente: Marcos Juárez — quiere análisis de laboratorio
+→ Cargar: Servicio / Laboratorio / Estado: Disponible
 
-### Consultar Historial de Paciente
+Paciente: Pedro Páez — quiere vacunarse
+→ Cargar: Servicio / Vacunación / Estado: Disponible
 
-1. Ver nombre del paciente en el turno
-2. Consultar información adicional en las notas del turno
+Paciente: Juan Pérez — quiere turno con Dr. García
+→ Cargar turno 1: Servicio / Enfermería / Estado: Disponible
+→ Cargar turno 2: Profesional / Dr. García / Estado: Pendiente
+   (queda pendiente hasta que pase por Enfermería)
+```
 
-## 📊 Ver Estadísticas (Todos los Roles)
+### Durante el día
 
-### Dashboard Principal
+```
+Laboratorio listo → Llamar a Marcos Juárez
+   Pantalla: "Paciente: Marcos Juárez → Laboratorio"
 
-- Ver resumen del día
-- Turnos totales y pendientes
-- Actividad reciente
+Marcos atendido → Marcar Atendido
 
-### Reportes (Admin y Administrativo)
+Juan pasa por Enfermería → Marcar su turno de Enfermería Atendido
+→ Cambiar su turno con Dr. García a Disponible
+→ Dr. García listo → Llamar a Juan Pérez
+   Pantalla: "Paciente: Juan Pérez → Dr. García - Consultorio 1"
+```
 
-1. Ir a `/reportes`
-2. Seleccionar período (hoy, semana, mes)
-3. Ver métricas:
-   - Ocupación de agendas
-   - Tiempos de espera
-   - Ausentismo
-   - Rendimiento por profesional
+---
 
 ## ⚠️ Situaciones Comunes
 
-### ¿Qué hago si un paciente llega tarde?
+### El profesional no aparece al cargar un turno
 
-1. Si es menos de 15 minutos: Marcar como "Esperando" normalmente
-2. Si es más de 15 minutos:
-   - Consultar con el profesional
-   - Si acepta: Marcar "Esperando" (pasará después de los turnos puntuales)
-   - Si no acepta: Marcar "Cancelado" y reasignar para otro día
+**Causa**: No tiene consultorio asignado hoy.
+**Solución**: Ir a `/asignaciones` y cargar la asignación del día.
 
-### ¿Qué hago si el profesional se ausenta?
+### Un paciente llega y quiere turno para profesional de la tarde
+
+Si son las 9hs y el profesional atiende a las 16hs, el administrativo de tarde debe cargarlo.
+Decirle al paciente que vuelva en el horario del turno tarde para que lo registren.
+
+### El profesional se ausenta
 
 1. Ir a `/turnos`
-2. Seleccionar todos los turnos de ese profesional
-3. Marcar como "Cancelado"
-4. Contactar a los pacientes para reasignar
+2. Filtrar por ese profesional
+3. Marcar todos sus turnos como **Cancelado**
+4. Si corresponde, ir a `/asignaciones` y eliminar su asignación del día
+5. Avisar a los pacientes
 
-### ¿Qué hago si un paciente quiere cambiar su turno?
+### La pantalla no se actualiza
 
-1. Buscar el turno actual → Marcar "Cancelado"
-2. Asignar nuevo turno en `/turnos-disponibles`
-3. Confirmar con el paciente
+1. Verificar conexión a internet
+2. Recargar la página (F5)
+3. Si persiste, avisar al administrador
 
-### ¿Qué hago si se cae el sistema?
+### Me aparece "sin permisos" o no veo opciones
 
-1. Mantener la calma
-2. Registrar turnos en papel temporalmente
-3. Avisar al administrador
-4. Cuando vuelva, actualizar los estados en el sistema
+Contactar al administrador — es posible que tu usuario no tenga el rol correcto asignado.
 
-## 💡 Consejos y Buenas Prácticas
+---
 
-### Para Personal Administrativo
+## 💡 Buenas Prácticas
 
-✅ **Hacer:**
-- Llegar 15 min antes para revisar turnos del día
-- Marcar "Esperando" apenas llega el paciente
-- Actualizar estados en tiempo real
-- Agregar notas importantes en los turnos
+### Administrativos
 
-❌ **No hacer:**
-- No dejar turnos sin actualizar
-- No asignar múltiples turnos al mismo horario
-- No cerrar la sesión durante el horario de atención
+✅ Llegar con tiempo para cargar las asignaciones de consultorios antes de que lleguen los pacientes
+✅ Pedir siempre el DNI del paciente al cargarlo
+✅ Marcar los turnos como **Atendido** apenas se completan — mantiene la cola limpia
+✅ Si el profesional tiene dos turnos en el día, recordar que los turno tarde los carga el administrativo de tarde
 
-### Para Médicos y Enfermeros
+❌ No cargar turnos para un profesional sin antes asignarle consultorio
+❌ No dejar turnos en estado **Llamado** sin resolverlos (atendido o cancelado)
 
-✅ **Hacer:**
-- Revisar agenda al inicio del día
-- Actualizar estados apenas cambian
-- Usar las notas para recordatorios
+### Todos
 
-❌ **No hacer:**
-- No saltear el flujo de estados
-- No dejar turnos en "Llamado" sin atender
+✅ Cerrar sesión al terminar el turno
+✅ Reportar cualquier problema al administrador
+✅ No compartir credenciales de acceso
 
-### Para Todos
+---
 
-✅ **Hacer:**
-- Cerrar sesión al terminar el turno
-- Reportar problemas al administrador
-- Mantener información de pacientes confidencial
+## 📞 ¿Necesitás Ayuda?
 
-❌ **No hacer:**
-- No compartir contraseñas
-- No dejar la sesión abierta sin supervisión
-
-## 🆘 Problemas Frecuentes
-
-### No puedo ver turnos
-
-**Solución**: Verificar que estés en la pantalla correcta (`/turnos` o `/turnos-disponibles`)
-
-### No aparecen pacientes al buscar
-
-**Solución**:
-1. Verificar ortografía
-2. Buscar por DNI
-3. Si no existe, crear el paciente primero
-
-### La pantalla pública no funciona
-
-**Solución**:
-1. Recargar la página (F5)
-2. Verificar conexión a internet
-3. Avisar al administrador
-
-### Me aparece "sin permisos"
-
-**Solución**: Contactar al administrador para verificar tu rol
-
-## 📞 ¿Necesitas Ayuda?
-
-1. **Primera opción**: Consultar esta guía
-2. **Segunda opción**: Consultar al administrador de tu institución
-3. **Tercera opción**: Contactar soporte técnico
-
-## 🎓 Capacitación
-
-### Temas Básicos (2 horas)
-- Login y dashboard
-- Asignar turnos
-- Gestionar flujo de atención
-
-### Temas Avanzados (2 horas)
-- Reportes y métricas
-- Gestión de excepciones
-- Mejores prácticas
-
-**Recomendación**: Practicar con datos de prueba antes de usar en producción.
+1. Consultar esta guía
+2. Consultar al administrador de tu institución
+3. Contactar soporte técnico
