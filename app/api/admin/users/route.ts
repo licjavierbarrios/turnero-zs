@@ -169,8 +169,7 @@ export async function POST(request: NextRequest) {
         email,
         first_name,
         last_name,
-        password_hash: '', // Manejado por Supabase Auth
-        is_active: is_active !== false, // Default a true
+        is_active: is_active !== false,
       })
       .select()
       .single()

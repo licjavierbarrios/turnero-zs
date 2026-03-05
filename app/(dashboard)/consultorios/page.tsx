@@ -90,9 +90,12 @@ export default function ConsultoriosPage() {
       toast(messages[operation])
     },
     onError: (operation, error) => {
+      const isUnique = (error as any)?.code === '23505'
       toast({
         title: 'Error',
-        description: `Error al ${operation === 'create' ? 'crear' : operation === 'update' ? 'actualizar' : 'eliminar'} el consultorio`,
+        description: isUnique
+          ? 'Ya existe un consultorio con ese nombre en esta institución.'
+          : `Error al ${operation === 'create' ? 'crear' : operation === 'update' ? 'actualizar' : 'eliminar'} el consultorio`,
         variant: 'destructive'
       })
     }
@@ -152,7 +155,9 @@ export default function ConsultoriosPage() {
 
       {error && (
         <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error.message}</AlertDescription>
+          <AlertDescription>
+            {error.message.includes('duplicate key value') ? 'Ya existe un consultorio con ese nombre en esta institución.' : error.message}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -229,7 +234,7 @@ export default function ConsultoriosPage() {
       >
         <RoomForm
           formData={formData}
-          error={error}
+          error={error ? { message: error.message.includes('duplicate key value') ? 'Ya existe un consultorio con ese nombre en esta institución.' : error.message } : null}
           institutionName={context?.institution_name || 'Cargando...'}
           updateFormField={updateFormField}
         />

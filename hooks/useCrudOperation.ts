@@ -381,6 +381,7 @@ export function useCrudOperation<T extends { id: string }>({
     setIsDialogOpen(false)
     setEditingItem(null)
     setFormData(initialFormData as Partial<T>)
+    setError(null)
   }, [initialFormData])
 
   /**

@@ -63,7 +63,7 @@ export default function ServiciosPage() {
       name: '',
       institution_id: institutionId,
       description: '',
-      duration_minutes: 30,
+      duration_minutes: 15,
       is_active: true
     },
     selectFields: `
@@ -92,9 +92,12 @@ export default function ServiciosPage() {
       toast(messages[operation])
     },
     onError: (operation, error) => {
+      const isUnique = (error as any)?.code === '23505'
       toast({
         title: 'Error',
-        description: `Error al ${operation === 'create' ? 'crear' : operation === 'update' ? 'actualizar' : 'eliminar'} el servicio`,
+        description: isUnique
+          ? 'Ya existe un servicio con ese nombre en esta institución.'
+          : `Error al ${operation === 'create' ? 'crear' : operation === 'update' ? 'actualizar' : 'eliminar'} el servicio`,
         variant: 'destructive'
       })
     }
@@ -169,7 +172,9 @@ export default function ServiciosPage() {
 
       {error && (
         <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error.message}</AlertDescription>
+          <AlertDescription>
+            {error.message.includes('duplicate key value') ? 'Ya existe un servicio con ese nombre en esta institución.' : error.message}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -247,7 +252,7 @@ export default function ServiciosPage() {
       >
         <ServiceForm
           formData={formData}
-          error={error}
+          error={error ? { message: error.message.includes('duplicate key value') ? 'Ya existe un servicio con ese nombre en esta institución.' : error.message } : null}
           institutionName={context?.institution_name || 'Cargando...'}
           updateFormField={updateFormField}
         />

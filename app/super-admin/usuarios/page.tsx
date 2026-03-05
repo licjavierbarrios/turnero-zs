@@ -108,6 +108,7 @@ export default function SuperAdminUsuariosPage() {
   const [services, setServices] = useState<Service[]>([])
   const [userServices, setUserServices] = useState<UserService[]>([])
   const [loading, setLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'users' | 'memberships' | 'professionals' | 'services'>('users')
 
   // User form state
@@ -424,6 +425,7 @@ export default function SuperAdminUsuariosPage() {
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setIsSaving(true)
 
     // Validate zone, institution and role for new users
     if (!editingUser && (!userFormData.zone_id || !userFormData.institution_id || !userFormData.role)) {
@@ -460,10 +462,12 @@ export default function SuperAdminUsuariosPage() {
         })
       } else {
         // Create new user via API route (server-side with admin privileges)
+        const { data: { session } } = await supabase.auth.getSession()
         const response = await fetch('/api/admin/users', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
           },
           body: JSON.stringify({
             email: userFormData.email,
@@ -516,6 +520,8 @@ export default function SuperAdminUsuariosPage() {
     } catch (error) {
       console.error('Error saving user:', error)
       setError(`Error al ${editingUser ? 'actualizar' : 'crear'} el usuario`)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -1030,8 +1036,14 @@ export default function SuperAdminUsuariosPage() {
                       >
                         Cancelar
                       </Button>
-                      <Button type="submit">
-                        {editingUser ? 'Actualizar' : 'Crear'} Usuario
+                      <Button
+                        type="submit"
+                        disabled={isSaving || (editingUser
+                          ? !userFormData.first_name || !userFormData.last_name || !userFormData.email
+                          : !userFormData.first_name || !userFormData.last_name || !userFormData.email || !userFormData.password || !userFormData.zone_id || !userFormData.institution_id || !userFormData.role
+                        )}
+                      >
+                        {isSaving ? 'Guardando...' : (editingUser ? 'Actualizar' : 'Crear')} Usuario
                       </Button>
                     </div>
                   </form>
