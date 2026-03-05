@@ -20,7 +20,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import {
-  Plus, Edit, UserCheck, UserX, Users, Search, AlertCircle,
+  Plus, Edit, UserCheck, UserX, Users, Search, AlertCircle, Eye, EyeOff, Wand2,
 } from 'lucide-react'
 
 // ============================================================
@@ -60,6 +60,7 @@ type StaffRow = {
 type FormState = {
   firstName: string
   lastName: string
+  dni: string
   email: string
   password: string
   isActive: boolean
@@ -106,6 +107,7 @@ const PROFESSIONAL_TYPES = [
 const EMPTY_FORM: FormState = {
   firstName: '',
   lastName: '',
+  dni: '',
   email: '',
   password: '',
   isActive: true,
@@ -116,6 +118,29 @@ const EMPTY_FORM: FormState = {
   speciality: '',
   licenseNumber: '',
   serviceId: '',
+}
+
+// ============================================================
+// Credential generation helpers
+// ============================================================
+function normalizeWord(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9]/g, '')
+}
+
+function generateEmail(firstName: string, lastName: string): string {
+  return `${normalizeWord(firstName)}.${normalizeWord(lastName)}@evita.com`
+}
+
+function generatePassword(dni: string, lastName: string): string {
+  const clean = lastName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
+  const c1 = clean.charAt(0).toUpperCase()
+  const c2 = clean.charAt(1)?.toLowerCase() ?? ''
+  return `${dni}${c1}${c2}`
 }
 
 // ============================================================
@@ -132,6 +157,7 @@ export default function SuperAdminUsuariosPage() {
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -331,20 +357,41 @@ export default function SuperAdminUsuariosPage() {
   // ============================================================
   // Dialog helpers
   // ============================================================
+  const generateCredentials = () => {
+    if (!form.firstName || !form.lastName) {
+      setError('Ingresá nombre y apellido antes de generar')
+      return
+    }
+    if (!form.dni) {
+      setError('Ingresá el DNI antes de generar')
+      return
+    }
+    setError(null)
+    setForm((prev) => ({
+      ...prev,
+      email: generateEmail(prev.firstName, prev.lastName),
+      password: generatePassword(prev.dni, prev.lastName),
+    }))
+    setShowPassword(true)
+  }
+
   const openCreate = () => {
     setEditingRow(null)
     setForm(EMPTY_FORM)
     setError(null)
+    setShowPassword(false)
     setRoleChangeWarning(false)
     setDialogOpen(true)
   }
 
   const openEdit = (row: StaffRow) => {
     setEditingRow(row)
+    setShowPassword(false)
     const inst = institutions.find((i) => i.id === row.institutionId)
     setForm({
       firstName: row.firstName,
       lastName: row.lastName,
+      dni: '',
       email: row.email,
       password: '',
       isActive: row.userActive,
@@ -820,6 +867,31 @@ export default function SuperAdminUsuariosPage() {
               </div>
             </div>
 
+            {/* DNI + botón Generar (solo creación) */}
+            {!editingRow && (
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1.5">
+                  <Label>DNI</Label>
+                  <Input
+                    value={form.dni}
+                    onChange={(e) => setField('dni', e.target.value.replace(/\D/g, ''))}
+                    placeholder="12345678"
+                    maxLength={8}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateCredentials}
+                  className="shrink-0"
+                  title="Generar email y contraseña automáticamente"
+                >
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Generar
+                </Button>
+              </div>
+            )}
+
             {/* Email */}
             <div className="space-y-1.5">
               <Label>Email *</Label>
@@ -827,7 +899,7 @@ export default function SuperAdminUsuariosPage() {
                 type="email"
                 value={form.email}
                 onChange={(e) => setField('email', e.target.value)}
-                placeholder="email@ejemplo.com"
+                placeholder="nombre.apellido@evita.com"
                 required
               />
             </div>
@@ -836,14 +908,29 @@ export default function SuperAdminUsuariosPage() {
             {!editingRow && (
               <div className="space-y-1.5">
                 <Label>Contraseña * (mínimo 8 caracteres)</Label>
-                <Input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setField('password', e.target.value)}
-                  placeholder="Contraseña"
-                  required
-                  minLength={8}
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={(e) => setField('password', e.target.value)}
+                    placeholder="Contraseña"
+                    required
+                    minLength={8}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {showPassword && form.password && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    Contraseña visible — recordá comunicársela al usuario
+                  </p>
+                )}
               </div>
             )}
 
