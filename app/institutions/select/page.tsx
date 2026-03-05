@@ -64,6 +64,13 @@ export default function InstitutionSelectPage() {
         return
       }
 
+      // Si el usuario es super_admin, redirigir directo al panel
+      const isSuperAdmin = (memberships || []).some((m: any) => m.role === 'super_admin')
+      if (isSuperAdmin) {
+        router.push('/super-admin')
+        return
+      }
+
       // Transformar a formato Institution
       const userInstitutions: Institution[] = (memberships || [])
         .filter((m: any) => m.institution) // Solo membresías con institución válida
@@ -132,8 +139,14 @@ export default function InstitutionSelectPage() {
     if (cachedUserData && cachedInstitutions) {
       // Datos precargados disponibles - usarlos inmediatamente
       try {
+        const parsedInstitutions = JSON.parse(cachedInstitutions)
+        // Si es super_admin el cache no tiene instituciones, redirigir directo
+        if (parsedInstitutions.length === 0) {
+          loadUserData()
+          return
+        }
         setUser(JSON.parse(cachedUserData))
-        setInstitutions(JSON.parse(cachedInstitutions))
+        setInstitutions(parsedInstitutions)
         setLoading(false)
         return
       } catch (e) {

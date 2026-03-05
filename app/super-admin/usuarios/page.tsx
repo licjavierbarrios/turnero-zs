@@ -20,7 +20,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import {
-  Plus, Edit, UserCheck, UserX, Users, Search, AlertCircle, Eye, EyeOff, Wand2,
+  Plus, Edit, UserCheck, UserX, Users, Search, AlertCircle, Eye, EyeOff, Wand2, UserPlus,
 } from 'lucide-react'
 
 // ============================================================
@@ -75,6 +75,16 @@ type FormState = {
   serviceId: string
 }
 
+type AssignFormState = {
+  zoneId: string
+  institutionId: string
+  role: AllRole | ''
+  professionalType: string
+  speciality: string
+  licenseNumber: string
+  serviceId: string
+}
+
 // ============================================================
 // Constants
 // ============================================================
@@ -103,6 +113,16 @@ const PROFESSIONAL_TYPES = [
   { value: 'tecnico', label: 'Técnico/a' },
   { value: 'otro', label: 'Otro' },
 ]
+
+const EMPTY_ASSIGN_FORM: AssignFormState = {
+  zoneId: '',
+  institutionId: '',
+  role: '',
+  professionalType: '',
+  speciality: '',
+  licenseNumber: '',
+  serviceId: '',
+}
 
 const EMPTY_FORM: FormState = {
   firstName: '',
@@ -174,6 +194,16 @@ export default function SuperAdminUsuariosPage() {
   // Toggle active confirmation
   const [toggleTarget, setToggleTarget] = useState<StaffRow | null>(null)
 
+  // Assign existing user dialog
+  type ExistingUser = { id: string; email: string; firstName: string; lastName: string }
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false)
+  const [assignUserSearch, setAssignUserSearch] = useState('')
+  const [assignUserResults, setAssignUserResults] = useState<ExistingUser[]>([])
+  const [selectedExistingUser, setSelectedExistingUser] = useState<ExistingUser | null>(null)
+  const [assignForm, setAssignForm] = useState<AssignFormState>(EMPTY_ASSIGN_FORM)
+  const [assignError, setAssignError] = useState<string | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
+
   // ============================================================
   // Computed: institutions filtered by selected zone (for filter bar)
   // ============================================================
@@ -193,6 +223,17 @@ export default function SuperAdminUsuariosPage() {
     if (!form.institutionId) return []
     return services.filter((s) => s.institution_id === form.institutionId)
   }, [form.institutionId, services])
+
+  // Computed: institutions/services for assign dialog
+  const assignFormInstitutions = useMemo(() => {
+    if (!assignForm.zoneId) return []
+    return institutions.filter((i) => i.zone_id === assignForm.zoneId)
+  }, [assignForm.zoneId, institutions])
+
+  const assignFormServices = useMemo(() => {
+    if (!assignForm.institutionId) return []
+    return services.filter((s) => s.institution_id === assignForm.institutionId)
+  }, [assignForm.institutionId, services])
 
   // ============================================================
   // Filtered staff rows
@@ -424,6 +465,108 @@ export default function SuperAdminUsuariosPage() {
       }
       return next
     })
+  }
+
+  const setAssignField = <K extends keyof AssignFormState>(key: K, value: AssignFormState[K]) => {
+    setAssignForm((prev) => {
+      const next = { ...prev, [key]: value }
+      if (key === 'zoneId') { next.institutionId = ''; next.serviceId = '' }
+      if (key === 'institutionId') { next.serviceId = '' }
+      return next
+    })
+  }
+
+  const searchUsers = async (query: string) => {
+    setAssignUserSearch(query)
+    if (query.trim().length < 2) { setAssignUserResults([]); return }
+    setIsSearching(true)
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name')
+        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`)
+        .limit(10)
+      setAssignUserResults(
+        (data || []).map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          firstName: u.first_name,
+          lastName: u.last_name,
+        }))
+      )
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const closeAssignDialog = () => {
+    setAssignDialogOpen(false)
+    setAssignUserSearch('')
+    setAssignUserResults([])
+    setSelectedExistingUser(null)
+    setAssignForm(EMPTY_ASSIGN_FORM)
+    setAssignError(null)
+  }
+
+  const handleAssign = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAssignError(null)
+
+    if (!selectedExistingUser) { setAssignError('Seleccioná un usuario existente'); return }
+    if (!assignForm.institutionId) { setAssignError('Seleccioná una institución'); return }
+    if (!assignForm.role) { setAssignError('Seleccioná un rol'); return }
+    if (assignForm.role === 'profesional' && !assignForm.professionalType) {
+      setAssignError('Seleccioná el tipo de profesional'); return
+    }
+    if (assignForm.role === 'servicio' && !assignForm.serviceId) {
+      setAssignError('Seleccioná el servicio'); return
+    }
+
+    setIsSaving(true)
+    try {
+      // Verificar que no tenga ya membresía en esa institución
+      const { data: existing } = await supabase
+        .from('membership')
+        .select('id')
+        .eq('user_id', selectedExistingUser.id)
+        .eq('institution_id', assignForm.institutionId)
+        .maybeSingle()
+
+      if (existing) {
+        setAssignError('Este usuario ya tiene acceso a esa institución')
+        return
+      }
+
+      // Crear membresía
+      const { error: membErr } = await supabase.from('membership').insert({
+        user_id: selectedExistingUser.id,
+        institution_id: assignForm.institutionId,
+        role: assignForm.role,
+        is_active: true,
+      })
+      if (membErr) throw membErr
+
+      // Crear registro de rol específico
+      const formCompat: FormState = {
+        ...EMPTY_FORM,
+        ...assignForm,
+        firstName: selectedExistingUser.firstName,
+        lastName: selectedExistingUser.lastName,
+        email: selectedExistingUser.email,
+      }
+      await createRoleRecord(selectedExistingUser.id, formCompat)
+
+      toast({
+        title: 'Usuario asignado',
+        description: `${selectedExistingUser.firstName} ${selectedExistingUser.lastName} fue asignado a la institución.`,
+      })
+      closeAssignDialog()
+      fetchData()
+    } catch (err: any) {
+      setAssignError(err.message || 'Error al asignar el usuario')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // ============================================================
@@ -661,10 +804,16 @@ export default function SuperAdminUsuariosPage() {
             Todos los usuarios con acceso a instituciones — {filteredStaff.length} resultado{filteredStaff.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Personal
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Asignar a institución
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Personal
+          </Button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -1129,6 +1278,242 @@ export default function SuperAdminUsuariosPage() {
                   : editingRow
                   ? 'Actualizar'
                   : 'Crear Personal'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============================================================ */}
+      {/* Assign existing user dialog                                  */}
+      {/* ============================================================ */}
+      <Dialog open={assignDialogOpen} onOpenChange={(open) => { if (!open) closeAssignDialog() }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Asignar usuario a institución</DialogTitle>
+            <DialogDescription>
+              Buscá un usuario existente y asignalo a otra institución con un nuevo rol.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAssign} className="space-y-4 mt-2">
+            {assignError && (
+              <Alert variant="destructive">
+                <AlertDescription>{assignError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Búsqueda de usuario */}
+            <div className="space-y-1.5">
+              <Label>Buscar usuario existente *</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  className="pl-9"
+                  placeholder="Nombre, apellido o email..."
+                  value={assignUserSearch}
+                  onChange={(e) => searchUsers(e.target.value)}
+                />
+              </div>
+
+              {/* Resultados de búsqueda */}
+              {isSearching && (
+                <p className="text-xs text-muted-foreground px-1">Buscando...</p>
+              )}
+              {!isSearching && assignUserSearch.length >= 2 && assignUserResults.length === 0 && (
+                <p className="text-xs text-muted-foreground px-1">Sin resultados</p>
+              )}
+              {assignUserResults.length > 0 && !selectedExistingUser && (
+                <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
+                  {assignUserResults.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+                      onClick={() => {
+                        setSelectedExistingUser(u)
+                        setAssignUserResults([])
+                        setAssignUserSearch('')
+                      }}
+                    >
+                      <span className="font-medium">{u.firstName} {u.lastName}</span>
+                      <span className="text-gray-400 ml-2">{u.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Usuario seleccionado */}
+              {selectedExistingUser && (
+                <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+                  <div>
+                    <span className="text-sm font-medium text-blue-900">
+                      {selectedExistingUser.firstName} {selectedExistingUser.lastName}
+                    </span>
+                    <span className="text-xs text-blue-600 ml-2">{selectedExistingUser.email}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-500 hover:text-blue-700 ml-2 shrink-0"
+                    onClick={() => {
+                      setSelectedExistingUser(null)
+                      setAssignUserSearch('')
+                      setAssignUserResults([])
+                    }}
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Zona */}
+            <div className="space-y-1.5">
+              <Label>Zona Sanitaria *</Label>
+              <Select
+                value={assignForm.zoneId}
+                onValueChange={(v) => setAssignField('zoneId', v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná una zona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {zones.map((z) => (
+                    <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Institución */}
+            {assignForm.zoneId && (
+              <div className="space-y-1.5">
+                <Label>Institución *</Label>
+                <Select
+                  value={assignForm.institutionId}
+                  onValueChange={(v) => setAssignField('institutionId', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccioná una institución" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignFormInstitutions.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">
+                        No hay instituciones en esta zona
+                      </div>
+                    ) : (
+                      assignFormInstitutions.map((i) => (
+                        <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Rol */}
+            <div className="space-y-1.5">
+              <Label>Rol en la nueva institución *</Label>
+              <Select
+                value={assignForm.role}
+                onValueChange={(v) => setAssignField('role', v as AllRole)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná un rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="administrativo">Administrativo</SelectItem>
+                  <SelectItem value="profesional">Profesional</SelectItem>
+                  <SelectItem value="servicio">Servicio</SelectItem>
+                  <SelectItem value="pantalla">Pantalla</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Campos PROFESIONAL */}
+            {assignForm.role === 'profesional' && (
+              <div className="space-y-3 rounded-lg border p-3 bg-green-50">
+                <p className="text-xs font-medium text-green-800 uppercase tracking-wide">
+                  Datos del Profesional
+                </p>
+                <div className="space-y-1.5">
+                  <Label>Tipo de Profesional *</Label>
+                  <Select
+                    value={assignForm.professionalType}
+                    onValueChange={(v) => setAssignField('professionalType', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccioná el tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROFESSIONAL_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Especialidad</Label>
+                  <Input
+                    value={assignForm.speciality}
+                    onChange={(e) => setAssignField('speciality', e.target.value)}
+                    placeholder="Ej: Cardiología, Pediatría"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Matrícula</Label>
+                  <Input
+                    value={assignForm.licenseNumber}
+                    onChange={(e) => setAssignField('licenseNumber', e.target.value)}
+                    placeholder="Ej: MP 12345"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Campos SERVICIO */}
+            {assignForm.role === 'servicio' && (
+              <div className="space-y-3 rounded-lg border p-3 bg-purple-50">
+                <p className="text-xs font-medium text-purple-800 uppercase tracking-wide">
+                  Asignación de Servicio
+                </p>
+                {!assignForm.institutionId ? (
+                  <p className="text-sm text-muted-foreground">
+                    Seleccioná una institución primero para ver sus servicios.
+                  </p>
+                ) : assignFormServices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay servicios activos en esta institución.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label>Servicio *</Label>
+                    <Select
+                      value={assignForm.serviceId}
+                      onValueChange={(v) => setAssignField('serviceId', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccioná el servicio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assignFormServices.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Acciones */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={closeAssignDialog}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? 'Asignando...' : 'Asignar a institución'}
               </Button>
             </div>
           </form>
