@@ -67,6 +67,12 @@ const navigation = [
     roles: ['admin']
   },
   {
+    name: 'Usuarios',
+    href: '/usuarios',
+    icon: UsersIcon,
+    roles: ['admin']
+  },
+  {
     name: 'Reportes',
     href: '/reportes',
     icon: BarChart3Icon,

@@ -60,11 +60,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================================
-    // PASO 3: Verificar que el usuario sea SUPER_ADMIN
+    // PASO 3: Verificar que el usuario sea SUPER_ADMIN o ADMIN
     // ============================================================================
     const { data: memberships, error: membershipError } = await supabaseAdmin
       .from('membership')
-      .select('role, is_active')
+      .select('role, is_active, institution_id')
       .eq('user_id', user.id)
 
     if (membershipError) {
@@ -80,18 +80,29 @@ export async function POST(request: NextRequest) {
       (m: any) => m.role === 'super_admin' && m.is_active === true
     )
 
-    if (!isSuperAdmin) {
+    const adminMembership = memberships?.find(
+      (m: any) => m.role === 'admin' && m.is_active === true
+    )
+
+    if (!isSuperAdmin && !adminMembership) {
       await logAuthFailure(
         request,
         '/api/admin/users',
-        `User ${user.id} attempted to create user without super_admin role`
+        `User ${user.id} attempted to create user without super_admin or admin role`
       )
       console.warn(
         `[SECURITY] Forbidden: User ${user.id} (${user.email}) attempted unauthorized user creation from IP: ${clientIP}`
       )
       return NextResponse.json(
-        { error: 'Forbidden: Super admin role required' },
+        { error: 'Forbidden: Se requiere rol de super_admin o admin' },
         { status: 403 }
+      )
+    }
+
+    // Log de auditoría: si es admin, registrar su institución
+    if (!isSuperAdmin && adminMembership) {
+      console.log(
+        `[AUDIT] Admin user ${user.id} (${user.email}) from institution ${adminMembership.institution_id} is creating a new user`
       )
     }
 

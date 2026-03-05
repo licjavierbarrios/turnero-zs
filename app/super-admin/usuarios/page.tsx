@@ -1,1355 +1,1077 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, User, Shield, Eye, EyeOff, Activity } from 'lucide-react'
-import { UserServicesTab } from '@/components/UserServicesTab'
-import { UserProfessionalsTab } from '@/components/UserProfessionalsTab'
-import { UsersTab } from './components/UsersTab'
-import { MembershipsTab } from './components/MembershipsTab'
+import {
+  Plus, Edit, UserCheck, UserX, Users, Search, AlertCircle,
+} from 'lucide-react'
 
-type User = {
-  id: string
+// ============================================================
+// Types
+// ============================================================
+type AllRole = 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
+
+type Zone = { id: string; name: string }
+type Institution = { id: string; name: string; zone_id: string; zone_name: string }
+type ServiceOption = { id: string; name: string; institution_id: string }
+
+type StaffRow = {
+  membershipId: string
+  userId: string
+  firstName: string
+  lastName: string
   email: string
-  first_name: string
-  last_name: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-type Membership = {
-  id: string
-  user_id: string
-  institution_id: string
-  role: 'super_admin' | 'admin' | 'administrativo' | 'profesional' | 'servicio' | 'pantalla'
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  user?: User
-  institution?: {
+  userActive: boolean
+  role: AllRole
+  institutionId: string
+  institutionName: string
+  zoneId: string
+  zoneName: string
+  professional?: {
     id: string
-    name: string
-    zone_name: string
+    professionalType: string | null
+    speciality: string | null
+    licenseNumber: string | null
+  }
+  userService?: {
+    id: string
+    serviceId: string
+    serviceName: string
   }
 }
 
-type Institution = {
-  id: string
-  name: string
-  zone_name: string
+type FormState = {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  isActive: boolean
+  zoneId: string
+  institutionId: string
+  role: AllRole | ''
+  // profesional
+  professionalType: string
+  speciality: string
+  licenseNumber: string
+  // servicio
+  serviceId: string
 }
 
-type Service = {
-  id: string
-  name: string
-  institution_id: string
-  institution_name?: string
-  zone_name?: string
-}
-
-type UserService = {
-  id: string
-  user_id: string
-  service_id: string
-  institution_id: string
-  is_active: boolean
-  created_at: string
-  user?: User
-  service?: Service
-  institution?: {
-    id: string
-    name: string
-    zone_name: string
-  }
-}
-
-const roleLabels = {
-  super_admin: 'Super Admin',
+// ============================================================
+// Constants
+// ============================================================
+const ROLE_LABELS: Record<AllRole, string> = {
   admin: 'Administrador',
   administrativo: 'Administrativo',
   profesional: 'Profesional',
   servicio: 'Servicio',
-  pantalla: 'Pantalla'
+  pantalla: 'Pantalla',
 }
 
-// Role options for selection (excludes super_admin)
-const selectableRoles = {
-  admin: 'Administrador',
-  administrativo: 'Administrativo',
-  profesional: 'Profesional',
-  servicio: 'Servicio',
-  pantalla: 'Pantalla'
-}
-
-const roleColors = {
-  super_admin: 'bg-purple-100 text-purple-800',
+const ROLE_COLORS: Record<AllRole, string> = {
   admin: 'bg-red-100 text-red-800',
   administrativo: 'bg-blue-100 text-blue-800',
   profesional: 'bg-green-100 text-green-800',
-  servicio: 'bg-yellow-100 text-yellow-800',
-  pantalla: 'bg-orange-100 text-orange-800'
+  servicio: 'bg-purple-100 text-purple-800',
+  pantalla: 'bg-orange-100 text-orange-800',
 }
 
+const PROFESSIONAL_TYPES = [
+  { value: 'medico', label: 'Médico/a' },
+  { value: 'psicologo', label: 'Psicólogo/a' },
+  { value: 'nutricionista', label: 'Nutricionista' },
+  { value: 'odontologo', label: 'Odontólogo/a' },
+  { value: 'enfermero', label: 'Enfermero/a' },
+  { value: 'tecnico', label: 'Técnico/a' },
+  { value: 'otro', label: 'Otro' },
+]
+
+const EMPTY_FORM: FormState = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  isActive: true,
+  zoneId: '',
+  institutionId: '',
+  role: '',
+  professionalType: '',
+  speciality: '',
+  licenseNumber: '',
+  serviceId: '',
+}
+
+// ============================================================
+// Component
+// ============================================================
 export default function SuperAdminUsuariosPage() {
-  const [users, setUsers] = useState<User[]>([])
-  const [memberships, setMemberships] = useState<Membership[]>([])
-  const [institutions, setInstitutions] = useState<Institution[]>([])
-  const [services, setServices] = useState<Service[]>([])
-  const [userServices, setUserServices] = useState<UserService[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'users' | 'memberships' | 'professionals' | 'services'>('users')
-
-  // User form state
-  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [editingUserMemberships, setEditingUserMemberships] = useState<Membership[]>([])
-  const [showPassword, setShowPassword] = useState(false)
-  const [userFormData, setUserFormData] = useState({
-    email: '',
-    first_name: '',
-    last_name: '',
-    password: '',
-    is_active: true,
-    zone_id: '',
-    institution_id: '',
-    role: '' as Membership['role'] | ''
-  })
-
-  // Membership form state
-  const [isMembershipDialogOpen, setIsMembershipDialogOpen] = useState(false)
-  const [editingMembership, setEditingMembership] = useState<Membership | null>(null)
-  const [membershipFormData, setMembershipFormData] = useState({
-    user_id: '',
-    institution_id: '',
-    role: '' as Membership['role'] | '',
-    is_active: true
-  })
-
-  // Search states
-  const [userSearch, setUserSearch] = useState('')
-  const [membershipUserSearch, setMembershipUserSearch] = useState('')
-  const [membershipSearch, setMembershipSearch] = useState('')
-  const [selectedZone, setSelectedZone] = useState<string>('ALL')
-  const [selectedInstitution, setSelectedInstitution] = useState<string>('ALL')
-  const [membershipSelectedZone, setMembershipSelectedZone] = useState<string>('ALL')
-  const [membershipSelectedInstitution, setMembershipSelectedInstitution] = useState<string>('ALL')
-  const [zones, setZones] = useState<Array<{ id: string, name: string }>>([])
-  const [filteredInstitutions, setFilteredInstitutions] = useState<Institution[]>([])
-  const [filteredInstitutionsForFilter, setFilteredInstitutionsForFilter] = useState<Institution[]>([])
-  const [filteredMembershipInstitutions, setFilteredMembershipInstitutions] = useState<Institution[]>([])
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
-  const [filteredMemberships, setFilteredMemberships] = useState<Membership[]>([])
-  const [filteredMembershipUsers, setFilteredMembershipUsers] = useState<User[]>([])
-  const [userFormInstitutions, setUserFormInstitutions] = useState<Institution[]>([])
-
-  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Delete confirmation dialogs
-  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false)
-  const [deletingUser, setDeletingUser] = useState<User | null>(null)
-  const [isDeleteMembershipDialogOpen, setIsDeleteMembershipDialogOpen] = useState(false)
-  const [deletingMembership, setDeletingMembership] = useState<Membership | null>(null)
+  // Data
+  const [staff, setStaff] = useState<StaffRow[]>([])
+  const [zones, setZones] = useState<Zone[]>([])
+  const [institutions, setInstitutions] = useState<Institution[]>([])
+  const [services, setServices] = useState<ServiceOption[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    Promise.all([fetchUsers(), fetchMemberships(), fetchInstitutions(), fetchZones()])
-  }, [])
+  // Filters
+  const [search, setSearch] = useState('')
+  const [filterZone, setFilterZone] = useState('ALL')
+  const [filterInstitution, setFilterInstitution] = useState('ALL')
+  const [filterRole, setFilterRole] = useState<AllRole | 'ALL'>('ALL')
 
-  // Filter users by zone, institution and search
-  useEffect(() => {
-    // Exclude super admin users
-    const superAdminIds = new Set(
-      memberships
-        .filter(m => m.role === 'super_admin')
-        .map(m => m.user_id)
-    )
-    let filtered = users.filter(u => !superAdminIds.has(u.id))
+  // Dialog
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingRow, setEditingRow] = useState<StaffRow | null>(null)
+  const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [roleChangeWarning, setRoleChangeWarning] = useState(false)
 
-    // Filter by zone if selected
-    if (selectedZone !== 'ALL') {
-      const zoneUserIds = new Set(
-        memberships
-          .filter(m => m.institution?.zone_name === selectedZone)
-          .map(m => m.user_id)
+  // Toggle active confirmation
+  const [toggleTarget, setToggleTarget] = useState<StaffRow | null>(null)
+
+  // ============================================================
+  // Computed: institutions filtered by selected zone (for filter bar)
+  // ============================================================
+  const filteredZoneInstitutions = useMemo(() => {
+    if (filterZone === 'ALL') return institutions
+    return institutions.filter((i) => i.zone_id === filterZone)
+  }, [filterZone, institutions])
+
+  // Computed: institutions filtered by form zone
+  const formInstitutions = useMemo(() => {
+    if (!form.zoneId) return []
+    return institutions.filter((i) => i.zone_id === form.zoneId)
+  }, [form.zoneId, institutions])
+
+  // Computed: services filtered by form institution
+  const formServices = useMemo(() => {
+    if (!form.institutionId) return []
+    return services.filter((s) => s.institution_id === form.institutionId)
+  }, [form.institutionId, services])
+
+  // ============================================================
+  // Filtered staff rows
+  // ============================================================
+  const filteredStaff = useMemo(() => {
+    let rows = staff
+
+    if (filterZone !== 'ALL') {
+      rows = rows.filter((r) => r.zoneId === filterZone)
+    }
+    if (filterInstitution !== 'ALL') {
+      rows = rows.filter((r) => r.institutionId === filterInstitution)
+    }
+    if (filterRole !== 'ALL') {
+      rows = rows.filter((r) => r.role === filterRole)
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      rows = rows.filter(
+        (r) =>
+          r.firstName.toLowerCase().includes(q) ||
+          r.lastName.toLowerCase().includes(q) ||
+          r.email.toLowerCase().includes(q)
       )
-      filtered = filtered.filter(u => zoneUserIds.has(u.id))
     }
 
-    // Filter by institution if selected
-    if (selectedInstitution !== 'ALL') {
-      const institutionUserIds = new Set(
-        memberships
-          .filter(m => m.institution?.name === selectedInstitution)
-          .map(m => m.user_id)
-      )
-      filtered = filtered.filter(u => institutionUserIds.has(u.id))
-    }
-
-    // Filter by search text
-    if (userSearch.trim() !== '') {
-      const search = userSearch.toLowerCase()
-      filtered = filtered.filter(u =>
-        u.first_name.toLowerCase().includes(search) ||
-        u.last_name.toLowerCase().includes(search) ||
-        u.email.toLowerCase().includes(search)
-      )
-    }
-
-    setFilteredUsers(filtered)
-  }, [userSearch, users, selectedZone, selectedInstitution, memberships])
-
-  // Filter institutions for users tab filter (cascade with zone)
-  useEffect(() => {
-    if (selectedZone === 'ALL') {
-      setFilteredInstitutionsForFilter(institutions)
-    } else {
-      setFilteredInstitutionsForFilter(
-        institutions.filter(i => i.zone_name === selectedZone)
-      )
-    }
-  }, [selectedZone, institutions])
+    return rows
+  }, [staff, filterZone, filterInstitution, filterRole, search])
 
   // Reset institution filter when zone changes
   useEffect(() => {
-    if (selectedZone !== 'ALL' && selectedInstitution !== 'ALL') {
-      const institutionExists = institutions.some(
-        i => i.zone_name === selectedZone && i.name === selectedInstitution
-      )
-      if (!institutionExists) {
-        setSelectedInstitution('ALL')
-      }
-    }
-  }, [selectedZone, selectedInstitution, institutions])
+    setFilterInstitution('ALL')
+  }, [filterZone])
 
-  // Filter institutions by zone (for memberships tab)
+  // Reset institution in form when zone changes
   useEffect(() => {
-    if (membershipSelectedZone === 'ALL') {
-      setFilteredInstitutions(institutions)
-    } else {
-      setFilteredInstitutions(
-        institutions.filter(i => i.zone_name === membershipSelectedZone)
-      )
-    }
-  }, [membershipSelectedZone, institutions])
+    setForm((prev) => ({ ...prev, institutionId: '', serviceId: '' }))
+  }, [form.zoneId])
 
-  // Filter institutions for membership tab filter (cascade with zone)
+  // Reset serviceId in form when institution changes
   useEffect(() => {
-    if (membershipSelectedZone === 'ALL') {
-      setFilteredMembershipInstitutions(institutions)
-    } else {
-      setFilteredMembershipInstitutions(
-        institutions.filter(i => i.zone_name === membershipSelectedZone)
-      )
-    }
-  }, [membershipSelectedZone, institutions])
+    setForm((prev) => ({ ...prev, serviceId: '' }))
+  }, [form.institutionId])
 
-  // Reset membership institution filter when zone changes
-  useEffect(() => {
-    if (membershipSelectedZone !== 'ALL' && membershipSelectedInstitution !== 'ALL') {
-      const institutionExists = institutions.some(
-        i => i.zone_name === membershipSelectedZone && i.name === membershipSelectedInstitution
-      )
-      if (!institutionExists) {
-        setMembershipSelectedInstitution('ALL')
-      }
-    }
-  }, [membershipSelectedZone, membershipSelectedInstitution, institutions])
-
-  // Filter institutions by zone (for user form)
-  useEffect(() => {
-    if (userFormData.zone_id === '') {
-      setUserFormInstitutions([])
-    } else {
-      const zoneName = zones.find(z => z.id === userFormData.zone_id)?.name
-      setUserFormInstitutions(
-        institutions.filter(i => i.zone_name === zoneName)
-      )
-    }
-  }, [userFormData.zone_id, institutions, zones])
-
-  // Filter users for membership search
-  useEffect(() => {
-    if (membershipUserSearch.trim() === '') {
-      setFilteredMembershipUsers(users)
-    } else {
-      const search = membershipUserSearch.toLowerCase()
-      setFilteredMembershipUsers(
-        users.filter(u =>
-          u.first_name.toLowerCase().includes(search) ||
-          u.last_name.toLowerCase().includes(search) ||
-          u.email.toLowerCase().includes(search)
-        )
-      )
-    }
-  }, [membershipUserSearch, users])
-
-  // Filter memberships by zone, institution and search
-  useEffect(() => {
-    // Exclude super_admin memberships
-    let filtered = memberships.filter(m => m.role !== 'super_admin')
-
-    // Filter by zone if selected
-    if (membershipSelectedZone !== 'ALL') {
-      filtered = filtered.filter(m => m.institution?.zone_name === membershipSelectedZone)
-    }
-
-    // Filter by institution if selected
-    if (membershipSelectedInstitution !== 'ALL') {
-      filtered = filtered.filter(m => m.institution?.name === membershipSelectedInstitution)
-    }
-
-    // Filter by search text (user name or email)
-    if (membershipSearch.trim() !== '') {
-      const search = membershipSearch.toLowerCase()
-      filtered = filtered.filter(m =>
-        m.user?.first_name.toLowerCase().includes(search) ||
-        m.user?.last_name.toLowerCase().includes(search) ||
-        m.user?.email.toLowerCase().includes(search)
-      )
-    }
-
-    setFilteredMemberships(filtered)
-  }, [membershipSearch, memberships, membershipSelectedZone, membershipSelectedInstitution])
-
-  const fetchUsers = async () => {
+  // ============================================================
+  // Data fetching
+  // ============================================================
+  const fetchData = useCallback(async () => {
+    setLoading(true)
     try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('last_name', { ascending: true })
+      const [membRes, profRes, usRes, zoneRes, instRes, svcRes] = await Promise.all([
+        // All memberships excluding super_admin
+        supabase
+          .from('membership')
+          .select(`
+            id, user_id, role, is_active,
+            user:user_id (id, email, first_name, last_name, is_active),
+            institution:institution_id (id, name, zone_id, zone:zone_id(id, name))
+          `)
+          .neq('role', 'super_admin')
+          .order('created_at', { ascending: false }),
 
-      if (error) throw error
-      setUsers(data || [])
-    } catch (error) {
-      console.error('Error fetching users:', error)
-      setError('Error al cargar los usuarios')
+        // All professionals
+        supabase
+          .from('professional')
+          .select('id, user_id, institution_id, professional_type, speciality, license_number'),
+
+        // All user_services (active only)
+        supabase
+          .from('user_service')
+          .select('id, user_id, service_id, institution_id, service:service_id(name)')
+          .eq('is_active', true),
+
+        // Zones
+        supabase.from('zone').select('id, name').order('name'),
+
+        // Institutions
+        supabase
+          .from('institution')
+          .select('id, name, zone_id, zone:zone_id(id, name)')
+          .order('name'),
+
+        // All services (for form dropdown)
+        supabase.from('service').select('id, name, institution_id').eq('is_active', true).order('name'),
+      ])
+
+      if (membRes.error) throw membRes.error
+
+      // Build lookup maps (by user_id + institution_id for professionals and user_services)
+      const profMap = new Map<string, any>()
+      for (const p of profRes.data || []) {
+        profMap.set(`${p.user_id}:${p.institution_id}`, p)
+      }
+
+      const usMap = new Map<string, any>()
+      for (const us of usRes.data || []) {
+        usMap.set(`${us.user_id}:${us.institution_id}`, us)
+      }
+
+      // Build staff rows
+      const rows: StaffRow[] = (membRes.data || []).map((m: any) => {
+        const u = m.user || {}
+        const inst = m.institution || {}
+        const zone = inst.zone || {}
+        const key = `${m.user_id}:${inst.id}`
+        const prof = profMap.get(key)
+        const us = usMap.get(key)
+
+        return {
+          membershipId: m.id,
+          userId: m.user_id,
+          firstName: u.first_name || '',
+          lastName: u.last_name || '',
+          email: u.email || '',
+          userActive: u.is_active ?? true,
+          role: m.role as AllRole,
+          institutionId: inst.id || '',
+          institutionName: inst.name || '',
+          zoneId: zone.id || '',
+          zoneName: zone.name || '',
+          professional: prof
+            ? {
+                id: prof.id,
+                professionalType: prof.professional_type,
+                speciality: prof.speciality,
+                licenseNumber: prof.license_number,
+              }
+            : undefined,
+          userService: us
+            ? {
+                id: us.id,
+                serviceId: us.service_id,
+                serviceName: (us.service as any)?.name || '',
+              }
+            : undefined,
+        }
+      })
+
+      setStaff(rows)
+      setZones((zoneRes.data || []).map((z: any) => ({ id: z.id, name: z.name })))
+      setInstitutions(
+        (instRes.data || []).map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          zone_id: i.zone_id,
+          zone_name: i.zone?.name || '',
+        }))
+      )
+      setServices(svcRes.data || [])
+    } catch (err: any) {
+      console.error('Error fetching staff:', err)
+      toast({ title: 'Error al cargar el personal', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
+  }, [toast])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // ============================================================
+  // Dialog helpers
+  // ============================================================
+  const openCreate = () => {
+    setEditingRow(null)
+    setForm(EMPTY_FORM)
+    setError(null)
+    setRoleChangeWarning(false)
+    setDialogOpen(true)
   }
 
-  const fetchMemberships = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('membership')
-        .select(`
-          *,
-          user:user_id (
-            id,
-            email,
-            first_name,
-            last_name,
-            is_active
-          ),
-          institution:institution_id (
-            id,
-            name,
-            zone_id,
-            zone:zone_id(id, name)
-          )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      const formattedData = data?.map((item: any) => ({
-        ...item,
-        institution: item.institution ? {
-          id: item.institution.id,
-          name: item.institution.name,
-          zone_name: item.institution.zone?.name || 'Sin zona'
-        } : undefined
-      })) || []
-
-      setMemberships(formattedData)
-    } catch (error) {
-      console.error('Error fetching memberships:', error)
-    }
+  const openEdit = (row: StaffRow) => {
+    setEditingRow(row)
+    const inst = institutions.find((i) => i.id === row.institutionId)
+    setForm({
+      firstName: row.firstName,
+      lastName: row.lastName,
+      email: row.email,
+      password: '',
+      isActive: row.userActive,
+      zoneId: inst?.zone_id || '',
+      institutionId: row.institutionId,
+      role: row.role,
+      professionalType: row.professional?.professionalType || '',
+      speciality: row.professional?.speciality || '',
+      licenseNumber: row.professional?.licenseNumber || '',
+      serviceId: row.userService?.serviceId || '',
+    })
+    setError(null)
+    setRoleChangeWarning(false)
+    setDialogOpen(true)
   }
 
-  const fetchInstitutions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('institution')
-        .select(`
-          id,
-          name,
-          zone_id,
-          zone:zone_id(id, name)
-        `)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-
-      const formattedData = data?.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        zone_name: item.zone?.name || 'Sin zona'
-      })) || []
-
-      setInstitutions(formattedData)
-      setFilteredInstitutions(formattedData)
-    } catch (error) {
-      console.error('Error fetching institutions:', error)
-    }
+  const closeDialog = () => {
+    setDialogOpen(false)
+    setEditingRow(null)
+    setForm(EMPTY_FORM)
+    setError(null)
+    setRoleChangeWarning(false)
   }
 
-  const fetchZones = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('zone')
-        .select('id, name')
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      setZones(data || [])
-    } catch (error) {
-      console.error('Error fetching zones:', error)
-    }
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value }
+      if (key === 'role' && editingRow) {
+        setRoleChangeWarning(value !== editingRow.role)
+      }
+      return next
+    })
   }
 
-  // User CRUD operations
-  const handleUserSubmit = async (e: React.FormEvent) => {
+  // ============================================================
+  // Create
+  // ============================================================
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setIsSaving(true)
 
-    // Validate zone, institution and role for new users
-    if (!editingUser && (!userFormData.zone_id || !userFormData.institution_id || !userFormData.role)) {
-      setError('Debes seleccionar zona, institución y rol para el nuevo usuario')
-      return
+    if (!form.institutionId) { setError('Seleccioná una institución'); return }
+    if (!form.role) { setError('Seleccioná un rol'); return }
+    if (form.role === 'profesional' && !form.professionalType) {
+      setError('Seleccioná el tipo de profesional'); return
+    }
+    if (form.role === 'servicio' && !form.serviceId) {
+      setError('Seleccioná el servicio'); return
     }
 
+    setIsSaving(true)
     try {
-      if (editingUser) {
-        // Update existing user
-        const updateData: any = {
-          email: userFormData.email,
-          first_name: userFormData.first_name,
-          last_name: userFormData.last_name,
-          is_active: userFormData.is_active,
-          updated_at: new Date().toISOString()
-        }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Sin sesión activa')
 
-        // Only include password if it's provided
-        if (userFormData.password) {
-          updateData.password_hash = userFormData.password // Note: In real app, this should be hashed
-        }
-
-        const { error } = await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', editingUser.id)
-
-        if (error) throw error
-
-        toast({
-          title: "Usuario actualizado",
-          description: "El usuario se ha actualizado correctamente.",
-        })
-      } else {
-        // Create new user via API route (server-side with admin privileges)
-        const { data: { session } } = await supabase.auth.getSession()
-        const response = await fetch('/api/admin/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
-          },
-          body: JSON.stringify({
-            email: userFormData.email,
-            password: userFormData.password,
-            first_name: userFormData.first_name,
-            last_name: userFormData.last_name,
-            is_active: userFormData.is_active
-          })
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Error al crear usuario')
-        }
-
-        const { user: newUser } = await response.json()
-        console.log('✅ Usuario creado:', newUser.id)
-
-        // Create membership for the new user
-        if (userFormData.institution_id && userFormData.role) {
-          const { error: membershipError } = await supabase
-            .from('membership')
-            .insert({
-              user_id: newUser.id,
-              institution_id: userFormData.institution_id,
-              role: userFormData.role,
-              is_active: true
-            })
-
-          if (membershipError) throw membershipError
-
-          toast({
-            title: "Usuario creado",
-            description: "El usuario y su membresía se han creado correctamente.",
-          })
-        } else {
-          toast({
-            title: "Usuario creado sin institución",
-            description: "Usuario creado, pero falta asignar institución. Por favor asígnala en Membresías.",
-            variant: "destructive"
-          })
-        }
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          first_name: form.firstName,
+          last_name: form.lastName,
+          is_active: form.isActive,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Error al crear usuario')
       }
+      const { user: newUser } = await res.json()
 
-      setIsUserDialogOpen(false)
-      setEditingUser(null)
-      resetUserForm()
-      fetchUsers()
-      fetchMemberships() // Refresh memberships list
-    } catch (error) {
-      console.error('Error saving user:', error)
-      setError(`Error al ${editingUser ? 'actualizar' : 'crear'} el usuario`)
+      // Membresía
+      const { error: membErr } = await supabase.from('membership').insert({
+        user_id: newUser.id,
+        institution_id: form.institutionId,
+        role: form.role,
+        is_active: true,
+      })
+      if (membErr) throw membErr
+
+      // Registro de rol específico
+      await createRoleRecord(newUser.id, form)
+
+      toast({
+        title: 'Personal creado',
+        description: `${form.firstName} ${form.lastName} creado como ${ROLE_LABELS[form.role as AllRole]}.`,
+      })
+      closeDialog()
+      fetchData()
+    } catch (err: any) {
+      setError(err.message || 'Error al crear el usuario')
     } finally {
       setIsSaving(false)
     }
   }
 
-  // Membership CRUD operations
-  const handleMembershipSubmit = async (e: React.FormEvent) => {
+  // ============================================================
+  // Edit
+  // ============================================================
+  const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!editingRow) return
     setError(null)
 
-    if (!membershipFormData.role) {
-      setError('Debe seleccionar un rol')
-      return
+    if (!form.role) { setError('Seleccioná un rol'); return }
+    if (form.role === 'profesional' && !form.professionalType) {
+      setError('Seleccioná el tipo de profesional'); return
+    }
+    if (form.role === 'servicio' && !form.serviceId) {
+      setError('Seleccioná el servicio'); return
     }
 
+    setIsSaving(true)
     try {
-      if (editingMembership) {
-        // Update existing membership
-        const { error } = await supabase
-          .from('membership')
-          .update({
-            user_id: membershipFormData.user_id,
-            institution_id: membershipFormData.institution_id,
-            role: membershipFormData.role,
-            is_active: membershipFormData.is_active,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingMembership.id)
-
-        if (error) throw error
-
-        toast({
-          title: "Membresía actualizada",
-          description: "La membresía se ha actualizado correctamente.",
+      // Actualizar usuario
+      const { error: userErr } = await supabase
+        .from('users')
+        .update({
+          first_name: form.firstName,
+          last_name: form.lastName,
+          email: form.email,
+          is_active: form.isActive,
         })
+        .eq('id', editingRow.userId)
+      if (userErr) throw userErr
+
+      const roleChanged = form.role !== editingRow.role
+
+      if (roleChanged) {
+        await deleteRoleRecord(editingRow)
+        const { error: membErr } = await supabase
+          .from('membership')
+          .update({ role: form.role })
+          .eq('id', editingRow.membershipId)
+        if (membErr) throw membErr
+        await createRoleRecord(editingRow.userId, form)
       } else {
-        // Create new membership
-        const { error } = await supabase
-          .from('membership')
-          .insert({
-            user_id: membershipFormData.user_id,
-            institution_id: membershipFormData.institution_id,
-            role: membershipFormData.role,
-            is_active: membershipFormData.is_active
-          })
-
-        if (error) throw error
-
-        toast({
-          title: "Membresía creada",
-          description: "La membresía se ha creado correctamente.",
-        })
+        await updateRoleRecord(editingRow, form)
       }
 
-      setIsMembershipDialogOpen(false)
-      setEditingMembership(null)
-      resetMembershipForm()
-      fetchMemberships()
-    } catch (error) {
-      console.error('Error saving membership:', error)
-      setError(`Error al ${editingMembership ? 'actualizar' : 'crear'} la membresía`)
+      toast({ title: 'Personal actualizado' })
+      closeDialog()
+      fetchData()
+    } catch (err: any) {
+      setError(err.message || 'Error al actualizar')
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const handleEditUser = (user: User) => {
-    setEditingUser(user)
-    setUserFormData({
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      password: '',
-      is_active: user.is_active,
-      zone_id: '',
-      institution_id: '',
-      role: ''
-    })
-    // Load user's memberships
-    const userMemberships = memberships.filter(m => m.user_id === user.id)
-    setEditingUserMemberships(userMemberships)
-    setIsUserDialogOpen(true)
+  // ============================================================
+  // Role record helpers
+  // ============================================================
+  const createRoleRecord = async (userId: string, f: FormState) => {
+    if (f.role === 'profesional') {
+      const { error } = await supabase.from('professional').insert({
+        user_id: userId,
+        institution_id: f.institutionId,
+        first_name: f.firstName,
+        last_name: f.lastName,
+        email: f.email,
+        professional_type: f.professionalType,
+        speciality: f.speciality || null,
+        license_number: f.licenseNumber || null,
+        is_active: true,
+      })
+      if (error) throw error
+    } else if (f.role === 'servicio') {
+      const { error } = await supabase.from('user_service').insert({
+        user_id: userId,
+        service_id: f.serviceId,
+        institution_id: f.institutionId,
+        is_active: true,
+      })
+      if (error) throw error
+    }
   }
 
-  const handleEditMembership = (membership: Membership) => {
-    setEditingMembership(membership)
-    setMembershipFormData({
-      user_id: membership.user_id,
-      institution_id: membership.institution_id,
-      role: membership.role,
-      is_active: membership.is_active
-    })
-    setIsMembershipDialogOpen(true)
+  const deleteRoleRecord = async (row: StaffRow) => {
+    if (row.role === 'profesional' && row.professional) {
+      const { error } = await supabase.from('professional').delete().eq('id', row.professional.id)
+      if (error) throw error
+    } else if (row.role === 'servicio' && row.userService) {
+      const { error } = await supabase.from('user_service').delete().eq('id', row.userService.id)
+      if (error) throw error
+    }
   }
 
-  const openDeleteUserDialog = (user: User) => {
-    setDeletingUser(user)
-    setIsDeleteUserDialogOpen(true)
+  const updateRoleRecord = async (row: StaffRow, f: FormState) => {
+    if (f.role === 'profesional' && row.professional) {
+      const { error } = await supabase
+        .from('professional')
+        .update({
+          professional_type: f.professionalType,
+          speciality: f.speciality || null,
+          license_number: f.licenseNumber || null,
+          first_name: f.firstName,
+          last_name: f.lastName,
+          email: f.email,
+        })
+        .eq('id', row.professional.id)
+      if (error) throw error
+    } else if (f.role === 'servicio' && row.userService) {
+      const { error } = await supabase
+        .from('user_service')
+        .update({ service_id: f.serviceId })
+        .eq('id', row.userService.id)
+      if (error) throw error
+    } else if ((f.role === 'profesional' || f.role === 'servicio') && !row.professional && !row.userService) {
+      await createRoleRecord(row.userId, f)
+    }
   }
 
-  const handleDeleteUser = async () => {
-    if (!deletingUser) return
-
+  // ============================================================
+  // Toggle active
+  // ============================================================
+  const handleToggleActive = async () => {
+    if (!toggleTarget) return
     try {
-      // Delete related records in order (due to foreign key constraints)
-
-      // 1. Delete call_events
-      const { error: callEventError } = await supabase
-        .from('call_event')
-        .delete()
-        .eq('called_by', deletingUser.id)
-
-      if (callEventError) throw callEventError
-
-      // 2. Delete attendance_events
-      const { error: attendanceEventError } = await supabase
-        .from('attendance_event')
-        .delete()
-        .eq('recorded_by', deletingUser.id)
-
-      if (attendanceEventError) throw attendanceEventError
-
-      // 3. Delete appointments created by this user
-      const { error: appointmentError } = await supabase
-        .from('appointment')
-        .delete()
-        .eq('created_by', deletingUser.id)
-
-      if (appointmentError) throw appointmentError
-
-      // 4. Delete memberships (should cascade automatically, but explicit is safer)
-      const { error: membershipError } = await supabase
-        .from('membership')
-        .delete()
-        .eq('user_id', deletingUser.id)
-
-      if (membershipError) throw membershipError
-
-      // 5. Finally delete the user
       const { error } = await supabase
         .from('users')
-        .delete()
-        .eq('id', deletingUser.id)
-
+        .update({ is_active: !toggleTarget.userActive })
+        .eq('id', toggleTarget.userId)
       if (error) throw error
 
       toast({
-        title: "Usuario eliminado",
-        description: "El usuario se ha eliminado correctamente.",
+        title: toggleTarget.userActive ? 'Usuario desactivado' : 'Usuario activado',
       })
-
-      setIsDeleteUserDialogOpen(false)
-      setDeletingUser(null)
-      fetchUsers()
-      fetchMemberships() // Refresh memberships as they may be affected
-    } catch (error) {
-      console.error('Error deleting user:', error)
-      setError('Error al eliminar el usuario')
+      setToggleTarget(null)
+      fetchData()
+    } catch {
+      toast({ title: 'Error al cambiar el estado', variant: 'destructive' })
     }
   }
 
-  const openDeleteMembershipDialog = (membership: Membership) => {
-    setDeletingMembership(membership)
-    setIsDeleteMembershipDialogOpen(true)
-  }
-
-  const handleDeleteMembership = async () => {
-    if (!deletingMembership) return
-
-    try {
-      const { error } = await supabase
-        .from('membership')
-        .delete()
-        .eq('id', deletingMembership.id)
-
-      if (error) throw error
-
-      toast({
-        title: "Membresía eliminada",
-        description: "La membresía se ha eliminada correctamente.",
-      })
-
-      setIsDeleteMembershipDialogOpen(false)
-      setDeletingMembership(null)
-      fetchMemberships()
-    } catch (error) {
-      console.error('Error deleting membership:', error)
-      setError('Error al eliminar la membresía')
+  // ============================================================
+  // Detail cell
+  // ============================================================
+  const renderDetail = (row: StaffRow) => {
+    if (row.role === 'profesional' && row.professional) {
+      const type =
+        PROFESSIONAL_TYPES.find((t) => t.value === row.professional!.professionalType)?.label ||
+        row.professional.professionalType
+      const parts = [type, row.professional.speciality].filter(Boolean)
+      return <span className="text-sm text-gray-700">{parts.join(' · ') || '—'}</span>
     }
+    if (row.role === 'servicio' && row.userService) {
+      return <span className="text-sm text-gray-700">{row.userService.serviceName}</span>
+    }
+    return <span className="text-sm text-gray-400">—</span>
   }
 
-  const resetUserForm = () => {
-    setUserFormData({
-      email: '',
-      first_name: '',
-      last_name: '',
-      password: '',
-      is_active: true,
-      zone_id: '',
-      institution_id: '',
-      role: ''
-    })
-    setEditingUser(null)
-    setEditingUserMemberships([])
-    setShowPassword(false)
-    setError(null)
-  }
-
-  const resetMembershipForm = () => {
-    setMembershipFormData({
-      user_id: '',
-      institution_id: '',
-      role: '',
-      is_active: true
-    })
-    setMembershipUserSearch('')
-    setSelectedZone('ALL')
-    setEditingMembership(null)
-    setError(null)
-  }
-
+  // ============================================================
+  // Render
+  // ============================================================
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gestión de Usuarios - Vista Global</h1>
-        <p className="text-muted-foreground">
-          Administra todos los usuarios del sistema y sus membresías en instituciones
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Personal del Sistema</h1>
+          <p className="text-muted-foreground">
+            Todos los usuarios con acceso a instituciones — {filteredStaff.length} resultado{filteredStaff.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <Button onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo Personal
+        </Button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
-            activeTab === 'users'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <User className="inline mr-2 h-4 w-4" />
-          Usuarios
-        </button>
-        <button
-          onClick={() => setActiveTab('memberships')}
-          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
-            activeTab === 'memberships'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Shield className="inline mr-2 h-4 w-4" />
-          Membresías
-        </button>
-        <button
-          onClick={() => setActiveTab('professionals')}
-          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
-            activeTab === 'professionals'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Activity className="inline mr-2 h-4 w-4" />
-          Profesionales
-        </button>
-        <button
-          onClick={() => setActiveTab('services')}
-          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
-            activeTab === 'services'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Activity className="inline mr-2 h-4 w-4" />
-          Servicios
-        </button>
-      </div>
-
-      {/* Users Tab */}
-      {activeTab === 'users' && (
-        <>
-          {/* User Dialog Form */}
-          <Dialog
-            open={isUserDialogOpen}
-            onOpenChange={(open) => {
-              setIsUserDialogOpen(open)
-              if (!open) resetUserForm()
-            }}
-          >
-            <DialogTrigger asChild>
-              <div className="mb-4">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nuevo Usuario
-                </Button>
-              </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingUser
-                    ? 'Modifica los datos del usuario'
-                    : 'Crea un nuevo usuario del sistema'
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUserSubmit} className="space-y-4">
-                    {error && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="user_first_name">Nombre *</Label>
-                        <Input
-                          id="user_first_name"
-                          type="text"
-                          value={userFormData.first_name}
-                          onChange={(e) => setUserFormData({ ...userFormData, first_name: e.target.value })}
-                          placeholder="Nombre"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="user_last_name">Apellido *</Label>
-                        <Input
-                          id="user_last_name"
-                          type="text"
-                          value={userFormData.last_name}
-                          onChange={(e) => setUserFormData({ ...userFormData, last_name: e.target.value })}
-                          placeholder="Apellido"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="user_email">Email *</Label>
-                      <Input
-                        id="user_email"
-                        type="email"
-                        value={userFormData.email}
-                        onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                        placeholder="email@ejemplo.com"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="user_password">
-                        {editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="user_password"
-                          type={showPassword ? "text" : "password"}
-                          value={userFormData.password}
-                          onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
-                          placeholder="Contraseña"
-                          required={!editingUser}
-                          className="pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="user_is_active"
-                        checked={userFormData.is_active}
-                        onChange={(e) => setUserFormData({ ...userFormData, is_active: e.target.checked })}
-                        className="rounded border-gray-300"
-                      />
-                      <Label htmlFor="user_is_active">Usuario activo</Label>
-                    </div>
-
-                    {editingUser && (
-                      <>
-                        <div className="border-t pt-4 space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-semibold text-sm">Instituciones Asignadas</h4>
-                            <span className="text-xs text-muted-foreground">
-                              {editingUserMemberships.length} institución(es)
-                            </span>
-                          </div>
-
-                          {editingUserMemberships.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic">
-                              Este usuario no tiene instituciones asignadas. Usa la pestaña &quot;Membresías&quot; para asignarle instituciones.
-                            </p>
-                          ) : (
-                            <div className="space-y-2 max-h-40 overflow-y-auto">
-                              {editingUserMemberships.map((membership) => (
-                                <div key={membership.id} className="flex items-center justify-between p-2 border rounded-md bg-gray-50">
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">{membership.institution?.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {membership.institution?.zone_name} • {roleLabels[membership.role]}
-                                    </p>
-                                  </div>
-                                  <Badge className={roleColors[membership.role]}>
-                                    {roleLabels[membership.role]}
-                                  </Badge>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          <p className="text-xs text-muted-foreground">
-                            Para gestionar las instituciones de este usuario, ve a la pestaña &quot;Membresías&quot;.
-                          </p>
-                        </div>
-                      </>
-                    )}
-
-                    {!editingUser && (
-                      <>
-                        <div className="border-t pt-4 space-y-4">
-                          <h4 className="font-semibold text-sm">Asignación de Zona e Institución</h4>
-                          <p className="text-xs text-muted-foreground">
-                            Selecciona la zona sanitaria, institución y rol para este usuario.
-                          </p>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="user_zone_id">Zona Sanitaria *</Label>
-                            <Select
-                              value={userFormData.zone_id}
-                              onValueChange={(value) => setUserFormData({ ...userFormData, zone_id: value, institution_id: '', role: '' })}
-                              required
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar zona" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {zones.map((zone) => (
-                                  <SelectItem key={zone.id} value={zone.id}>
-                                    {zone.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {userFormData.zone_id && (
-                            <>
-                              <div className="space-y-2">
-                                <Label htmlFor="user_institution_id">Institución *</Label>
-                                <Select
-                                  value={userFormData.institution_id}
-                                  onValueChange={(value) => setUserFormData({ ...userFormData, institution_id: value })}
-                                  required
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar institución" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {userFormInstitutions.map((inst) => (
-                                      <SelectItem key={inst.id} value={inst.id}>
-                                        {inst.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="user_role">Rol *</Label>
-                                <Select
-                                  value={userFormData.role}
-                                  onValueChange={(value) => setUserFormData({ ...userFormData, role: value as Membership['role'] })}
-                                  required
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar rol" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Object.entries(selectableRoles).map(([value, label]) => (
-                                      <SelectItem key={value} value={value}>
-                                        {label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsUserDialogOpen(false)
-                          resetUserForm()
-                        }}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={isSaving || (editingUser
-                          ? !userFormData.first_name || !userFormData.last_name || !userFormData.email
-                          : !userFormData.first_name || !userFormData.last_name || !userFormData.email || !userFormData.password || !userFormData.zone_id || !userFormData.institution_id || !userFormData.role
-                        )}
-                      >
-                        {isSaving ? 'Guardando...' : (editingUser ? 'Actualizar' : 'Crear')} Usuario
-                      </Button>
-                    </div>
-                  </form>
-              </DialogContent>
-            </Dialog>
-
-          {/* Users Tab Content */}
-          <UsersTab
-            users={users}
-            memberships={memberships}
-            institutions={institutions}
-            zones={zones}
-            loading={loading}
-            selectedZone={selectedZone}
-            selectedInstitution={selectedInstitution}
-            userSearch={userSearch}
-            filteredUsers={filteredUsers}
-            filteredInstitutionsForFilter={filteredInstitutionsForFilter}
-            onZoneChange={setSelectedZone}
-            onInstitutionChange={setSelectedInstitution}
-            onSearchChange={setUserSearch}
-            onEditUser={handleEditUser}
-            onDeleteUser={openDeleteUserDialog}
+      {/* Filter bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            className="pl-9"
+            placeholder="Buscar por nombre o email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-        </>
-      )}
+        </div>
 
-      {/* Memberships Tab */}
-      {activeTab === 'memberships' && (
-        <>
-          {/* Membership Dialog Form */}
-          <div className="mb-4">
-            <Dialog
-              open={isMembershipDialogOpen}
-              onOpenChange={(open) => {
-                setIsMembershipDialogOpen(open)
-                if (!open) resetMembershipForm()
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nueva Membresía
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingMembership ? 'Editar Membresía' : 'Nueva Membresía'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingMembership
-                      ? 'Modifica la membresía del usuario'
-                      : 'Asigna un rol a un usuario en una institución'
-                    }
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleMembershipSubmit} className="space-y-4">
-                    {error && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
+        {/* Zone filter */}
+        <Select value={filterZone} onValueChange={setFilterZone}>
+          <SelectTrigger>
+            <SelectValue placeholder="Todas las zonas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todas las zonas</SelectItem>
+            {zones.map((z) => (
+              <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-                    {!editingMembership && (
-                      <>
-                        {/* Paso 1: Buscar Usuario */}
-                        <div className="space-y-2">
-                          <Label htmlFor="membership_user_search">Buscar Usuario *</Label>
-                          <Input
-                            id="membership_user_search"
-                            type="text"
-                            placeholder="Buscar por nombre o email..."
-                            value={membershipUserSearch}
-                            onChange={(e) => setMembershipUserSearch(e.target.value)}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Escribe para buscar entre {users.length} usuarios
-                          </p>
+        {/* Institution filter */}
+        <Select
+          value={filterInstitution}
+          onValueChange={setFilterInstitution}
+          disabled={filteredZoneInstitutions.length === 0}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Todas las instituciones" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todas las instituciones</SelectItem>
+            {filteredZoneInstitutions.map((i) => (
+              <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Role filter */}
+        <Select value={filterRole} onValueChange={(v) => setFilterRole(v as AllRole | 'ALL')}>
+          <SelectTrigger>
+            <SelectValue placeholder="Todos los roles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todos los roles</SelectItem>
+            {Object.entries(ROLE_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Users className="mr-2 h-5 w-5" />
+            Personal
+          </CardTitle>
+          <CardDescription>
+            {staff.length} total · {filteredStaff.length} mostrado{filteredStaff.length !== 1 ? 's' : ''}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">Cargando...</div>
+          ) : filteredStaff.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              {staff.length === 0
+                ? 'No hay personal registrado. Creá el primero.'
+                : 'Sin resultados para los filtros aplicados.'}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-2 font-medium text-gray-500">Nombre</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-500">Email</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-500">Institución</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-500">Rol</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-500">Detalle</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-500">Estado</th>
+                    <th className="text-right py-3 px-2 font-medium text-gray-500">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredStaff.map((row) => (
+                    <tr key={row.membershipId} className="hover:bg-gray-50">
+                      <td className="py-3 px-2 font-medium">
+                        {row.firstName} {row.lastName}
+                      </td>
+                      <td className="py-3 px-2 text-gray-600">{row.email}</td>
+                      <td className="py-3 px-2">
+                        <div className="flex flex-col">
+                          <span className="text-gray-800">{row.institutionName}</span>
+                          <span className="text-xs text-gray-400">{row.zoneName}</span>
                         </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="membership_user_id">Usuario *</Label>
-                          <Select
-                            value={membershipFormData.user_id}
-                            onValueChange={(value) => setMembershipFormData({ ...membershipFormData, user_id: value })}
+                      </td>
+                      <td className="py-3 px-2">
+                        <Badge className={ROLE_COLORS[row.role]}>
+                          {ROLE_LABELS[row.role]}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-2">{renderDetail(row)}</td>
+                      <td className="py-3 px-2">
+                        <Badge
+                          className={
+                            row.userActive
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }
+                        >
+                          {row.userActive ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(row)}
+                            title="Editar"
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar usuario" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredMembershipUsers.filter(u => u.is_active).length === 0 ? (
-                                <div className="p-2 text-sm text-muted-foreground text-center">
-                                  No se encontraron usuarios
-                                </div>
-                              ) : (
-                                filteredMembershipUsers.filter(u => u.is_active).map((user) => (
-                                  <SelectItem key={user.id} value={user.id}>
-                                    {user.first_name} {user.last_name} - {user.email}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setToggleTarget(row)}
+                            title={row.userActive ? 'Desactivar' : 'Activar'}
+                          >
+                            {row.userActive ? (
+                              <UserX className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <UserCheck className="h-4 w-4 text-green-600" />
+                            )}
+                          </Button>
                         </div>
-                      </>
-                    )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-                    {editingMembership && (
-                      <div className="space-y-2">
-                        <Label>Usuario</Label>
-                        <div className="p-3 border rounded-md bg-gray-50">
-                          <p className="font-medium">
-                            {editingMembership.user?.first_name} {editingMembership.user?.last_name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{editingMembership.user?.email}</p>
-                        </div>
-                      </div>
-                    )}
+      {/* ============================================================ */}
+      {/* Create / Edit Dialog                                          */}
+      {/* ============================================================ */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog() }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingRow ? 'Editar Personal' : 'Nuevo Personal'}</DialogTitle>
+            <DialogDescription>
+              {editingRow
+                ? 'Modificá los datos del usuario'
+                : 'Creá un nuevo usuario y asignalo a una institución'}
+            </DialogDescription>
+          </DialogHeader>
 
-                    {/* Paso 2: Seleccionar Zona */}
-                    <div className="space-y-2">
-                      <Label htmlFor="zone_filter">Zona Sanitaria *</Label>
-                      <Select
-                        value={selectedZone}
-                        onValueChange={(value) => {
-                          setSelectedZone(value)
-                          setMembershipFormData({ ...membershipFormData, institution_id: '' })
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar zona" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {zones.map((zone) => (
-                            <SelectItem key={zone.id} value={zone.name}>
-                              {zone.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+          <form
+            onSubmit={editingRow ? handleEdit : handleCreate}
+            className="space-y-4 mt-2"
+          >
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-                    {/* Paso 3: Seleccionar Institución */}
-                    <div className="space-y-2">
-                      <Label htmlFor="membership_institution_id">Institución *</Label>
-                      <Select
-                        value={membershipFormData.institution_id}
-                        onValueChange={(value) => setMembershipFormData({ ...membershipFormData, institution_id: value })}
-                        disabled={!selectedZone}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={!selectedZone ? "Primero selecciona una zona" : "Seleccionar institución"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredInstitutions.length === 0 ? (
-                            <div className="p-2 text-sm text-muted-foreground text-center">
-                              No hay instituciones en esta zona
-                            </div>
-                          ) : (
-                            filteredInstitutions.map((institution) => (
-                              <SelectItem key={institution.id} value={institution.id}>
-                                {institution.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="membership_role">Rol *</Label>
-                      <Select
-                        value={membershipFormData.role}
-                        onValueChange={(value) => setMembershipFormData({ ...membershipFormData, role: value as Membership['role'] })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar rol" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(selectableRoles).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="membership_is_active"
-                        checked={membershipFormData.is_active}
-                        onChange={(e) => setMembershipFormData({ ...membershipFormData, is_active: e.target.checked })}
-                        className="rounded border-gray-300"
-                      />
-                      <Label htmlFor="membership_is_active">Membresía activa</Label>
-                    </div>
-
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsMembershipDialogOpen(false)}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button type="submit">
-                        {editingMembership ? 'Actualizar' : 'Crear'} Membresía
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+            {/* Nombre / Apellido */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Nombre *</Label>
+                <Input
+                  value={form.firstName}
+                  onChange={(e) => setField('firstName', e.target.value)}
+                  placeholder="Nombre"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Apellido *</Label>
+                <Input
+                  value={form.lastName}
+                  onChange={(e) => setField('lastName', e.target.value)}
+                  placeholder="Apellido"
+                  required
+                />
+              </div>
             </div>
 
-          {/* Memberships Tab Content */}
-          <MembershipsTab
-            memberships={memberships}
-            zones={zones}
-            institutions={institutions}
-            loading={loading}
-            membershipSelectedZone={membershipSelectedZone}
-            membershipSelectedInstitution={membershipSelectedInstitution}
-            membershipSearch={membershipSearch}
-            filteredMemberships={filteredMemberships}
-            filteredMembershipInstitutions={filteredMembershipInstitutions}
-            onZoneChange={setMembershipSelectedZone}
-            onInstitutionChange={setMembershipSelectedInstitution}
-            onSearchChange={setMembershipSearch}
-            onEditMembership={handleEditMembership}
-            onDeleteMembership={openDeleteMembershipDialog}
-          />
-        </>
-      )}
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setField('email', e.target.value)}
+                placeholder="email@ejemplo.com"
+                required
+              />
+            </div>
 
-      {/* Professionals Tab */}
-      {activeTab === 'professionals' && (
-        <UserProfessionalsTab
-          users={users}
-          zones={zones}
-          institutions={institutions}
-        />
-      )}
+            {/* Contraseña (solo creación) */}
+            {!editingRow && (
+              <div className="space-y-1.5">
+                <Label>Contraseña * (mínimo 8 caracteres)</Label>
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setField('password', e.target.value)}
+                  placeholder="Contraseña"
+                  required
+                  minLength={8}
+                />
+              </div>
+            )}
 
-      {/* Services Tab */}
-      {activeTab === 'services' && (
-        <UserServicesTab
-          users={users}
-          zones={zones}
-          institutions={institutions}
-        />
-      )}
+            {/* Zona */}
+            <div className="space-y-1.5">
+              <Label>Zona Sanitaria *</Label>
+              <Select
+                value={form.zoneId}
+                onValueChange={(v) => setField('zoneId', v)}
+                disabled={!!editingRow}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná una zona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {zones.map((z) => (
+                    <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editingRow && (
+                <p className="text-xs text-muted-foreground">
+                  La institución no puede cambiarse desde aquí.
+                </p>
+              )}
+            </div>
 
-      {/* Delete User Confirmation Dialog */}
-      <AlertDialog open={isDeleteUserDialogOpen} onOpenChange={setIsDeleteUserDialogOpen}>
+            {/* Institución */}
+            {form.zoneId && !editingRow && (
+              <div className="space-y-1.5">
+                <Label>Institución *</Label>
+                <Select
+                  value={form.institutionId}
+                  onValueChange={(v) => setField('institutionId', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccioná una institución" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formInstitutions.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">
+                        No hay instituciones en esta zona
+                      </div>
+                    ) : (
+                      formInstitutions.map((i) => (
+                        <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Institución (edición — solo lectura) */}
+            {editingRow && (
+              <div className="space-y-1.5">
+                <Label>Institución</Label>
+                <div className="p-2 rounded-md border bg-gray-50 text-sm text-gray-700">
+                  {editingRow.institutionName}
+                  <span className="text-gray-400 ml-1">· {editingRow.zoneName}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Rol */}
+            <div className="space-y-1.5">
+              <Label>Rol *</Label>
+              <Select
+                value={form.role}
+                onValueChange={(v) => setField('role', v as AllRole)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná un rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="administrativo">Administrativo</SelectItem>
+                  <SelectItem value="profesional">Profesional</SelectItem>
+                  <SelectItem value="servicio">Servicio</SelectItem>
+                  <SelectItem value="pantalla">Pantalla</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Advertencia cambio de rol */}
+            {roleChangeWarning && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Al cambiar el rol se eliminarán los datos asociados al rol anterior
+                  y se crearán los del nuevo rol.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Campos para PROFESIONAL */}
+            {form.role === 'profesional' && (
+              <div className="space-y-3 rounded-lg border p-3 bg-green-50">
+                <p className="text-xs font-medium text-green-800 uppercase tracking-wide">
+                  Datos del Profesional
+                </p>
+
+                <div className="space-y-1.5">
+                  <Label>Tipo de Profesional *</Label>
+                  <Select
+                    value={form.professionalType}
+                    onValueChange={(v) => setField('professionalType', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccioná el tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROFESSIONAL_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Especialidad</Label>
+                  <Input
+                    value={form.speciality}
+                    onChange={(e) => setField('speciality', e.target.value)}
+                    placeholder="Ej: Cardiología, Pediatría"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Matrícula</Label>
+                  <Input
+                    value={form.licenseNumber}
+                    onChange={(e) => setField('licenseNumber', e.target.value)}
+                    placeholder="Ej: MP 12345"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Campos para SERVICIO */}
+            {form.role === 'servicio' && (
+              <div className="space-y-3 rounded-lg border p-3 bg-purple-50">
+                <p className="text-xs font-medium text-purple-800 uppercase tracking-wide">
+                  Asignación de Servicio
+                </p>
+
+                {!form.institutionId ? (
+                  <p className="text-sm text-muted-foreground">
+                    Seleccioná una institución primero para ver sus servicios.
+                  </p>
+                ) : formServices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay servicios activos en esta institución.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label>Servicio *</Label>
+                    <Select
+                      value={form.serviceId}
+                      onValueChange={(v) => setField('serviceId', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccioná el servicio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formServices.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Activo */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={form.isActive}
+                onChange={(e) => setField('isActive', e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="isActive">Usuario activo</Label>
+            </div>
+
+            {/* Acciones */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={closeDialog}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving
+                  ? 'Guardando...'
+                  : editingRow
+                  ? 'Actualizar'
+                  : 'Crear Personal'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toggle active confirmation */}
+      <AlertDialog
+        open={!!toggleTarget}
+        onOpenChange={(open) => { if (!open) setToggleTarget(null) }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar eliminación de usuario</AlertDialogTitle>
+            <AlertDialogTitle>
+              {toggleTarget?.userActive ? 'Desactivar usuario' : 'Activar usuario'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {deletingUser && (
-                <>
-                  ¿Estás seguro de que deseas eliminar al usuario <strong>{deletingUser.first_name} {deletingUser.last_name}</strong>?
-                  <br /><br />
-                  Esta acción eliminará también todas las membresías, eventos y turnos asociados a este usuario.
-                  <br /><br />
-                  <strong>Esta acción no se puede deshacer.</strong>
-                </>
-              )}
+              {toggleTarget &&
+                (toggleTarget.userActive
+                  ? `¿Desactivar a ${toggleTarget.firstName} ${toggleTarget.lastName}? No podrá iniciar sesión en ninguna institución.`
+                  : `¿Activar a ${toggleTarget.firstName} ${toggleTarget.lastName}?`)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
-              Eliminar usuario
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Membership Confirmation Dialog */}
-      <AlertDialog open={isDeleteMembershipDialogOpen} onOpenChange={setIsDeleteMembershipDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar eliminación de membresía</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deletingMembership && (
-                <>
-                  ¿Estás seguro de que deseas eliminar esta membresía?
-                  <br /><br />
-                  Usuario: <strong>{deletingMembership.user?.first_name} {deletingMembership.user?.last_name}</strong>
-                  <br />
-                  Institución: <strong>{deletingMembership.institution?.name}</strong>
-                  <br />
-                  Rol: <strong>{roleLabels[deletingMembership.role]}</strong>
-                  <br /><br />
-                  <strong>Esta acción no se puede deshacer.</strong>
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteMembership} className="bg-red-600 hover:bg-red-700">
-              Eliminar membresía
+            <AlertDialogAction
+              onClick={handleToggleActive}
+              className={toggleTarget?.userActive ? 'bg-red-600 hover:bg-red-700' : ''}
+            >
+              {toggleTarget?.userActive ? 'Desactivar' : 'Activar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
