@@ -24,16 +24,29 @@ interface UserMembershipsResponse {
   hasMultipleInstitutions: boolean
 }
 
+const MAX_ATTEMPTS = 5
+const LOCKOUT_MS = 30_000 // 30 segundos
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [failedAttempts, setFailedAttempts] = useState(0)
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Rate limiting client-side (Supabase también aplica rate limiting server-side)
+    if (lockedUntil && Date.now() < lockedUntil) {
+      const seconds = Math.ceil((lockedUntil - Date.now()) / 1000)
+      setError(`Demasiados intentos fallidos. Esperá ${seconds} segundos.`)
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -45,9 +58,20 @@ export default function LoginPage() {
       })
 
       if (authError) {
-        setError('Email o contraseña incorrectos')
+        const newAttempts = failedAttempts + 1
+        setFailedAttempts(newAttempts)
+        if (newAttempts >= MAX_ATTEMPTS) {
+          setLockedUntil(Date.now() + LOCKOUT_MS)
+          setError(`Demasiados intentos fallidos. Cuenta bloqueada por 30 segundos.`)
+        } else {
+          setError(`Email o contraseña incorrectos. Intento ${newAttempts}/${MAX_ATTEMPTS}.`)
+        }
         return
       }
+
+      // Login exitoso — resetear contadores
+      setFailedAttempts(0)
+      setLockedUntil(null)
 
       if (!data.user) {
         setError('No se recibió información del usuario')

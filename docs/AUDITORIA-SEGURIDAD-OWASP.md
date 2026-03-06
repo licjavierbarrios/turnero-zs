@@ -579,12 +579,12 @@ Los endpoints publicos estan correctamente identificados, pero no hay documentac
 | SEC-009 | **MEDIA** ⏳ | A02 | Contrasenas generadas con patron predecible — bloqueado: requiere feature "cambiar contraseña" en /configuracion | `app/super-admin/usuarios/page.tsx:159-164` |
 | SEC-012 | **MEDIA** | A04 | Datos en sessionStorage sin cifrar | `app/page.tsx:73-74` |
 | SEC-014 | **MEDIA** | A05 / API8 | Headers HTTP de seguridad no configurados | `next.config.js` |
-| SEC-015 | **MEDIA** | A05 / API8 | API memberships usa service_role_key innecesariamente | `app/api/user/memberships/route.ts:5-8` |
-| SEC-016 | **MEDIA** | A06 | Dependencias potencialmente desactualizadas | `package.json` |
+| SEC-015 | **MEDIA** ✅ | A05 / API8 | API memberships usa service_role_key innecesariamente | `app/api/user/memberships/route.ts:5-8` |
+| SEC-016 | **MEDIA** ✅ | A06 | Dependencias potencialmente desactualizadas | `package.json` |
 | SEC-017 | **MEDIA** ✅ | A07 / API2 | getSession() en lugar de getUser() | Multiples archivos |
-| SEC-010 | **BAJA** | A03 | Proteccion SQLi solo en cliente | `lib/security.ts:268-277` |
-| SEC-018 | **BAJA** | A07 | Politica de contrasenas debil en API | `app/api/admin/users/route.ts:138-144` |
-| SEC-019 | **BAJA** | A07 / API2 | Sin rate limiting en login | `app/page.tsx` |
+| SEC-010 | **BAJA** ✅ | A03 | Proteccion SQLi solo en cliente — aceptado, Supabase SDK usa queries parametrizadas | `lib/security.ts:268-277` |
+| SEC-018 | **BAJA** ✅ | A07 | Politica de contrasenas debil en API | `app/api/admin/users/route.ts:138-144` |
+| SEC-019 | **BAJA** ✅ | A07 / API2 | Sin rate limiting en login | `app/page.tsx` |
 | SEC-020 | **BAJA** | A08 / API10 | TTS proxy a servicio externo sin validacion | `app/api/tts/route.ts:35-47` |
 | SEC-021 | **BAJA** | A09 | Audit logger depende de servicio externo para IP | `lib/audit.ts:241-247` |
 | SEC-022 | **INFO** | A09 | SecurityManager no integrado | `lib/security.ts` |

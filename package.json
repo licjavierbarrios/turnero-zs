@@ -66,7 +66,7 @@
     "jsdom": "^27.0.0",
     "postcss": "8.4.33",
     "shadcn": "3.3.1",
-    "supabase": "2.45.5",
+    "supabase": "^2.76.17",
     "typescript": "5.9.2",
     "typescript-language-server": "^5.0.1",
     "vitest": "^3.2.4",

@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-// Crear cliente server-side para Supabase
-const supabase = createClient(
+// Cliente admin solo para verificar tokens (auth.getUser)
+const adminSupabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
@@ -17,12 +17,19 @@ export async function GET(request: Request) {
 
     const token = authHeader.slice(7)
 
-    // Verificar token y obtener usuario
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    // Verificar token con admin client (necesario para validar JWT server-side)
+    const { data: { user }, error: authError } = await adminSupabase.auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
+
+    // Cliente con el token del usuario para que RLS aplique en las queries
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    )
 
     // Obtener membresías con institución y zona (optimizado con select específico)
     const { data: memberships, error: membershipError } = await supabase
