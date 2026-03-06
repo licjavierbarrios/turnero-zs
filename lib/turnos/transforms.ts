@@ -40,7 +40,9 @@ export function transformQueueItem(raw: any): QueueItem {
     enabled_at: raw.enabled_at,
     called_at: raw.called_at,
     attended_at: raw.attended_at,
-    created_by: raw.created_by || null
+    created_by: raw.created_by || null,
+    queue_session_id: raw.queue_session_id || null,
+    queue_session_name: raw.queue_session?.name || null
   }
 }
 

@@ -25,6 +25,8 @@ export const createQueueItem = (overrides?: Partial<QueueItem>): QueueItem => ({
   called_at: null,
   attended_at: null,
   created_by: null,
+  queue_session_id: null,
+  queue_session_name: null,
   ...overrides,
 })
 
@@ -91,6 +93,8 @@ export const createQueueItems = (count: number = 10): QueueItem[] => {
       called_at: calledAt,
       attended_at: attendedAt,
       created_by: null,
+      queue_session_id: null,
+      queue_session_name: null,
     })
   }
 
@@ -117,6 +121,8 @@ export const mockQueueItemPending: QueueItem = {
   called_at: null,
   attended_at: null,
   created_by: null,
+  queue_session_id: null,
+  queue_session_name: null,
 }
 
 export const mockQueueItemAvailable: QueueItem = {
@@ -136,6 +142,8 @@ export const mockQueueItemAvailable: QueueItem = {
   called_at: null,
   attended_at: null,
   created_by: null,
+  queue_session_id: null,
+  queue_session_name: null,
 }
 
 export const mockQueueItemCalled: QueueItem = {
@@ -155,6 +163,8 @@ export const mockQueueItemCalled: QueueItem = {
   called_at: '2025-10-22T08:25:00Z',
   attended_at: null,
   created_by: null,
+  queue_session_id: null,
+  queue_session_name: null,
 }
 
 export const mockQueueItemAttended: QueueItem = {
@@ -174,6 +184,8 @@ export const mockQueueItemAttended: QueueItem = {
   called_at: '2025-10-22T08:35:00Z',
   attended_at: '2025-10-22T09:00:00Z',
   created_by: null,
+  queue_session_id: null,
+  queue_session_name: null,
 }
 
 /**
@@ -201,6 +213,8 @@ export const mockQueueMultiService: QueueItem[] = [
     called_at: null,
     attended_at: null,
     created_by: null,
+    queue_session_id: null,
+    queue_session_name: null,
   },
 ]
 
@@ -229,6 +243,8 @@ export const mockQueueSingle: QueueItem = {
   called_at: '2025-10-22T10:05:00Z',
   attended_at: null,
   created_by: null,
+  queue_session_id: null,
+  queue_session_name: null,
 }
 
 /**
@@ -251,4 +267,6 @@ export const mockQueueItemLongName: QueueItem = {
   called_at: null,
   attended_at: null,
   created_by: null,
+  queue_session_id: null,
+  queue_session_name: null,
 }

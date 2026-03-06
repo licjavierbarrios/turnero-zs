@@ -19,6 +19,23 @@ export interface QueueItem {
   called_at: string | null
   attended_at: string | null
   created_by: string | null
+  queue_session_id: string | null
+  queue_session_name: string | null
+}
+
+export interface QueueSession {
+  id: string
+  service_id: string
+  service_name?: string
+  institution_id: string
+  session_date: string        // 'YYYY-MM-DD'
+  name: string                // ej: "Extracción", "Entrega de resultados"
+  start_time: string          // 'HH:MM:SS'
+  end_time: string            // 'HH:MM:SS'
+  max_slots: number | null
+  is_active: boolean
+  created_by: string | null
+  created_at: string
 }
 
 export interface Service {
