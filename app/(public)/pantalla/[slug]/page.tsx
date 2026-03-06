@@ -21,6 +21,20 @@ import { MultiServiceDisplay } from '@/components/multi-service-display'
 import { useSpeech } from '@/hooks/use-speech'
 import { playNotificationSound } from '@/lib/audio-utils'
 
+/**
+ * Anonimiza el nombre del paciente para la pantalla pública.
+ * "Juan Carlos Perez" → "J. C. Perez"
+ * Solo el apellido (última palabra) se muestra completo.
+ */
+function anonymizeName(fullName: string): string {
+  if (!fullName) return ''
+  const parts = fullName.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0]
+  const lastName = parts[parts.length - 1]
+  const initials = parts.slice(0, -1).map(p => p.charAt(0).toUpperCase() + '.').join(' ')
+  return `${initials} ${lastName}`
+}
+
 interface PublicAppointment {
   id: string
   order_number: number
@@ -459,7 +473,7 @@ export default function PantallaPublicaPage({
         return {
           id: item.id,
           order_number: item.order_number,
-          patient_name: item.patient_name,
+          patient_name: anonymizeName(item.patient_name),
           service_name: serviceName,
           status: item.status,
           called_at: item.called_at,
