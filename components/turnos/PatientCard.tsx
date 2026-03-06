@@ -104,6 +104,11 @@ export function PatientCard({
                     🚪 {item.room_name}
                   </Badge>
                 )}
+                {item.queue_session_name && (
+                  <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 border-purple-200">
+                    📋 {item.queue_session_name}
+                  </Badge>
+                )}
                 {/* Hora de carga - Discreta */}
                 <div className="flex items-center gap-1 text-xs text-gray-500 ml-auto md:ml-0">
                   <Clock className="h-3 w-3" />

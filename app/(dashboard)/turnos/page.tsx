@@ -11,7 +11,7 @@ import { useRequirePermission } from '@/hooks/use-permissions'
 import { StatusLegend } from '@/components/turnos/StatusLegend'
 import { QueueStats } from '@/components/turnos/QueueStats'
 import { PatientCard } from '@/components/turnos/PatientCard'
-import { AddPatientDialog } from '@/components/turnos/AddPatientDialog'
+import { AddPatientDialog, type QueueSessionOption } from '@/components/turnos/AddPatientDialog'
 import { QueueFilters } from '@/components/turnos/QueueFilters'
 import { statusConfig } from '@/lib/turnos/config'
 import type { QueueItem, Service, Professional, Room, ProfessionalAssignment, AttentionOption, UserProfessionalAssignment } from '@/lib/turnos/types'
@@ -45,6 +45,7 @@ export default function QueuePage() {
   const [userServices, setUserServices] = useState<Service[]>([]) // Servicios asignados al usuario
   const [userProfessionals, setUserProfessionals] = useState<UserProfessionalAssignment[]>([]) // Profesionales asignados al usuario
   const [currentUserId, setCurrentUserId] = useState<string>('') // ID del usuario actual para permisos
+  const [todaySessions, setTodaySessions] = useState<QueueSessionOption[]>([])
 
   // Filtros
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('ALL')
@@ -141,6 +142,17 @@ export default function QueuePage() {
       if (servicesError) throw servicesError
       setServices(servicesData || [])
 
+      // Obtener sesiones de cola activas para hoy
+      const { data: sessionsData } = await supabase
+        .from('queue_session')
+        .select('id, name, service_id, start_time, end_time')
+        .eq('institution_id', context.institution_id)
+        .eq('session_date', today)
+        .eq('is_active', true)
+        .order('start_time')
+
+      setTodaySessions(sessionsData || [])
+
       // Obtener asignaciones de profesionales del día actual
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('daily_professional_assignment')
@@ -197,6 +209,7 @@ export default function QueuePage() {
           called_at,
           attended_at,
           created_by,
+          queue_session_id,
           service:service_id (
             name
           ),
@@ -206,6 +219,9 @@ export default function QueuePage() {
             speciality
           ),
           room:room_id (
+            name
+          ),
+          queue_session:queue_session_id (
             name
           )
         `)
@@ -277,9 +293,11 @@ export default function QueuePage() {
                 called_at,
                 attended_at,
                 created_by,
+                queue_session_id,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
-                room:room_id (name)
+                room:room_id (name),
+                queue_session:queue_session_id (name)
               `)
               .eq('id', payload.new.id)
               .single()
@@ -323,9 +341,11 @@ export default function QueuePage() {
                 called_at,
                 attended_at,
                 created_by,
+                queue_session_id,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
-                room:room_id (name)
+                room:room_id (name),
+                queue_session:queue_session_id (name)
               `)
               .eq('id', payload.new.id)
               .single()
@@ -422,8 +442,9 @@ export default function QueuePage() {
     patientDni: string
     selectedOptions: string[]
     initialStatus: 'pendiente' | 'disponible'
+    sessionId: string | null
   }) => {
-    const { patientName, patientDni, selectedOptions, initialStatus } = data
+    const { patientName, patientDni, selectedOptions, initialStatus, sessionId } = data
 
     try {
       const context = getInstitutionContext()
@@ -469,6 +490,8 @@ export default function QueuePage() {
               enabled_at: null
             }
 
+        const session = sessionId ? todaySessions.find(s => s.id === sessionId) : null
+
         const optimisticItem: any = {
           id: generateTempId(i),
           order_number: baseOrderNumber + i,
@@ -480,6 +503,8 @@ export default function QueuePage() {
           professional_name: assignment?.professional_name || null,
           room_id: option.room_id || null,
           room_name: assignment?.room_name || null,
+          queue_session_id: sessionId || null,
+          queue_session_name: session?.name || null,
           ...statusData,
           created_at: now,
           called_at: null,
@@ -541,6 +566,11 @@ export default function QueuePage() {
           queueEntry.professional_id = option.professional_id
           queueEntry.room_id = option.room_id
           // NO asignar service_id - quedará NULL
+        }
+
+        // Sesión de cola (si fue seleccionada)
+        if (sessionId) {
+          queueEntry.queue_session_id = sessionId
         }
 
         const { error: insertError } = await supabase
@@ -669,6 +699,7 @@ export default function QueuePage() {
             isOpen={isDialogOpen}
             onOpenChange={setIsDialogOpen}
             attentionOptions={attentionOptions}
+            todaySessions={todaySessions}
             onSubmit={handleAddPatient}
           />
         </div>

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -11,17 +12,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { AttentionOption } from '@/lib/turnos/types'
+
+export type QueueSessionOption = {
+  id: string
+  name: string
+  service_id: string
+  start_time: string
+  end_time: string
+}
 
 interface AddPatientDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   attentionOptions: AttentionOption[]
+  todaySessions?: QueueSessionOption[]
   onSubmit: (data: {
     patientName: string
     patientDni: string
     selectedOptions: string[]
     initialStatus: 'pendiente' | 'disponible'
+    sessionId: string | null
   }) => Promise<void>
 }
 
@@ -45,16 +63,29 @@ interface AddPatientDialogProps {
  * />
  * ```
  */
+function formatTime(time: string): string {
+  return time.slice(0, 5) // HH:MM
+}
+
 export function AddPatientDialog({
   isOpen,
   onOpenChange,
   attentionOptions,
+  todaySessions = [],
   onSubmit
 }: AddPatientDialogProps) {
   const [patientName, setPatientName] = useState('')
   const [patientDni, setPatientDni] = useState('')
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
-  const [isHabilitado, setIsHabilitado] = useState(false) // false = pendiente, true = disponible
+  const [isHabilitado, setIsHabilitado] = useState(false)
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('NONE')
+
+  // Determinar sesiones relevantes para los servicios seleccionados
+  const selectedServiceIds = attentionOptions
+    .filter(o => selectedOptions.includes(o.id) && o.type === 'service')
+    .map(o => o.service_id)
+
+  const relevantSessions = todaySessions.filter(s => selectedServiceIds.includes(s.service_id))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,7 +99,8 @@ export function AddPatientDialog({
       patientName,
       patientDni,
       selectedOptions,
-      initialStatus: isHabilitado ? 'disponible' : 'pendiente'
+      initialStatus: isHabilitado ? 'disponible' : 'pendiente',
+      sessionId: selectedSessionId !== 'NONE' ? selectedSessionId : null,
     })
 
     // Limpiar formulario
@@ -76,14 +108,15 @@ export function AddPatientDialog({
     setPatientDni('')
     setSelectedOptions([])
     setIsHabilitado(false)
+    setSelectedSessionId('NONE')
   }
 
   const handleCancel = () => {
-    // Limpiar formulario al cancelar
     setPatientName('')
     setPatientDni('')
     setSelectedOptions([])
     setIsHabilitado(false)
+    setSelectedSessionId('NONE')
     onOpenChange(false)
   }
 
@@ -199,6 +232,29 @@ export function AddPatientDialog({
               </p>
             )}
           </div>
+
+          {/* Selector de sesión — solo aparece si el servicio seleccionado tiene sesiones hoy */}
+          {relevantSessions.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="session_picker">
+                Sesión de cola
+                <Badge variant="secondary" className="ml-2 text-xs">Opcional</Badge>
+              </Label>
+              <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                <SelectTrigger id="session_picker">
+                  <SelectValue placeholder="Sin sesión específica" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">Sin sesión específica</SelectItem>
+                  {relevantSessions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} ({formatTime(s.start_time)} – {formatTime(s.end_time)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Toggle para estado inicial del paciente */}
           <div className="border-t pt-4">

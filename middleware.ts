@@ -207,5 +207,6 @@ export const config = {
     '/configuracion/:path*',
     '/pantallas/:path*',
     '/usuarios/:path*',
+    '/sesiones/:path*',
   ],
 }

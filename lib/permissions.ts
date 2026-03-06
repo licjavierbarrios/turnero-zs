@@ -20,6 +20,7 @@ export const routePermissions: Record<string, UserRole[]> = {
   '/configuracion': ['admin'],
   '/pantallas': ['admin'],
   '/usuarios': ['admin'],
+  '/sesiones': ['admin', 'administrativo'],
 }
 
 /**
