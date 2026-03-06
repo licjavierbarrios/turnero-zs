@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Plus, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw, CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useRequirePermission } from '@/hooks/use-permissions'
@@ -46,6 +46,7 @@ export default function QueuePage() {
   const [userProfessionals, setUserProfessionals] = useState<UserProfessionalAssignment[]>([]) // Profesionales asignados al usuario
   const [currentUserId, setCurrentUserId] = useState<string>('') // ID del usuario actual para permisos
   const [todaySessions, setTodaySessions] = useState<QueueSessionOption[]>([])
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayISO())
 
   // Filtros
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('ALL')
@@ -128,8 +129,9 @@ export default function QueuePage() {
       const assignedProfessionals = userProfessionalsData ? transformUserProfessionals(userProfessionalsData) : []
       setUserProfessionals(assignedProfessionals)
 
-      // Obtener fecha del día actual
+      // Fecha seleccionada (hoy por defecto, puede ser futura)
       const today = getTodayISO()
+      const dateToFetch = selectedDate
 
       // Obtener todos los servicios de la institución (para el formulario de carga)
       const { data: servicesData, error: servicesError } = await supabase
@@ -147,7 +149,7 @@ export default function QueuePage() {
         .from('queue_session')
         .select('id, name, service_id, start_time, end_time')
         .eq('institution_id', context.institution_id)
-        .eq('session_date', today)
+        .eq('session_date', dateToFetch)
         .eq('is_active', true)
         .order('start_time')
 
@@ -226,7 +228,7 @@ export default function QueuePage() {
           )
         `)
         .eq('institution_id', context.institution_id)
-        .eq('queue_date', today)
+        .eq('queue_date', dateToFetch)
         .order('order_number', { ascending: true })
 
       if (queueError) throw queueError
@@ -244,7 +246,7 @@ export default function QueuePage() {
       setInitialLoading(false)
       setIsRefreshing(false)
     }
-  }, [queue.length])
+  }, [queue.length, selectedDate])
 
   useEffect(() => {
     fetchData()
@@ -453,7 +455,7 @@ export default function QueuePage() {
       const { data: authData } = await supabase.auth.getUser()
       const userId = authData.user?.id
 
-      const today = getTodayISO()
+      const today = selectedDate
       const now = getNowISO()
 
       // ═══════════════════════════════════════════════════════════
@@ -677,9 +679,18 @@ export default function QueuePage() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Cola del Día</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {selectedDate === getTodayISO() ? 'Cola del Día' : 'Cola Futura'}
+            </h1>
+            {selectedDate !== getTodayISO() && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                📅 Fecha futura
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 mt-1">
-            {format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
+            {format(new Date(selectedDate + 'T12:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
           </p>
           <QueueStats
             totalCount={queue.length}
@@ -687,6 +698,19 @@ export default function QueuePage() {
           />
         </div>
         <div className="flex gap-2">
+          <div className="flex items-center gap-1 border rounded-md px-3 py-2 bg-white">
+            <CalendarIcon className="h-4 w-4 text-gray-500" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value)
+                setQueue([])
+              }}
+              className="text-sm border-none outline-none bg-transparent cursor-pointer"
+              title="Seleccionar fecha"
+            />
+          </div>
           <Button onClick={fetchData} variant="outline" disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Actualizando...' : 'Actualizar'}
@@ -726,6 +750,21 @@ export default function QueuePage() {
           setSelectedStatusFilter('ALL')
         }}
       />
+
+      {/* Banner fecha futura */}
+      {selectedDate !== getTodayISO() && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+          <CalendarIcon className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <div>
+            <p className="text-amber-800 font-medium">
+              Estás viendo la cola del {format(new Date(selectedDate + 'T12:00:00'), 'dd/MM/yyyy', { locale: es })}
+            </p>
+            <p className="text-amber-700 text-sm">
+              Los pacientes cargados se guardarán para esa fecha. La pantalla pública no los mostrará hasta ese día.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Leyenda de colores */}
       <StatusLegend />
