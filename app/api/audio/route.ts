@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'audio/mpeg',
         'Content-Length': uint8Array.length.toString(),
         'Cache-Control': 'public, max-age=3600, immutable',
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://turnero-zs.vercel.app',
         'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       },
@@ -47,7 +47,7 @@ export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://turnero-zs.vercel.app',
       'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
