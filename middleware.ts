@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { UserRole } from './lib/types'
 import { getClientCountry, getClientIP } from './lib/headers'
+import { routePermissions } from './lib/permissions'
 
 export async function middleware(request: NextRequest) {
   // ============================================================================
@@ -133,14 +134,33 @@ export async function middleware(request: NextRequest) {
   const isDashboardRoute = dashboardRoutes.some(route => currentPath.startsWith(route))
 
   if (isDashboardRoute) {
-    // Si no hay usuario, redirigir a login (página principal)
     if (!user) {
       const redirectUrl = new URL('/', request.url)
       redirectUrl.searchParams.set('redirectTo', currentPath)
       return NextResponse.redirect(redirectUrl)
     }
 
-    // Usuario autenticado tiene acceso al dashboard
+    // Verificar rol real desde la DB (no confiar en localStorage del cliente)
+    const { data: memberships } = await supabase
+      .from('membership')
+      .select('role, institution_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .not('institution_id', 'is', null)
+
+    const baseRoute = '/' + currentPath.split('/')[1]
+    const allowedRoles = routePermissions[baseRoute]
+
+    const hasAccess = allowedRoles && memberships?.some(
+      (m: any) => (allowedRoles as string[]).includes(m.role)
+    )
+
+    if (!hasAccess) {
+      return NextResponse.redirect(
+        new URL(`/forbidden?route=${encodeURIComponent(currentPath)}`, request.url)
+      )
+    }
+
     return response
   }
 
@@ -185,5 +205,7 @@ export const config = {
     '/consultorios/:path*',
     '/reportes/:path*',
     '/configuracion/:path*',
+    '/pantallas/:path*',
+    '/usuarios/:path*',
   ],
 }
