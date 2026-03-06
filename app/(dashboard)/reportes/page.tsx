@@ -35,7 +35,7 @@ import {
 } from 'lucide-react'
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { toast } from '@/hooks/use-toast'
+import { useToast } from '@/hooks/use-toast'
 import { useRequirePermission } from '@/hooks/use-permissions'
 
 interface MetricsSummary {
@@ -109,6 +109,7 @@ const PERIOD_OPTIONS = [
 ]
 
 export default function ReportesPage() {
+  const { toast } = useToast()
   const { hasAccess, loading: permissionLoading } = useRequirePermission('/reportes')
   const { userMembership, loading: membershipLoading } = useUserMembership()
   const [selectedInstitution, setSelectedInstitution] = useState<string>('')

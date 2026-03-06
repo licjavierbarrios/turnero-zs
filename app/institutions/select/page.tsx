@@ -90,7 +90,7 @@ export default function InstitutionSelectPage() {
       setError(`Error inesperado: ${error.message}`)
       setLoading(false)
     }
-  }, [])
+  }, [router])
 
   const loadUserData = useCallback(async () => {
     try {
