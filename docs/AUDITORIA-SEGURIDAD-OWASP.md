@@ -576,7 +576,7 @@ Los endpoints publicos estan correctamente identificados, pero no hay documentac
 | SEC-013 | **ALTA** ✅ | A05 / API8 | CORS con wildcard en endpoints | `app/api/tts/route.ts:76` |
 | SEC-005 | **MEDIA** ✅ | A01 / API1 | RLS de daily_queue sin verificacion de rol | `db/migrations/003_create_daily_queue.sql` |
 | SEC-006 | **MEDIA** ✅ | A01 / API1 | Tabla patient accesible globalmente | `db/policies.sql:167-168` |
-| SEC-009 | **MEDIA** | A02 | Contrasenas generadas con patron predecible | `app/super-admin/usuarios/page.tsx:159-164` |
+| SEC-009 | **MEDIA** ⏳ | A02 | Contrasenas generadas con patron predecible — bloqueado: requiere feature "cambiar contraseña" en /configuracion | `app/super-admin/usuarios/page.tsx:159-164` |
 | SEC-012 | **MEDIA** | A04 | Datos en sessionStorage sin cifrar | `app/page.tsx:73-74` |
 | SEC-014 | **MEDIA** | A05 / API8 | Headers HTTP de seguridad no configurados | `next.config.js` |
 | SEC-015 | **MEDIA** | A05 / API8 | API memberships usa service_role_key innecesariamente | `app/api/user/memberships/route.ts:5-8` |
