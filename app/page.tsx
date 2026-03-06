@@ -44,10 +44,14 @@ export default function LoginPage() {
         password
       })
 
-      if (authError) throw authError
+      if (authError) {
+        setError('Email o contraseña incorrectos')
+        return
+      }
 
       if (!data.user) {
-        throw new Error('No se recibió información del usuario')
+        setError('No se recibió información del usuario')
+        return
       }
 
       // Obtener token de sesión para las siguientes queries
@@ -107,8 +111,8 @@ export default function LoginPage() {
       // 3. Si tiene múltiples instituciones → mostrar selector (con datos precargados)
       router.push('/institutions/select')
     } catch (error: any) {
-      console.error('Login error:', error)
-      setError(error.message || 'Email o contraseña incorrectos')
+      console.error('Error inesperado en login:', error)
+      setError('Error inesperado. Por favor intentá de nuevo.')
     } finally {
       setLoading(false)
     }

@@ -75,8 +75,15 @@ export async function middleware(request: NextRequest) {
     const { data } = await supabase.auth.getUser()
     user = data.user
   } catch {
-    // Si Supabase no responde, dejamos pasar el request (fail-open)
-    // Las rutas protegidas verifican sesión nuevamente en el servidor
+    // Si Supabase no responde, redirigir a login en rutas protegidas (fail-closed)
+    const isProtected = path.startsWith('/super-admin') || path.startsWith('/turnos') ||
+      path.startsWith('/agenda') || path.startsWith('/asignaciones') ||
+      path.startsWith('/profesionales') || path.startsWith('/servicios') ||
+      path.startsWith('/consultorios') || path.startsWith('/reportes') ||
+      path.startsWith('/configuracion') || path.startsWith('/dashboard')
+    if (isProtected) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
     return response
   }
 
@@ -87,8 +94,23 @@ export async function middleware(request: NextRequest) {
   // PROTECCIÓN DE RUTAS /super-admin/*
   // ============================================================================
   if (currentPath.startsWith('/super-admin')) {
-    // TEMPORAL: Permitir acceso sin verificación para debugging
-    console.log('🔍 Middleware: Acceso a /super-admin, usuario:', user?.id)
+    if (!user) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    // Verificar que el usuario tiene rol super_admin
+    const { data: memberships } = await supabase
+      .from('membership')
+      .select('role, is_active')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+
+    const isSuperAdmin = memberships?.some((m: any) => m.role === 'super_admin')
+
+    if (!isSuperAdmin) {
+      return NextResponse.redirect(new URL('/institutions/select', request.url))
+    }
+
     return response
   }
 

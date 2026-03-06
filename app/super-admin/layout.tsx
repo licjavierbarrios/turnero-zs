@@ -42,15 +42,41 @@ export default function SuperAdminLayout({
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Verificar autenticación con Supabase
-    // Por ahora, simulamos el usuario
-    const mockUser = {
-      email: 'licjavierbarrios@hotmail.com',
-      name: 'Super Administrador',
-      role: 'super_admin'
+    const checkAuth = async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+
+        if (!authUser) {
+          router.push('/')
+          return
+        }
+
+        const { data: memberships } = await supabase
+          .from('membership')
+          .select('role, is_active')
+          .eq('user_id', authUser.id)
+          .eq('is_active', true)
+
+        const isSuperAdmin = memberships?.some((m: any) => m.role === 'super_admin')
+
+        if (!isSuperAdmin) {
+          router.push('/institutions/select')
+          return
+        }
+
+        setUser({
+          email: authUser.email,
+          name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Super Admin',
+          role: 'super_admin',
+        })
+        setLoading(false)
+      } catch (error) {
+        console.error('Error verificando autenticación:', error)
+        router.push('/')
+      }
     }
-    setUser(mockUser)
-    setLoading(false)
+
+    checkAuth()
   }, [router])
 
   const handleLogout = async () => {
