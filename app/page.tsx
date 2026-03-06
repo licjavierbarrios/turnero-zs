@@ -54,16 +54,15 @@ export default function LoginPage() {
         return
       }
 
-      // Obtener token de sesión para las siguientes queries
-      const session = await supabase.auth.getSession()
-      if (!session.data.session?.access_token) {
+      // Usar la sesión retornada por signInWithPassword (ya validada, sin call extra)
+      if (!data.session?.access_token) {
         throw new Error('No se pudo obtener el token de sesión')
       }
 
       // Pre-cargar membresías del usuario usando el nuevo endpoint
       const response = await fetch('/api/user/memberships', {
         headers: {
-          'Authorization': `Bearer ${session.data.session.access_token}`
+          'Authorization': `Bearer ${data.session.access_token}`
         }
       })
 

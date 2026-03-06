@@ -588,7 +588,7 @@ export default function SuperAdminUsuariosPage() {
     setIsSaving(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) throw new Error('Sin sesión activa')
+      if (!session?.access_token) throw new Error('Sin sesión activa') // token para API, validado server-side
 
       const res = await fetch('/api/admin/users', {
         method: 'POST',

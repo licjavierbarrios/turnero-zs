@@ -299,20 +299,15 @@ class SecurityManager {
    */
   async validateSession(): Promise<{ valid: boolean; user?: any }> {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession()
+      // getUser() valida el JWT contra el servidor (no solo localStorage)
+      const { data: { user }, error } = await supabase.auth.getUser()
 
-      if (error || !session) {
+      if (error || !user) {
         return { valid: false }
       }
 
-      // Check session expiration
+      // Check for session timeout via last activity
       const now = Date.now()
-      const sessionStart = new Date(session.expires_at || 0).getTime()
-
-      if (now > sessionStart) {
-        await supabase.auth.signOut()
-        return { valid: false }
-      }
 
       // Check for session timeout
       const lastActivity = localStorage.getItem('last-activity')
@@ -327,7 +322,7 @@ class SecurityManager {
       // Update last activity
       localStorage.setItem('last-activity', now.toString())
 
-      return { valid: true, user: session.user }
+      return { valid: true, user }
     } catch (error) {
       console.error('Session validation error:', error)
       return { valid: false }
