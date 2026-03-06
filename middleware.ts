@@ -69,9 +69,16 @@ export async function middleware(request: NextRequest) {
   )
 
   // Obtener sesión del usuario
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Envuelto en try/catch para evitar 504 si Supabase no responde en el Edge Runtime
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Si Supabase no responde, dejamos pasar el request (fail-open)
+    // Las rutas protegidas verifican sesión nuevamente en el servidor
+    return response
+  }
 
   // Variables locales para protección de rutas
   const currentPath = request.nextUrl.pathname
