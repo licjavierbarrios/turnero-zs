@@ -567,7 +567,7 @@ Los endpoints publicos estan correctamente identificados, pero no hay documentac
 | ID | Severidad | Categoria OWASP | Titulo | Archivo Principal |
 |---|---|---|---|---|
 | SEC-001 | **CRITICA** ✅ | A01 / API5 | Panel /super-admin sin autorizacion en middleware | `middleware.ts:89-93` |
-| SEC-002 | **CRITICA** | A01 / API5 | Autorizacion basada en localStorage (client-side) | `hooks/use-permissions.ts:19-29` |
+| SEC-002 | **CRITICA** ✅ | A01 / API5 | Autorizacion basada en localStorage (client-side) | `hooks/use-permissions.ts:19-29` |
 | SEC-007 | **CRITICA** | A02 | Cifrado XOR con clave hardcodeada | `lib/security.ts:513-525` |
 | SEC-003 | **ALTA** ✅ | A01 | Layout super-admin con usuario mock | `app/super-admin/layout.tsx:44-53` |
 | SEC-004 | **ALTA** ✅ | A01 / API2 | Middleware fail-open | `middleware.ts:74-81` |
@@ -613,7 +613,7 @@ Los endpoints publicos estan correctamente identificados, pero no hay documentac
 |---|---|---|---|
 | 1 | SEC-001 | ✅ Restaurar verificacion de super_admin en middleware | 1 hora |
 | 2 | SEC-003 | ✅ Implementar verificacion real de sesion en super-admin layout | 2 horas |
-| 3 | SEC-002 | Agregar verificacion de rol server-side en middleware para dashboard | 4 horas |
+| 3 | SEC-002 | ✅ Agregar verificacion de rol server-side en middleware para dashboard | 4 horas |
 | 4 | SEC-007 | Eliminar cifrado XOR; reemplazar con Web Crypto API si es necesario | 2 horas |
 
 ### Fase 2 - Altos (Semana 2)
