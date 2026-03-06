@@ -46,10 +46,19 @@ interface PublicAppointment {
   // Raw IDs for screen filter
   service_id?: string | null
   room_id?: string | null
+  queue_session_id?: string | null
   // Professional/Consultorio fields (when service_id is null)
   professional_name?: string
   room_name?: string
   is_professional_assignment?: boolean
+}
+
+interface ActiveSession {
+  id: string
+  name: string
+  service_id: string
+  start_time: string
+  end_time: string
 }
 
 interface Institution {
@@ -132,6 +141,7 @@ export default function PantallaPublicaPage({
   const [screenMode, setScreenMode] = useState<'all' | 'exclude' | 'include'>('all')
   const [screenServiceIds, setScreenServiceIds] = useState<string[]>([])
   const [screenRoomIds, setScreenRoomIds] = useState<string[]>([])
+  const [activeSession, setActiveSession] = useState<ActiveSession | null>(null)
 
   // Load template from localStorage on mount
   useEffect(() => {
@@ -434,6 +444,7 @@ export default function PantallaPublicaPage({
           service_id,
           professional_id,
           room_id,
+          queue_session_id,
           service:service_id (
             name
           ),
@@ -480,19 +491,41 @@ export default function PantallaPublicaPage({
           queue_date: item.queue_date,
           service_id: item.service_id ?? null,
           room_id: item.room_id ?? null,
+          queue_session_id: item.queue_session_id ?? null,
           professional_name: professionalName,
           room_name: roomName,
           is_professional_assignment: isProfessionalAssignment
         }
       }) || []
 
+      // Fetch active session for current time
+      const nowTime = new Date().toTimeString().slice(0, 8) // HH:MM:SS
+      const { data: sessionsData } = await supabase
+        .from('queue_session')
+        .select('id, name, service_id, start_time, end_time')
+        .eq('institution_id', institution.id)
+        .eq('session_date', new Date().toISOString().split('T')[0])
+        .eq('is_active', true)
+
+      const active = (sessionsData || []).find(
+        (s: any) => s.start_time <= nowTime && s.end_time >= nowTime
+      ) || null
+      setActiveSession(active as ActiveSession | null)
+
       // Apply screen filter if this is a screen-token URL
-      const filteredAppointments = applyScreenFilter(
+      const screenFiltered = applyScreenFilter(
         formattedAppointments,
         screenMode,
         screenServiceIds,
         screenRoomIds
       )
+
+      // Apply session filter: hide patients from OTHER sessions (not the active one)
+      const filteredAppointments = active
+        ? screenFiltered.filter(
+            item => item.queue_session_id === null || item.queue_session_id === active.id
+          )
+        : screenFiltered
 
       setAppointments(filteredAppointments)
 
@@ -623,6 +656,11 @@ export default function PantallaPublicaPage({
                   {screenName && (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
                       {screenName}
+                    </span>
+                  )}
+                  {activeSession && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                      📋 {activeSession.name}
                     </span>
                   )}
                 </div>
