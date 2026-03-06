@@ -572,16 +572,16 @@ Los endpoints publicos estan correctamente identificados, pero no hay documentac
 | SEC-003 | **ALTA** ✅ | A01 | Layout super-admin con usuario mock | `app/super-admin/layout.tsx:44-53` |
 | SEC-004 | **ALTA** ✅ | A01 / API2 | Middleware fail-open | `middleware.ts:74-81` |
 | SEC-008 | **ALTA** ✅ | A02 | Token generation con Math.random() | `lib/security.ts:552-561` |
-| SEC-011 | **ALTA** | A04 / API6 | Pantalla publica expone nombres de pacientes | `app/(public)/pantalla/[slug]/page.tsx` |
+| SEC-011 | **ALTA** ✅ | A04 / API6 | Pantalla publica expone nombres de pacientes | `app/(public)/pantalla/[slug]/page.tsx` |
 | SEC-013 | **ALTA** ✅ | A05 / API8 | CORS con wildcard en endpoints | `app/api/tts/route.ts:76` |
-| SEC-005 | **MEDIA** | A01 / API1 | RLS de daily_queue sin verificacion de rol | `db/migrations/003_create_daily_queue.sql` |
-| SEC-006 | **MEDIA** | A01 / API1 | Tabla patient accesible globalmente | `db/policies.sql:167-168` |
+| SEC-005 | **MEDIA** ✅ | A01 / API1 | RLS de daily_queue sin verificacion de rol | `db/migrations/003_create_daily_queue.sql` |
+| SEC-006 | **MEDIA** ✅ | A01 / API1 | Tabla patient accesible globalmente | `db/policies.sql:167-168` |
 | SEC-009 | **MEDIA** | A02 | Contrasenas generadas con patron predecible | `app/super-admin/usuarios/page.tsx:159-164` |
 | SEC-012 | **MEDIA** | A04 | Datos en sessionStorage sin cifrar | `app/page.tsx:73-74` |
 | SEC-014 | **MEDIA** | A05 / API8 | Headers HTTP de seguridad no configurados | `next.config.js` |
 | SEC-015 | **MEDIA** | A05 / API8 | API memberships usa service_role_key innecesariamente | `app/api/user/memberships/route.ts:5-8` |
 | SEC-016 | **MEDIA** | A06 | Dependencias potencialmente desactualizadas | `package.json` |
-| SEC-017 | **MEDIA** | A07 / API2 | getSession() en lugar de getUser() | Multiples archivos |
+| SEC-017 | **MEDIA** ✅ | A07 / API2 | getSession() en lugar de getUser() | Multiples archivos |
 | SEC-010 | **BAJA** | A03 | Proteccion SQLi solo en cliente | `lib/security.ts:268-277` |
 | SEC-018 | **BAJA** | A07 | Politica de contrasenas debil en API | `app/api/admin/users/route.ts:138-144` |
 | SEC-019 | **BAJA** | A07 / API2 | Sin rate limiting en login | `app/page.tsx` |
@@ -623,16 +623,16 @@ Los endpoints publicos estan correctamente identificados, pero no hay documentac
 | 5 | SEC-004 | ✅ Cambiar middleware a fail-closed | 1 hora |
 | 6 | SEC-008 | ✅ Reemplazar Math.random() con crypto.getRandomValues() | 30 min |
 | 7 | SEC-013 | ✅ Restringir CORS al dominio de la aplicacion | 1 hora |
-| 8 | SEC-011 | Anonimizar nombres en pantalla publica (iniciales o codigo) | 3 horas |
+| 8 | SEC-011 | ✅ Anonimizar nombres en pantalla publica (iniciales o codigo) | 3 horas |
 
 ### Fase 3 - Medios (Semanas 3-4)
 
 | Prioridad | ID | Accion | Esfuerzo estimado |
 |---|---|---|---|
 | 9 | SEC-014 | ✅ Configurar headers de seguridad HTTP en next.config.js | 1 hora |
-| 10 | SEC-017 | Reemplazar getSession() con getUser() en todos los componentes | 2 horas |
-| 11 | SEC-006 | Restringir RLS de patient por institucion | 2 horas |
-| 12 | SEC-005 | Agregar verificacion de rol en RLS de daily_queue | 1 hora |
+| 10 | SEC-017 | ✅ Reemplazar getSession() con getUser() en todos los componentes | 2 horas |
+| 11 | SEC-006 | ✅ Restringir RLS de patient por institucion | 2 horas |
+| 12 | SEC-005 | ✅ Agregar verificacion de rol en RLS de daily_queue | 1 hora |
 | 13 | SEC-015 | Refactorizar API memberships para usar token del usuario | 2 horas |
 | 14 | SEC-009 | Implementar generacion segura de contrasenas y cambio obligatorio | 3 horas |
 | 15 | SEC-016 | Ejecutar npm audit y actualizar dependencias | 2 horas |
