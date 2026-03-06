@@ -508,56 +508,14 @@ class SecurityManager {
   }
 
   /**
-   * Encrypt sensitive data
-   */
-  encryptSensitiveData(data: string, key?: string): string {
-    // Simple XOR encryption for demo - use proper encryption in production
-    const encryptionKey = key || 'turnero-zs-default-key'
-    let encrypted = ''
-
-    for (let i = 0; i < data.length; i++) {
-      encrypted += String.fromCharCode(
-        data.charCodeAt(i) ^ encryptionKey.charCodeAt(i % encryptionKey.length)
-      )
-    }
-
-    return btoa(encrypted)
-  }
-
-  /**
-   * Decrypt sensitive data
-   */
-  decryptSensitiveData(encryptedData: string, key?: string): string {
-    try {
-      const encryptionKey = key || 'turnero-zs-default-key'
-      const data = atob(encryptedData)
-      let decrypted = ''
-
-      for (let i = 0; i < data.length; i++) {
-        decrypted += String.fromCharCode(
-          data.charCodeAt(i) ^ encryptionKey.charCodeAt(i % encryptionKey.length)
-        )
-      }
-
-      return decrypted
-    } catch (error) {
-      console.error('Decryption failed:', error)
-      return ''
-    }
-  }
-
-  /**
-   * Generate secure token
+   * Generate cryptographically secure token using Web Crypto API.
+   * Para cifrado de datos sensibles en base de datos usar pgcrypto (Supabase).
    */
   generateSecureToken(length: number = 32): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    let token = ''
-
-    for (let i = 0; i < length; i++) {
-      token += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-
-    return token
+    const values = new Uint32Array(length)
+    crypto.getRandomValues(values)
+    return Array.from(values, (v) => chars[v % chars.length]).join('')
   }
 }
 
