@@ -30,9 +30,10 @@ interface PublicAppointment {
 interface MultiServiceDisplayProps {
   appointments: PublicAppointment[]
   template: DisplayTemplate | null
+  announcingAppointmentId?: string | null
 }
 
-export function MultiServiceDisplay({ appointments, template }: MultiServiceDisplayProps) {
+export function MultiServiceDisplay({ appointments, template, announcingAppointmentId }: MultiServiceDisplayProps) {
   // Agrupar appointments por servicio
   const serviceGroups = useMemo(() => {
     return groupAppointmentsByService(appointments)
@@ -45,18 +46,18 @@ export function MultiServiceDisplay({ appointments, template }: MultiServiceDisp
   // Renderizar el layout correspondiente
   switch (layoutType) {
     case 'grid-2x2':
-      return <GridLayout services={serviceGroups} columns={2} />
+      return <GridLayout services={serviceGroups} columns={2} announcingAppointmentId={announcingAppointmentId} />
 
     case 'grid-3x2':
-      return <GridLayout services={serviceGroups} columns={3} />
+      return <GridLayout services={serviceGroups} columns={3} announcingAppointmentId={announcingAppointmentId} />
 
     case 'list':
-      return <ListLayout services={serviceGroups} />
+      return <ListLayout services={serviceGroups} announcingAppointmentId={announcingAppointmentId} />
 
     case 'carousel':
-      return <CarouselLayout services={serviceGroups} intervalSeconds={carouselInterval} />
+      return <CarouselLayout services={serviceGroups} intervalSeconds={carouselInterval} announcingAppointmentId={announcingAppointmentId} />
 
     default:
-      return <GridLayout services={serviceGroups} columns={3} />
+      return <GridLayout services={serviceGroups} columns={3} announcingAppointmentId={announcingAppointmentId} />
   }
 }

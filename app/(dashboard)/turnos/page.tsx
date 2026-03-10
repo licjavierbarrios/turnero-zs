@@ -32,6 +32,7 @@ import {
   extractUniqueRooms,
   buildStatusUpdates
 } from '@/lib/turnos/transforms'
+import type { QueueAction } from '@/lib/turnos/types'
 
 export default function QueuePage() {
   const { hasAccess, loading: permissionLoading } = useRequirePermission('/turnos')
@@ -212,6 +213,8 @@ export default function QueuePage() {
           attended_at,
           created_by,
           queue_session_id,
+          call_count,
+          re_queued_at,
           service:service_id (
             name
           ),
@@ -229,6 +232,7 @@ export default function QueuePage() {
         `)
         .eq('institution_id', context.institution_id)
         .eq('queue_date', dateToFetch)
+        .order('re_queued_at', { ascending: true, nullsFirst: true })
         .order('order_number', { ascending: true })
 
       if (queueError) throw queueError
@@ -296,6 +300,8 @@ export default function QueuePage() {
                 attended_at,
                 created_by,
                 queue_session_id,
+                call_count,
+                re_queued_at,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
                 room:room_id (name),
@@ -320,8 +326,13 @@ export default function QueuePage() {
                   return withoutTemp
                 }
 
-                // Agregar el nuevo item y ordenar por order_number
-                return [...withoutTemp, newItem].sort((a, b) => a.order_number - b.order_number)
+                // Agregar el nuevo item y ordenar (requeued al final, resto por order_number)
+                return [...withoutTemp, newItem].sort((a, b) => {
+                  if (!a.re_queued_at && !b.re_queued_at) return a.order_number - b.order_number
+                  if (!a.re_queued_at) return -1
+                  if (!b.re_queued_at) return 1
+                  return new Date(a.re_queued_at).getTime() - new Date(b.re_queued_at).getTime()
+                })
               })
             }
           }
@@ -344,6 +355,8 @@ export default function QueuePage() {
                 attended_at,
                 created_by,
                 queue_session_id,
+                call_count,
+                re_queued_at,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
                 room:room_id (name),
@@ -600,30 +613,52 @@ export default function QueuePage() {
     }
   }
 
-  const updateStatus = async (id: string, newStatus: QueueItem['status']) => {
+  const updateStatus = async (id: string, action: QueueAction) => {
     // Guardar estado previo para rollback
     const previousQueue = queue
 
     try {
       const { data: authData } = await supabase.auth.getUser()
       const userId = authData.user?.id
+      const now = new Date().toISOString()
 
-      // Construir actualizaciones según el nuevo estado
-      const updates = buildStatusUpdates(newStatus, userId)
+      let updates: Record<string, any>
+      let optimisticUpdates: Record<string, any>
+
+      if (action === 'rellamar') {
+        const currentItem = queue.find(q => q.id === id)
+        const newCount = (currentItem?.call_count ?? 0) + 1
+        updates = { call_count: newCount, called_at: now }
+        optimisticUpdates = updates
+      } else if (action === 'siguiente') {
+        updates = { status: 'disponible', enabled_at: now, re_queued_at: now }
+        optimisticUpdates = updates
+      } else {
+        updates = buildStatusUpdates(action, userId)
+        if (action === 'llamado') updates.call_count = 1
+        optimisticUpdates = updates
+      }
 
       // ═══════════════════════════════════════════════════════════
       // FASE 1 - ACTUALIZACIÓN OPTIMISTA
       // ═══════════════════════════════════════════════════════════
+      setQueue(prev => {
+        const updated = prev.map(item =>
+          item.id === id ? { ...item, ...optimisticUpdates } : item
+        )
+        // Re-ordenar si fue "siguiente" (cambia posición en la cola)
+        if (action === 'siguiente') {
+          return updated.sort((a, b) => {
+            if (!a.re_queued_at && !b.re_queued_at) return a.order_number - b.order_number
+            if (!a.re_queued_at) return -1
+            if (!b.re_queued_at) return 1
+            return new Date(a.re_queued_at).getTime() - new Date(b.re_queued_at).getTime()
+          })
+        }
+        return updated
+      })
 
-      // 1️⃣ Actualizar UI inmediatamente
-      setQueue(prev => prev.map(item =>
-        item.id === id
-          ? { ...item, ...updates }
-          : item
-      ))
-
-      // 2️⃣ Efectos visuales específicos
-      if (newStatus === 'llamado') {
+      if (action === 'llamado' || action === 'rellamar') {
         setCallingId(id)
       }
 
@@ -637,24 +672,14 @@ export default function QueuePage() {
 
       if (error) throw error
 
-      // ✅ NO llamamos a fetchData() → Realtime sincronizará
-
-      // Si se está llamando, esperar el tiempo de los dos anuncios TTS
-      if (newStatus === 'llamado') {
-        setTimeout(() => {
-          setCallingId(null)
-        }, 11000) // 11 segundos para ambos llamados completos
+      if (action === 'llamado' || action === 'rellamar') {
+        setTimeout(() => setCallingId(null), 11000)
       }
 
     } catch (error) {
       console.error('Error al actualizar estado:', error)
-
-      // ═══════════════════════════════════════════════════════════
-      // FASE 3 - ROLLBACK
-      // ═══════════════════════════════════════════════════════════
       setQueue(previousQueue)
       setCallingId(null)
-
       alert('Error al actualizar estado. Por favor intente nuevamente.')
     }
   }

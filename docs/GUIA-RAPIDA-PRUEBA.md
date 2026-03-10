@@ -15,8 +15,8 @@ Hacer en este orden. Cada paso depende del anterior.
 - [ ] 2. Crear el usuario admin del CPS ← **necesario antes de continuar**
 - [ ] 3. Crear los consultorios
 - [ ] 4. Crear los servicios
-- [ ] 5. Cargar los profesionales
-- [ ] 6. Crear el resto de usuarios del sistema y asignar roles
+- [ ] 5. Crear usuarios con sus roles (incluye profesionales) — todo desde `/usuarios`
+- [ ] 6. (opcional) Ver listado de profesionales en `/profesionales` — solo lectura
 
 ---
 
@@ -92,19 +92,17 @@ Cargar todos los servicios que ofrece el CPS. Ejemplos:
 
 ---
 
-### Paso 5 — Cargar los profesionales
+### Paso 5 — Crear usuarios y asignar roles (incluye profesionales)
 
-**Dónde:** `/profesionales`
+**Dónde:** (logueado como admin del CPS) → `/usuarios`
 
-Cargar uno por uno. Por cada profesional completar:
-- Nombre y Apellido
-- Especialidad (ej: Médico Clínico, Psicólogo, Nutricionista)
-- Matrícula
-- Email y teléfono (opcional)
+> ⚠️ **NO ir a `/profesionales`** — esa pantalla es solo lectura (lista y activa/desactiva). La creación se hace desde `/usuarios`.
 
-> 💡 Los profesionales en esta sección son el **registro clínico** (quién atiende). La cuenta de acceso al sistema se crea por separado en el Paso 5.
->
-> Un profesional puede existir sin cuenta de acceso (si no va a usar el sistema directamente). Pero si necesita acceder para ver su agenda o llamar pacientes, también necesita usuario.
+Crear un usuario por cada persona del CPS. Por cada uno:
+1. Completar nombre, apellido, email, contraseña, rol
+2. Si el rol es `profesional`: completar también especialidad y matrícula en el mismo form
+
+> 💡 Un profesional puede existir sin cuenta de acceso (si no va a usar el sistema directamente). Pero si necesita acceder para ver su agenda o llamar pacientes, también necesita usuario.
 
 ---
 
@@ -223,7 +221,8 @@ Las TVs de sala de espera **no necesitan usuario ni login**. Cada pantalla tiene
 | Crear/ver usuarios y roles | `/super-admin/usuarios` | super_admin |
 | Crear consultorios | `/consultorios` | admin |
 | Crear servicios | `/servicios` | admin |
-| Cargar profesionales | `/profesionales` | admin |
+| Crear usuarios y profesionales | `/usuarios` | admin |
+| Ver/activar profesionales (solo lectura) | `/profesionales` | admin |
 | Asignar consultorio del día | `/asignaciones` | administrativo |
 | Cargar pacientes / llamar turnos | `/turnos` | administrativo |
 | Crear y configurar pantallas de TV | `/pantallas` | admin |
@@ -259,3 +258,66 @@ Una vez cargado todo lo anterior, cada día el flujo es:
 - Ver métricas globales de todas las instituciones (`/super-admin/metricas`)
 
 > Todo lo demás (profesionales, servicios, consultorios, turnos) lo gestiona el **admin de la institución** o el **administrativo**.
+
+---
+
+## PARTE 6: Personal del CPS B° EVITA — Datos para Carga
+
+### Administrativos
+
+| Nombre | DNI |
+|--------|-----|
+| Balmaceda Silvana Elisa | 26798098 |
+| Tejada Ocampo Natalia Victoria | 37415388 |
+| Verasay Deolinda María | 26994832 |
+| Quiroga Tobares Rocio Belén | 42444261 |
+| Fuentes Alejandra | 29428059 |
+
+---
+
+### Profesionales — Con datos completos
+
+| Nombre | Especialidad / Tipo | DNI |
+|--------|--------------------|----|
+| Vera Ivana | Lic. Trabajo Social | 26798018 |
+| Moreno Rodriguez Johana | Psicóloga | 33394277 |
+| Morales Carolina | Médica | 26170926 |
+| Terraza Juan Carlos | Médico (boliviano — DNI extranjero) | 92412393 |
+| Maza Andrea | Médica | 31771278 |
+| Montivero Cecilia | Médica | 28348621 |
+| Mercado Silvia | Ecógrafa | 14752670 |
+| Bravo Iara Belén | Lic. Trabajo Social — a cargo del servicio Salud Sexual y Reproductiva ⚠️ ver nota | 27686054 |
+| Gasparovich Silvana | Lic. Nutrición | 27450763 |
+| Hunicken Monica | Lic. Nutrición | 32808547 |
+| Zalazar Romina | Lic. Nutrición | 30543929 |
+| Papinutti Estela | Kinesióloga | 22103659 |
+
+---
+
+### Profesionales — Faltan datos (DNI pendiente)
+
+| Nombre | Especialidad / Tipo |
+|--------|---------------------|
+| Juárez (apellido) | Lic. Nutrición |
+| Rossi | Psiquiatra |
+| Páez Páez Eduardo | Médico |
+| Flores Jimena | Lic. (especialidad a confirmar) |
+| Rodríguez Oviedo Silvia | Kinesióloga |
+| Ávila Lourdes | Psicopedagoga |
+| Suárez Cecilia | Psicóloga |
+| Munge Federico | Odontólogo |
+
+> ⚠️ Estos profesionales NO se pueden cargar hasta tener el DNI completo.
+
+---
+
+### Notas pendientes de consulta
+
+**Bravo Iara Belén** — ¿Cómo cargarla?
+
+Opciones:
+- **Como `profesional`**: si los pacientes piden turno *con ella* específicamente (aparece en la cola por nombre)
+- **Como `servicio`**: si los pacientes van al *servicio* de Salud Sexual y Reproductiva (no importa quién atiende)
+- **Como ambos**: profesional para sus turnos individuales + servicio si también gestiona la cola del área
+
+> Consultar con ella antes de cargar. Por ahora dejarla pendiente.

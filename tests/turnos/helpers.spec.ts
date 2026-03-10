@@ -38,6 +38,8 @@ describe('Turnos Helpers', () => {
           created_by: null,
           queue_session_id: null,
           queue_session_name: null,
+          call_count: 0,
+          re_queued_at: null,
         },
         {
           id: '2',
@@ -58,6 +60,8 @@ describe('Turnos Helpers', () => {
           created_by: null,
           queue_session_id: null,
           queue_session_name: null,
+          call_count: 0,
+          re_queued_at: null,
         }
       ]
       const result = getNextOrderNumber(queue)
@@ -85,6 +89,8 @@ describe('Turnos Helpers', () => {
           created_by: null,
           queue_session_id: null,
           queue_session_name: null,
+          call_count: 0,
+          re_queued_at: null,
         }
       ]
       const result = getNextOrderNumber(queue)

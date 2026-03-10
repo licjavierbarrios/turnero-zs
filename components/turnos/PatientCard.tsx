@@ -4,13 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Lock, Clock } from 'lucide-react'
 import { statusConfig } from '@/lib/turnos/config'
 import { formatDate } from '@/lib/turnos/helpers'
-import type { QueueItem } from '@/lib/turnos/types'
+import type { QueueItem, QueueAction } from '@/lib/turnos/types'
 
 interface PatientCardProps {
   item: QueueItem
   isOptimistic: boolean
   callingId: string | null
-  onUpdateStatus: (id: string, newStatus: QueueItem['status']) => void
+  onUpdateStatus: (id: string, action: QueueAction) => void
   currentUserId?: string // ID del usuario actual para validar permisos
   createdBy?: string | null // ID del usuario que creó el turno
 }
@@ -109,6 +109,11 @@ export function PatientCard({
                     📋 {item.queue_session_name}
                   </Badge>
                 )}
+                {item.status === 'disponible' && item.call_count > 0 && (
+                  <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                    ⚠ Ya llamado {item.call_count} {item.call_count === 1 ? 'vez' : 'veces'}
+                  </Badge>
+                )}
                 {/* Hora de carga - Discreta */}
                 <div className="flex items-center gap-1 text-xs text-gray-500 ml-auto md:ml-0">
                   <Clock className="h-3 w-3" />
@@ -166,12 +171,37 @@ export function PatientCard({
               )}
 
               {item.status === 'llamado' && (
-                <Button
-                  onClick={() => onUpdateStatus(item.id, 'atendido')}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Marcar Atendido
-                </Button>
+                <>
+                  <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs px-2 py-1">
+                    🔔 {item.call_count} {item.call_count === 1 ? 'vez' : 'veces'}
+                  </Badge>
+                  <Button
+                    onClick={() => onUpdateStatus(item.id, 'rellamar')}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                    disabled={callingId === item.id}
+                  >
+                    {callingId === item.id ? (
+                      <><span className="animate-pulse">🔔</span> Llamando...</>
+                    ) : (
+                      'Llamar de nuevo'
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => onUpdateStatus(item.id, 'siguiente')}
+                    variant="outline"
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    disabled={callingId === item.id}
+                  >
+                    Siguiente
+                  </Button>
+                  <Button
+                    onClick={() => onUpdateStatus(item.id, 'atendido')}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={callingId === item.id}
+                  >
+                    Atendido
+                  </Button>
+                </>
               )}
 
               {(item.status === 'pendiente' || item.status === 'disponible') && (

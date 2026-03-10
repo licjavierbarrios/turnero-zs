@@ -42,6 +42,7 @@ interface PublicAppointment {
   service_name: string
   status: string
   called_at?: string
+  call_count: number
   queue_date: string
   // Raw IDs for screen filter
   service_id?: string | null
@@ -194,6 +195,9 @@ export default function PantallaPublicaPage({
     loadTTSConfig()
   }, [institution?.id])
 
+  const [announcingAppointmentId, setAnnouncingAppointmentId] = useState<string | null>(null)
+  const announcingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const channelRef = useRef<any>(null)
 
@@ -251,7 +255,7 @@ export default function PantallaPublicaPage({
       : currentCall.service_name
 
     return [{
-      id: currentCall.id,
+      id: `${currentCall.id}-${currentCall.call_count}`,
       appointment_id: currentCall.id,
       created_at: currentCall.called_at || new Date().toISOString(),
       appointment: {
@@ -441,6 +445,7 @@ export default function PantallaPublicaPage({
           patient_name,
           status,
           called_at,
+          call_count,
           queue_date,
           service_id,
           professional_id,
@@ -489,6 +494,7 @@ export default function PantallaPublicaPage({
           service_name: serviceName,
           status: item.status,
           called_at: item.called_at,
+          call_count: item.call_count ?? 0,
           queue_date: item.queue_date,
           service_id: item.service_id ?? null,
           room_id: item.room_id ?? null,
@@ -560,10 +566,10 @@ export default function PantallaPublicaPage({
         },
         (payload: any) => {
 
-          // If status changed to 'llamado', play notification sound
+          // If status changed to 'llamado', play notification sound and show "Llamando..." state
           if (payload.eventType === 'UPDATE' &&
               payload.new?.status === 'llamado' &&
-              payload.old?.status !== 'llamado') {
+              (payload.old?.status !== 'llamado' || payload.new?.call_count !== payload.old?.call_count)) {
             if (soundEnabled && audioRef.current) {
               setTimeout(async () => {
                 try {
@@ -573,6 +579,10 @@ export default function PantallaPublicaPage({
                 }
               }, 300) // Small delay to ensure sound plays after UI update
             }
+            // Show "Llamando..." state for 11 seconds (matches TTS duration)
+            if (announcingTimerRef.current) clearTimeout(announcingTimerRef.current)
+            setAnnouncingAppointmentId(payload.new.id)
+            announcingTimerRef.current = setTimeout(() => setAnnouncingAppointmentId(null), 11000)
           }
 
           // Refresh queue data
@@ -728,6 +738,7 @@ export default function PantallaPublicaPage({
         <MultiServiceDisplay
           appointments={appointments}
           template={currentTemplate}
+          announcingAppointmentId={announcingAppointmentId}
         />
 
         {/* Footer */}

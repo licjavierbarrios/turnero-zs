@@ -27,6 +27,8 @@ export const createQueueItem = (overrides?: Partial<QueueItem>): QueueItem => ({
   created_by: null,
   queue_session_id: null,
   queue_session_name: null,
+  call_count: 0,
+  re_queued_at: null,
   ...overrides,
 })
 
@@ -95,6 +97,8 @@ export const createQueueItems = (count: number = 10): QueueItem[] => {
       created_by: null,
       queue_session_id: null,
       queue_session_name: null,
+      call_count: 0,
+      re_queued_at: null,
     })
   }
 
@@ -123,6 +127,8 @@ export const mockQueueItemPending: QueueItem = {
   created_by: null,
   queue_session_id: null,
   queue_session_name: null,
+  call_count: 0,
+  re_queued_at: null,
 }
 
 export const mockQueueItemAvailable: QueueItem = {
@@ -144,6 +150,8 @@ export const mockQueueItemAvailable: QueueItem = {
   created_by: null,
   queue_session_id: null,
   queue_session_name: null,
+  call_count: 0,
+  re_queued_at: null,
 }
 
 export const mockQueueItemCalled: QueueItem = {
@@ -165,6 +173,8 @@ export const mockQueueItemCalled: QueueItem = {
   created_by: null,
   queue_session_id: null,
   queue_session_name: null,
+  call_count: 1,
+  re_queued_at: null,
 }
 
 export const mockQueueItemAttended: QueueItem = {
@@ -186,6 +196,8 @@ export const mockQueueItemAttended: QueueItem = {
   created_by: null,
   queue_session_id: null,
   queue_session_name: null,
+  call_count: 1,
+  re_queued_at: null,
 }
 
 /**
@@ -215,6 +227,8 @@ export const mockQueueMultiService: QueueItem[] = [
     created_by: null,
     queue_session_id: null,
     queue_session_name: null,
+    call_count: 0,
+    re_queued_at: null,
   },
 ]
 
@@ -245,6 +259,8 @@ export const mockQueueSingle: QueueItem = {
   created_by: null,
   queue_session_id: null,
   queue_session_name: null,
+  call_count: 1,
+  re_queued_at: null,
 }
 
 /**
@@ -269,4 +285,6 @@ export const mockQueueItemLongName: QueueItem = {
   created_by: null,
   queue_session_id: null,
   queue_session_name: null,
+  call_count: 0,
+  re_queued_at: null,
 }

@@ -21,9 +21,10 @@ const statusColors: Record<string, string> = {
 
 interface ListLayoutProps {
   services: ServiceGroup[]
+  announcingAppointmentId?: string | null
 }
 
-export function ListLayout({ services }: ListLayoutProps) {
+export function ListLayout({ services, announcingAppointmentId }: ListLayoutProps) {
   return (
     <div className="space-y-4">
       {services.map((service) => {
@@ -31,6 +32,7 @@ export function ListLayout({ services }: ListLayoutProps) {
         const icon = getServiceIcon(service.serviceName)
         const currentCall = service.appointments.find(apt => apt.status === 'llamado')
         const waiting = service.appointments.filter(apt => apt.status === 'disponible')
+        const isAnnouncing = !!currentCall && currentCall.id === announcingAppointmentId
 
         return (
           <div
@@ -48,11 +50,17 @@ export function ListLayout({ services }: ListLayoutProps) {
               <div>
                 <h4 className="text-sm font-semibold text-gray-600 mb-3 uppercase">Llamado Actual</h4>
                 {currentCall ? (
-                  <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 animate-pulse">
+                  <div className={`rounded-lg p-4 border-2 ${isAnnouncing ? 'bg-yellow-50 border-yellow-400 animate-pulse' : 'bg-purple-50 border-purple-300 animate-pulse'}`}>
                     <div className="mb-2">
-                      <Badge className={statusColors['llamado']}>
-                        🔔 {statusLabels['llamado']}
-                      </Badge>
+                      {isAnnouncing ? (
+                        <Badge className="bg-yellow-400 text-yellow-900 animate-pulse">
+                          🔔 Llamando...
+                        </Badge>
+                      ) : (
+                        <Badge className={statusColors['llamado']}>
+                          🔔 {statusLabels['llamado']}
+                        </Badge>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-gray-900 font-bold text-xl">

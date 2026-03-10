@@ -10,9 +10,10 @@ export interface ServiceGroup {
 interface GridLayoutProps {
   services: ServiceGroup[]
   columns: 2 | 3 // 2 para grid-2x2, 3 para grid-3x2
+  announcingAppointmentId?: string | null
 }
 
-export function GridLayout({ services, columns }: GridLayoutProps) {
+export function GridLayout({ services, columns, announcingAppointmentId }: GridLayoutProps) {
   const gridCols = columns === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
 
   return (
@@ -23,6 +24,7 @@ export function GridLayout({ services, columns }: GridLayoutProps) {
           serviceName={service.serviceName}
           appointments={service.appointments}
           compact={columns === 3}
+          announcingAppointmentId={announcingAppointmentId}
         />
       ))}
     </div>

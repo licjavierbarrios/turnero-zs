@@ -20,6 +20,7 @@ interface ServiceCardProps {
   serviceName: string
   appointments: ServiceAppointment[]
   compact?: boolean
+  announcingAppointmentId?: string | null
 }
 
 const statusLabels: Record<string, string> = {
@@ -38,11 +39,12 @@ const statusColors: Record<string, string> = {
   'en_consulta': 'bg-green-100 text-green-800'
 }
 
-export function ServiceCard({ serviceName, appointments, compact = false }: ServiceCardProps) {
+export function ServiceCard({ serviceName, appointments, compact = false, announcingAppointmentId }: ServiceCardProps) {
   const colors = getServiceColors(serviceName)
   const icon = getServiceIcon(serviceName)
 
   const currentCall = appointments.find(apt => apt.status === 'llamado')
+  const isAnnouncing = !!currentCall && currentCall.id === announcingAppointmentId
   const inConsultation = appointments.filter(apt => apt.status === 'en_consulta')
   const waiting = appointments.filter(apt => apt.status === 'disponible')
 
@@ -57,11 +59,17 @@ export function ServiceCard({ serviceName, appointments, compact = false }: Serv
       <CardContent className="space-y-3">
         {/* Llamado Actual */}
         {currentCall ? (
-          <div className="p-3 bg-white rounded-lg border-2 border-purple-300 shadow-sm">
+          <div className={`p-3 bg-white rounded-lg border-2 shadow-sm transition-all ${isAnnouncing ? 'border-yellow-400 animate-pulse' : 'border-purple-300'}`}>
             <div className="flex items-center gap-1 mb-2">
-              <Badge className={statusColors['llamado']}>
-                🔔 {statusLabels['llamado']}
-              </Badge>
+              {isAnnouncing ? (
+                <Badge className="bg-yellow-400 text-yellow-900 animate-pulse">
+                  🔔 Llamando...
+                </Badge>
+              ) : (
+                <Badge className={statusColors['llamado']}>
+                  🔔 {statusLabels['llamado']}
+                </Badge>
+              )}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-gray-900 font-semibold text-lg">

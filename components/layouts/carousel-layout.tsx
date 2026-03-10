@@ -8,9 +8,10 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 interface CarouselLayoutProps {
   services: ServiceGroup[]
   intervalSeconds: number
+  announcingAppointmentId?: string | null
 }
 
-export function CarouselLayout({ services, intervalSeconds }: CarouselLayoutProps) {
+export function CarouselLayout({ services, intervalSeconds, announcingAppointmentId }: CarouselLayoutProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
 
@@ -77,6 +78,7 @@ export function CarouselLayout({ services, intervalSeconds }: CarouselLayoutProp
             serviceName={currentService.serviceName}
             appointments={currentService.appointments}
             compact={false}
+            announcingAppointmentId={announcingAppointmentId}
           />
         </div>
 

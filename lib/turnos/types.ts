@@ -21,7 +21,11 @@ export interface QueueItem {
   created_by: string | null
   queue_session_id: string | null
   queue_session_name: string | null
+  call_count: number
+  re_queued_at: string | null
 }
+
+export type QueueAction = QueueItem['status'] | 'rellamar' | 'siguiente'
 
 export interface QueueSession {
   id: string
