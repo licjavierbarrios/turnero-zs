@@ -65,16 +65,16 @@ export function PatientCard({
         ${isOptimistic ? 'border-blue-400 border-2' : ''}
       `}
     >
-      <CardContent className="p-6">
+      <CardContent className="px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Info del paciente */}
-          <div className="flex items-center gap-6 flex-1">
-            <div className="text-4xl font-bold text-gray-900 w-16 text-center">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="text-2xl font-bold text-gray-400 w-12 text-center">
               {String(item.order_number).padStart(3, '0')}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="text-base font-semibold text-gray-900">
                   {item.patient_name}
                 </h3>
                 {/* Indicador visual de guardado */}
@@ -85,7 +85,7 @@ export function PatientCard({
                   </Badge>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2 mt-1 items-center">
+              <div className="flex flex-wrap gap-1.5 mt-0.5 items-center">
                 <span className="text-sm text-gray-600">
                   DNI: {item.patient_dni}
                 </span>
@@ -124,18 +124,19 @@ export function PatientCard({
           </div>
 
           {/* Estado y acciones */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {/* Estado - Sin hover */}
-            <div className={`${statusConfig[item.status].color} inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-semibold whitespace-nowrap`}>
+            <div className={`${statusConfig[item.status].color} inline-flex items-center rounded-md border border-transparent px-2 py-1 text-xs font-semibold whitespace-nowrap`}>
               {statusConfig[item.status].label}
             </div>
 
             {/* Botones según estado */}
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               {item.status === 'pendiente' && (
                 <>
                   {canEnableButton ? (
                     <Button
+                      size="sm"
                       onClick={() => onUpdateStatus(item.id, 'disponible')}
                       className="bg-green-600 hover:bg-green-700"
                     >
@@ -143,11 +144,12 @@ export function PatientCard({
                     </Button>
                   ) : (
                     <Button
+                      size="sm"
                       disabled
                       className="bg-gray-400 cursor-not-allowed opacity-60"
                       title="Solo el usuario que cargó este turno puede habilitarlo"
                     >
-                      <Lock className="h-4 w-4 mr-2" />
+                      <Lock className="h-3 w-3 mr-1" />
                       Habilitar
                     </Button>
                   )}
@@ -156,6 +158,7 @@ export function PatientCard({
 
               {item.status === 'disponible' && (
                 <Button
+                  size="sm"
                   onClick={() => onUpdateStatus(item.id, 'llamado')}
                   className="bg-yellow-600 hover:bg-yellow-700"
                   disabled={callingId === item.id}
@@ -176,6 +179,7 @@ export function PatientCard({
                     🔔 {item.call_count} {item.call_count === 1 ? 'vez' : 'veces'}
                   </Badge>
                   <Button
+                    size="sm"
                     onClick={() => onUpdateStatus(item.id, 'rellamar')}
                     className="bg-yellow-600 hover:bg-yellow-700"
                     disabled={callingId === item.id}
@@ -187,6 +191,7 @@ export function PatientCard({
                     )}
                   </Button>
                   <Button
+                    size="sm"
                     onClick={() => onUpdateStatus(item.id, 'siguiente')}
                     variant="outline"
                     className="text-orange-600 border-orange-300 hover:bg-orange-50"
@@ -195,6 +200,7 @@ export function PatientCard({
                     Siguiente
                   </Button>
                   <Button
+                    size="sm"
                     onClick={() => onUpdateStatus(item.id, 'atendido')}
                     className="bg-blue-600 hover:bg-blue-700"
                     disabled={callingId === item.id}
@@ -206,6 +212,7 @@ export function PatientCard({
 
               {(item.status === 'pendiente' || item.status === 'disponible') && (
                 <Button
+                  size="sm"
                   onClick={() => onUpdateStatus(item.id, 'cancelado')}
                   variant="outline"
                   className="text-red-600"

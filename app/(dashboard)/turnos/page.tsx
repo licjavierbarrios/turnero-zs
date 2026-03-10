@@ -813,7 +813,7 @@ export default function QueuePage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-2">
           {filteredQueue.map((item: any) => (
             <PatientCard
               key={item.id}
