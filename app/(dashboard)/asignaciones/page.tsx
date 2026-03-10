@@ -11,11 +11,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DeleteConfirmation } from '@/components/crud/DeleteConfirmation'
 import { useToast } from '@/hooks/use-toast'
 import { useRequirePermission } from '@/hooks/use-permissions'
-import { CalendarIcon, Plus, Trash2, Building2, UserCheck, CheckCircle2, ClockIcon } from 'lucide-react'
+import { CalendarIcon, Plus, Trash2, Building2, UserCheck, CheckCircle2, ClockIcon, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { getTodayISO, formatFullName } from '@/lib/supabase/helpers'
 import { AssignmentForm } from './components/AssignmentForm'
+import { TimeInput } from './components/TimeInput'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog'
 
 interface Professional {
   id: string
@@ -103,6 +107,71 @@ export default function AsignacionesPage() {
       })
     }
   })
+
+  // ── Estado de edición ──────────────────────────────────────────────────────
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
+  const [editStartHH, setEditStartHH] = useState('')
+  const [editStartMM, setEditStartMM] = useState('')
+  const [editEndHH, setEditEndHH] = useState('')
+  const [editEndMM, setEditEndMM] = useState('')
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+
+  const openEditDialog = (assignment: Assignment) => {
+    const [sHH = '', sMM = ''] = (assignment.start_time ?? '').slice(0, 5).split(':')
+    const [eHH = '', eMM = ''] = (assignment.end_time ?? '').slice(0, 5).split(':')
+    setEditStartHH(sHH)
+    setEditStartMM(sMM)
+    setEditEndHH(eHH)
+    setEditEndMM(eMM)
+    setEditingAssignment(assignment)
+  }
+
+  const handleEditStartHH = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 23) return
+    setEditStartHH(clean)
+    if (clean.length === 2 && !editStartMM) setEditStartMM('00')
+  }
+  const handleEditStartMM = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 59) return
+    setEditStartMM(clean)
+  }
+  const handleEditEndHH = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 23) return
+    setEditEndHH(clean)
+    if (clean.length === 2 && !editEndMM) setEditEndMM('00')
+  }
+  const handleEditEndMM = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 59) return
+    setEditEndMM(clean)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingAssignment) return
+    const startTime = `${editStartHH}:${editStartMM}`
+    const endTime   = `${editEndHH}:${editEndMM}`
+    if (startTime >= endTime) return
+
+    setIsSavingEdit(true)
+    try {
+      const { error } = await supabase
+        .from('daily_professional_assignment')
+        .update({ start_time: startTime, end_time: endTime })
+        .eq('id', editingAssignment.id)
+      if (error) throw error
+      toast({ title: 'Horario actualizado' })
+      setEditingAssignment(null)
+      refreshData()
+    } catch {
+      toast({ title: 'Error al actualizar el horario', variant: 'destructive' })
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   const handleAddAssignment = async (professionalId: string, roomId: string, startTime: string, endTime: string) => {
     try {
@@ -269,15 +338,27 @@ export default function AsignacionesPage() {
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteDialog(assignment)}
-                        className="text-red-600 hover:text-red-700"
-                        disabled={isSaving}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(assignment)}
+                          title="Editar horario"
+                          disabled={isSaving}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDeleteDialog(assignment)}
+                          className="text-red-600 hover:text-red-700"
+                          title="Eliminar asignación"
+                          disabled={isSaving}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -286,6 +367,63 @@ export default function AsignacionesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de edición de horario */}
+      <Dialog open={!!editingAssignment} onOpenChange={(open) => { if (!open) setEditingAssignment(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar horario</DialogTitle>
+            <DialogDescription>
+              {editingAssignment?.professional_name} — {editingAssignment?.room_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="flex items-center gap-3">
+              <div className="space-y-1.5 flex-1">
+                <label className="text-sm font-medium">Desde</label>
+                <TimeInput
+                  hh={editStartHH}
+                  mm={editStartMM}
+                  onChangeHH={handleEditStartHH}
+                  onChangeMM={handleEditStartMM}
+                  disabled={isSavingEdit}
+                />
+              </div>
+              <span className="text-muted-foreground mt-6">a</span>
+              <div className="space-y-1.5 flex-1">
+                <label className="text-sm font-medium">Hasta</label>
+                <TimeInput
+                  hh={editEndHH}
+                  mm={editEndMM}
+                  onChangeHH={handleEditEndHH}
+                  onChangeMM={handleEditEndMM}
+                  disabled={isSavingEdit}
+                />
+              </div>
+            </div>
+            {editStartHH && editStartMM && editEndHH && editEndMM &&
+              `${editStartHH}:${editStartMM}` >= `${editEndHH}:${editEndMM}` && (
+              <p className="text-xs text-red-600">La hora de fin debe ser mayor que la de inicio</p>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setEditingAssignment(null)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={
+                  isSavingEdit ||
+                  editStartHH.length < 2 || editStartMM.length < 2 ||
+                  editEndHH.length < 2 || editEndMM.length < 2 ||
+                  `${editStartHH}:${editStartMM}` >= `${editEndHH}:${editEndMM}`
+                }
+              >
+                {isSavingEdit ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Confirmación de Eliminación */}
       <DeleteConfirmation

@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import { formatFullName } from '@/lib/supabase/helpers'
+import { TimeInput } from './TimeInput'
 
 interface Professional {
   id: string
@@ -37,9 +37,18 @@ export function AssignmentForm({
   const [rooms, setRooms] = useState<Room[]>([])
   const [selectedProfessional, setSelectedProfessional] = useState('')
   const [selectedRoom, setSelectedRoom] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
+
+  // Segmentos de hora separados para control total del UX
+  const [startHH, setStartHH] = useState('')
+  const [startMM, setStartMM] = useState('')
+  const [endHH, setEndHH] = useState('')
+  const [endMM, setEndMM] = useState('')
+
   const [loading, setLoading] = useState(true)
+
+  // Valores derivados para validación y envío
+  const startTime = startHH.length === 2 && startMM.length === 2 ? `${startHH}:${startMM}` : ''
+  const endTime   = endHH.length === 2   && endMM.length === 2   ? `${endHH}:${endMM}`     : ''
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,13 +78,53 @@ export function AssignmentForm({
     fetchData()
   }, [institutionId])
 
+  // ── Handlers de hora ──────────────────────────────────────────────────────
+
+  const handleStartHH = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 23) return
+    setStartHH(clean)
+
+    if (clean.length === 2) {
+      // Auto-fill MM = "00"
+      setStartMM('00')
+      // Auto-fill hasta = desde + 4h (foco no cambia)
+      const endH = (parseInt(clean) + 4) % 24
+      setEndHH(String(endH).padStart(2, '0'))
+      setEndMM('00')
+    }
+  }
+
+  const handleStartMM = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 59) return
+    setStartMM(clean)
+  }
+
+  const handleEndHH = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 23) return
+    setEndHH(clean)
+    if (clean.length === 2 && !endMM) setEndMM('00')
+  }
+
+  const handleEndMM = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 2)
+    if (clean && parseInt(clean) > 59) return
+    setEndMM(clean)
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleSubmit = () => {
     if (selectedProfessional && selectedRoom && startTime && endTime) {
       onSubmit(selectedProfessional, selectedRoom, startTime, endTime)
       setSelectedProfessional('')
       setSelectedRoom('')
-      setStartTime('')
-      setEndTime('')
+      setStartHH('')
+      setStartMM('')
+      setEndHH('')
+      setEndMM('')
     }
   }
 
@@ -128,20 +177,20 @@ export function AssignmentForm({
       <div className="space-y-2">
         <label className="text-sm font-medium">Horario</label>
         <div className="flex gap-1 items-center">
-          <Input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
+          <TimeInput
+            hh={startHH}
+            mm={startMM}
+            onChangeHH={handleStartHH}
+            onChangeMM={handleStartMM}
             disabled={loading || isLoading}
-            className="w-full"
           />
-          <span className="text-muted-foreground text-sm">a</span>
-          <Input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
+          <span className="text-muted-foreground text-sm shrink-0">a</span>
+          <TimeInput
+            hh={endHH}
+            mm={endMM}
+            onChangeHH={handleEndHH}
+            onChangeMM={handleEndMM}
             disabled={loading || isLoading}
-            className="w-full"
           />
         </div>
       </div>
