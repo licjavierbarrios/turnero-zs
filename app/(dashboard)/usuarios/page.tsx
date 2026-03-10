@@ -25,7 +25,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { useInstitutionContext } from '@/hooks/useInstitutionContext'
 import {
-  Plus, Edit, UserCheck, UserX, Users, AlertCircle, Eye, EyeOff, Wand2,
+  Plus, Edit, UserCheck, UserX, Users, AlertCircle, Eye, EyeOff, Wand2, KeyRound,
 } from 'lucide-react'
 
 // ============================================================
@@ -125,7 +125,7 @@ function normalizeWord(str: string): string {
 }
 
 function generateEmail(firstName: string, lastName: string): string {
-  return `${normalizeWord(firstName)}.${normalizeWord(lastName)}@evita.com`
+  return `${normalizeWord(firstName)}.${normalizeWord(lastName)}@zona3.com`
 }
 
 function generatePassword(dni: string, lastName: string): string {
@@ -158,6 +158,13 @@ export default function UsuariosPage() {
 
   // Toggle active confirmation
   const [toggleTarget, setToggleTarget] = useState<StaffRow | null>(null)
+
+  // Password change dialog
+  const [pwdDialogOpen, setPwdDialogOpen] = useState(false)
+  const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '', confirm: '' })
+  const [pwdError, setPwdError] = useState<string | null>(null)
+  const [isSavingPwd, setIsSavingPwd] = useState(false)
+  const [pwdVisible, setPwdVisible] = useState({ current: false, newPwd: false, confirm: false })
 
   const institutionId = context?.institution_id
 
@@ -288,6 +295,7 @@ export default function UsuariosPage() {
     setForm(EMPTY_FORM)
     setError(null)
     setShowPassword(false)
+    setPwdDialogOpen(false)
     setRoleChangeWarning(false)
     setDialogOpen(true)
   }
@@ -295,6 +303,7 @@ export default function UsuariosPage() {
   const openEdit = (row: StaffRow) => {
     setEditingRow(row)
     setShowPassword(false)
+    setPwdDialogOpen(false)
     setForm({
       firstName: row.firstName,
       lastName: row.lastName,
@@ -415,20 +424,31 @@ export default function UsuariosPage() {
     if (form.role === 'servicio' && !form.serviceId) {
       setError('Seleccioná el servicio'); return
     }
-
     setIsSaving(true)
     try {
-      // 1. Actualizar datos del usuario
-      const { error: userErr } = await supabase
-        .from('users')
-        .update({
-          first_name: form.firstName,
-          last_name: form.lastName,
-          email: form.email,
-          is_active: form.isActive,
-        })
-        .eq('id', editingRow.userId)
-      if (userErr) throw userErr
+      // 1. Actualizar usuario vía API (actualiza Auth + tabla users)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Sin sesión activa')
+
+      const updateBody: Record<string, unknown> = {
+        first_name: form.firstName,
+        last_name: form.lastName,
+        email: form.email,
+        is_active: form.isActive,
+      }
+
+      const res = await fetch(`/api/admin/users/${editingRow.userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(updateBody),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Error al actualizar usuario')
+      }
 
       const roleChanged = form.role !== editingRow.role
 
@@ -549,6 +569,54 @@ export default function UsuariosPage() {
       fetchData()
     } catch (err: any) {
       toast({ title: 'Error al cambiar el estado', variant: 'destructive' })
+    }
+  }
+
+  // ============================================================
+  // Change password
+  // ============================================================
+  const openPasswordDialog = () => {
+    setPwdForm({ current: '', newPwd: '', confirm: '' })
+    setPwdError(null)
+    setPwdVisible({ current: false, newPwd: false, confirm: false })
+    setPwdDialogOpen(true)
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingRow) return
+    setPwdError(null)
+
+    if (!pwdForm.newPwd) { setPwdError('Ingresá la nueva contraseña'); return }
+    if (pwdForm.newPwd.length < 8) { setPwdError('Mínimo 8 caracteres'); return }
+    if (!/[A-Z]/.test(pwdForm.newPwd)) { setPwdError('Debe incluir al menos una mayúscula'); return }
+    if (!/[0-9]/.test(pwdForm.newPwd)) { setPwdError('Debe incluir al menos un número'); return }
+    if (pwdForm.newPwd !== pwdForm.confirm) { setPwdError('Las contraseñas no coinciden'); return }
+
+    setIsSavingPwd(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Sin sesión activa')
+
+      const res = await fetch(`/api/admin/users/${editingRow.userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ password: pwdForm.newPwd }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Error al cambiar la contraseña')
+      }
+
+      toast({ title: 'Contraseña actualizada', description: `Recordá comunicársela a ${editingRow.firstName}.` })
+      setPwdDialogOpen(false)
+    } catch (err: any) {
+      setPwdError(err.message || 'Error al cambiar la contraseña')
+    } finally {
+      setIsSavingPwd(false)
     }
   }
 
@@ -779,10 +847,25 @@ export default function UsuariosPage() {
                 type="email"
                 value={form.email}
                 onChange={(e) => setField('email', e.target.value)}
-                placeholder="nombre.apellido@evita.com"
+                placeholder="nombre.apellido@zona3.com"
                 required
               />
             </div>
+
+            {/* Cambiar contraseña (solo edición) */}
+            {editingRow && (
+              <div className="flex items-center justify-between rounded-lg border px-3 py-2.5 bg-gray-50">
+                <span className="text-sm text-gray-600">Contraseña del usuario</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={openPasswordDialog}
+                >
+                  Cambiar contraseña
+                </Button>
+              </div>
+            )}
 
             {/* Contraseña (solo creación) */}
             {!editingRow && (
@@ -989,6 +1072,111 @@ export default function UsuariosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ============================================================ */}
+      {/* Password change dialog                                        */}
+      {/* ============================================================ */}
+      <Dialog open={pwdDialogOpen} onOpenChange={(open) => { if (!open) setPwdDialogOpen(false) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Cambiar contraseña
+            </DialogTitle>
+            <DialogDescription>
+              {editingRow && `${editingRow.firstName} ${editingRow.lastName}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleChangePassword} className="space-y-4 mt-2">
+            {pwdError && (
+              <Alert variant="destructive">
+                <AlertDescription>{pwdError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Contraseña actual (informativa — confirma que el admin sabe cuál es) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-current">Contraseña actual</Label>
+              <div className="relative">
+                <Input
+                  id="pwd-current"
+                  type={pwdVisible.current ? 'text' : 'password'}
+                  value={pwdForm.current}
+                  onChange={(e) => setPwdForm((p) => ({ ...p, current: e.target.value }))}
+                  placeholder="Contraseña actual del usuario"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPwdVisible((v) => ({ ...v, current: !v.current }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {pwdVisible.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Nueva contraseña */}
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-new">Nueva contraseña</Label>
+              <div className="relative">
+                <Input
+                  id="pwd-new"
+                  type={pwdVisible.newPwd ? 'text' : 'password'}
+                  value={pwdForm.newPwd}
+                  onChange={(e) => setPwdForm((p) => ({ ...p, newPwd: e.target.value }))}
+                  placeholder="Mínimo 8 caracteres, 1 mayúscula, 1 número"
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setPwdVisible((v) => ({ ...v, newPwd: !v.newPwd }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {pwdVisible.newPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Repetir contraseña */}
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-confirm">Repetir nueva contraseña</Label>
+              <div className="relative">
+                <Input
+                  id="pwd-confirm"
+                  type={pwdVisible.confirm ? 'text' : 'password'}
+                  value={pwdForm.confirm}
+                  onChange={(e) => setPwdForm((p) => ({ ...p, confirm: e.target.value }))}
+                  placeholder="Repetí la nueva contraseña"
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setPwdVisible((v) => ({ ...v, confirm: !v.confirm }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {pwdVisible.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {pwdForm.confirm && pwdForm.newPwd && pwdForm.confirm !== pwdForm.newPwd && (
+                <p className="text-xs text-red-600">Las contraseñas no coinciden</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setPwdDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSavingPwd}>
+                {isSavingPwd ? 'Guardando...' : 'Actualizar contraseña'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
