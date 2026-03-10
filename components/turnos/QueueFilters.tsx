@@ -1,6 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -130,123 +127,75 @@ export function QueueFilters({
     selectedStatusFilter !== 'ALL'
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Filtros</CardTitle>
-        <CardDescription>{getDescription()}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className={`grid grid-cols-1 md:grid-cols-2 ${getGridCols()} gap-4`}>
-          {/* Filtro por Servicio - Solo para admin y administrativo */}
-          {isAdminOrAdministrativo && (
-            <div className="space-y-2">
-              <Label htmlFor="service_filter">Servicio</Label>
-              <Select value={selectedServiceFilter} onValueChange={onServiceFilterChange}>
-                <SelectTrigger id="service_filter">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos los servicios</SelectItem>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Filtro por Servicio - Solo para admin y administrativo */}
+      {isAdminOrAdministrativo && (
+        <Select value={selectedServiceFilter} onValueChange={onServiceFilterChange}>
+          <SelectTrigger className="h-8 text-sm w-auto min-w-40">
+            <SelectValue placeholder="Todos los servicios" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todos los servicios</SelectItem>
+            {services.map((service) => (
+              <SelectItem key={service.id} value={service.id}>
+                {service.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
-          {/* Filtro por Profesional */}
-          <div className="space-y-2">
-            <Label htmlFor="professional_filter">Profesional</Label>
-            <Select value={selectedProfessionalFilter} onValueChange={onProfessionalFilterChange}>
-              <SelectTrigger id="professional_filter">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Todos los profesionales</SelectItem>
-                {professionals.map((prof) => (
-                  <SelectItem key={prof.id} value={prof.id}>
-                    {prof.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Filtro por Profesional */}
+      <Select value={selectedProfessionalFilter} onValueChange={onProfessionalFilterChange}>
+        <SelectTrigger className="h-8 text-sm w-auto min-w-44">
+          <SelectValue placeholder="Todos los profesionales" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">Todos los profesionales</SelectItem>
+          {professionals.map((prof) => (
+            <SelectItem key={prof.id} value={prof.id}>
+              {prof.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-          {/* Filtro por Consultorio */}
-          <div className="space-y-2">
-            <Label htmlFor="room_filter">Consultorio</Label>
-            <Select value={selectedRoomFilter} onValueChange={onRoomFilterChange}>
-              <SelectTrigger id="room_filter">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Todos los consultorios</SelectItem>
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Filtro por Consultorio */}
+      <Select value={selectedRoomFilter} onValueChange={onRoomFilterChange}>
+        <SelectTrigger className="h-8 text-sm w-auto min-w-44">
+          <SelectValue placeholder="Todos los consultorios" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">Todos los consultorios</SelectItem>
+          {rooms.map((room) => (
+            <SelectItem key={room.id} value={room.id}>
+              {room.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-          {/* Filtro por Estado */}
-          <div className="space-y-2">
-            <Label htmlFor="status_filter">Estado</Label>
-            <Select value={selectedStatusFilter} onValueChange={onStatusFilterChange}>
-              <SelectTrigger id="status_filter">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Todos los estados</SelectItem>
-                {Object.entries(statusConfig).map(([key, config]) => (
-                  <SelectItem key={key} value={key}>
-                    {config.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+      {/* Filtro por Estado */}
+      <Select value={selectedStatusFilter} onValueChange={onStatusFilterChange}>
+        <SelectTrigger className="h-8 text-sm w-auto min-w-36">
+          <SelectValue placeholder="Todos los estados" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">Todos los estados</SelectItem>
+          {Object.entries(statusConfig).map(([key, config]) => (
+            <SelectItem key={key} value={key}>
+              {config.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-        {/* Resumen de filtros activos y botón limpiar */}
-        {hasActiveFilters && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t">
-            <div className="flex flex-wrap gap-2">
-              {selectedServiceFilter !== 'ALL' && (
-                <Badge variant="secondary">
-                  Servicio: {services.find(s => s.id === selectedServiceFilter)?.name}
-                </Badge>
-              )}
-              {selectedProfessionalFilter !== 'ALL' && (
-                <Badge variant="secondary">
-                  Profesional: {professionals.find(p => p.id === selectedProfessionalFilter)?.name}
-                </Badge>
-              )}
-              {selectedRoomFilter !== 'ALL' && (
-                <Badge variant="secondary">
-                  Consultorio: {rooms.find(r => r.id === selectedRoomFilter)?.name}
-                </Badge>
-              )}
-              {selectedStatusFilter !== 'ALL' && (
-                <Badge variant="secondary">
-                  Estado: {statusConfig[selectedStatusFilter as keyof typeof statusConfig].label}
-                </Badge>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearFilters}
-            >
-              Limpiar filtros
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Limpiar filtros */}
+      {hasActiveFilters && (
+        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={onClearFilters}>
+          × Limpiar
+        </Button>
+      )}
+    </div>
   )
 }

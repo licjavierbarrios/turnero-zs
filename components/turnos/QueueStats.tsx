@@ -23,7 +23,7 @@ export function QueueStats({ totalCount, filteredCount }: QueueStatsProps) {
   const hiddenCount = totalCount - filteredCount
 
   return (
-    <div className="flex gap-4 mt-3">
+    <div className="flex gap-2">
       <Badge variant="outline" className="text-sm px-3 py-1">
         Total: {totalCount}
       </Badge>

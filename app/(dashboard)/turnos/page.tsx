@@ -675,7 +675,7 @@ export default function QueuePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
@@ -692,10 +692,13 @@ export default function QueuePage() {
           <p className="text-gray-600 mt-1">
             {format(new Date(selectedDate + 'T12:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
           </p>
-          <QueueStats
-            totalCount={queue.length}
-            filteredCount={filteredQueue.length}
-          />
+          <div className="flex items-center gap-1 mt-3">
+            <QueueStats
+              totalCount={queue.length}
+              filteredCount={filteredQueue.length}
+            />
+            <StatusLegend />
+          </div>
         </div>
         <div className="flex gap-2">
           <div className="flex items-center gap-1 border rounded-md px-3 py-2 bg-white">
@@ -765,9 +768,6 @@ export default function QueuePage() {
           </div>
         </div>
       )}
-
-      {/* Leyenda de colores */}
-      <StatusLegend />
 
       {/* Lista de pacientes */}
       {filteredQueue.length === 0 ? (
