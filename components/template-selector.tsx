@@ -93,7 +93,7 @@ export function TemplateSelector({ currentTemplateId, onTemplateChange }: Templa
         <Button
           variant="outline"
           size="sm"
-          className="fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
+          className="bg-white/90 hover:bg-white"
         >
           <LayoutGridIcon className="h-4 w-4 mr-2" />
           Cambiar Vista

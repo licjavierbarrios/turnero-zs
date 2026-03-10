@@ -91,10 +91,11 @@ function applyScreenFilter(
     const matchesRoom = item.room_id ? roomIds.includes(item.room_id) : null
 
     if (mode === 'include') {
+      // include: mostrar solo los que están en la lista
       return matchesService === true || matchesRoom === true
     }
-    // exclude
-    return matchesService !== false && matchesRoom !== false
+    // exclude: ocultar los que están en la lista; si las listas están vacías, mostrar todo
+    return matchesService !== true && matchesRoom !== true
   })
 }
 
@@ -711,17 +712,15 @@ export default function PantallaPublicaPage({
                 >
                   🔔
                 </button>
+                <TemplateSelector
+                  currentTemplateId={currentTemplate?.id}
+                  onTemplateChange={handleTemplateChange}
+                />
               </div>
             </div>
           </div>
         </div>
       </header>
-
-      {/* Template Selector Button */}
-      <TemplateSelector
-        currentTemplateId={currentTemplate?.id}
-        onTemplateChange={handleTemplateChange}
-      />
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
