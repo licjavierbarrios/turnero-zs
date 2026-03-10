@@ -28,7 +28,7 @@ export function transformQueueItem(raw: any): QueueItem {
     patient_name: raw.patient_name,
     patient_dni: raw.patient_dni,
     service_id: raw.service_id,
-    service_name: raw.service?.name || 'Sin servicio',
+    service_name: raw.service?.name || null,
     professional_id: raw.professional_id,
     professional_name: raw.professional
       ? `${raw.professional.first_name} ${raw.professional.last_name}`
@@ -42,7 +42,9 @@ export function transformQueueItem(raw: any): QueueItem {
     attended_at: raw.attended_at,
     created_by: raw.created_by || null,
     queue_session_id: raw.queue_session_id || null,
-    queue_session_name: raw.queue_session?.name || null
+    queue_session_name: raw.queue_session?.name || null,
+    call_count: raw.call_count ?? 0,
+    re_queued_at: raw.re_queued_at || null
   }
 }
 
