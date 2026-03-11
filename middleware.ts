@@ -1,28 +1,24 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { UserRole } from './lib/types'
 import { getClientCountry, getClientIP } from './lib/headers'
-import { routePermissions } from './lib/permissions'
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname
+
   // ============================================================================
   // LOGGING DE SECURITY PARA ENDPOINTS /api/*
   // ============================================================================
-  const path = request.nextUrl.pathname
   if (path.startsWith('/api/')) {
     const country = getClientCountry(request)
     const ip = getClientIP(request)
-    const method = request.method
-
-    // Log de todos los requests a API (útil para debugging y auditoría)
-    console.log(`[API] ${method} ${path} | Country: ${country} | IP: ${ip}`)
+    console.log(`[API] ${request.method} ${path} | Country: ${country} | IP: ${ip}`)
   }
+
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   })
 
+  // Refrescar sesión de Supabase (única operación permitida en Edge middleware)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -32,94 +28,35 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: any) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          request.cookies.set({ name, value, ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: any) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+          request.cookies.set({ name, value: '', ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value: '', ...options })
         },
       },
     }
   )
 
-  // Obtener sesión del usuario
-  // Envuelto en try/catch para evitar 504 si Supabase no responde en el Edge Runtime
-  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  // Solo verificar si hay sesión activa — sin queries a la DB
+  let user = null
   try {
     const { data } = await supabase.auth.getUser()
     user = data.user
   } catch {
-    // Si Supabase no responde, redirigir a login en rutas protegidas (fail-closed)
-    const isProtected = path.startsWith('/super-admin') || path.startsWith('/turnos') ||
-      path.startsWith('/agenda') || path.startsWith('/asignaciones') ||
-      path.startsWith('/profesionales') || path.startsWith('/servicios') ||
-      path.startsWith('/consultorios') || path.startsWith('/reportes') ||
-      path.startsWith('/configuracion') || path.startsWith('/dashboard')
-    if (isProtected) {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-    return response
+    // Si Supabase Auth no responde, fail-closed en rutas protegidas
   }
 
-  // Variables locales para protección de rutas
   const currentPath = request.nextUrl.pathname
 
   // ============================================================================
-  // PROTECCIÓN DE RUTAS /super-admin/*
+  // RUTAS PROTEGIDAS — solo verificar autenticación, el rol lo chequea la página
   // ============================================================================
-  if (currentPath.startsWith('/super-admin')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-
-    // Verificar que el usuario tiene rol super_admin
-    const { data: memberships } = await supabase
-      .from('membership')
-      .select('role, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-
-    const isSuperAdmin = memberships?.some((m: any) => m.role === 'super_admin')
-
-    if (!isSuperAdmin) {
-      return NextResponse.redirect(new URL('/institutions/select', request.url))
-    }
-
-    return response
-  }
-
-  // ============================================================================
-  // PROTECCIÓN DE RUTAS DEL DASHBOARD
-  // ============================================================================
-  // Rutas del dashboard (con o sin prefijo /dashboard)
-  const dashboardRoutes = [
+  const protectedPrefixes = [
+    '/super-admin',
     '/dashboard',
     '/turnos',
     '/agenda',
@@ -129,64 +66,26 @@ export async function middleware(request: NextRequest) {
     '/consultorios',
     '/reportes',
     '/configuracion',
+    '/pantallas',
+    '/usuarios',
+    '/sesiones',
   ]
 
-  const isDashboardRoute = dashboardRoutes.some(route => currentPath.startsWith(route))
+  const isProtected = protectedPrefixes.some(prefix => currentPath.startsWith(prefix))
 
-  if (isDashboardRoute) {
-    if (!user) {
-      const redirectUrl = new URL('/', request.url)
+  if (isProtected && !user) {
+    const redirectUrl = new URL('/', request.url)
+    if (currentPath !== '/') {
       redirectUrl.searchParams.set('redirectTo', currentPath)
-      return NextResponse.redirect(redirectUrl)
     }
-
-    // Verificar rol real desde la DB (no confiar en localStorage del cliente)
-    const { data: memberships } = await supabase
-      .from('membership')
-      .select('role, institution_id')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .not('institution_id', 'is', null)
-
-    const baseRoute = '/' + currentPath.split('/')[1]
-    const allowedRoles = routePermissions[baseRoute]
-
-    const hasAccess = allowedRoles && memberships?.some(
-      (m: any) => (allowedRoles as string[]).includes(m.role)
-    )
-
-    if (!hasAccess) {
-      return NextResponse.redirect(
-        new URL(`/forbidden?route=${encodeURIComponent(currentPath)}`, request.url)
-      )
-    }
-
-    return response
+    return NextResponse.redirect(redirectUrl)
   }
 
   // ============================================================================
-  // RUTA RAÍZ / (LOGIN)
+  // RUTA RAÍZ / — redirigir si ya está autenticado
   // ============================================================================
-  if (currentPath === '/') {
-    // Si ya está autenticado, redirigir según su rol
-    if (user) {
-      // Verificar si es super admin
-      const { data: memberships } = await supabase
-        .from('membership')
-        .select('role, is_active')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-
-      const isSuperAdmin = memberships?.some(
-        (m: any) => m.role === 'super_admin' && m.is_active
-      )
-
-      if (isSuperAdmin) {
-        return NextResponse.redirect(new URL('/super-admin', request.url))
-      }
-
-      return NextResponse.redirect(new URL('/institutions/select', request.url))
-    }
+  if (currentPath === '/' && user) {
+    return NextResponse.redirect(new URL('/institutions/select', request.url))
   }
 
   return response
