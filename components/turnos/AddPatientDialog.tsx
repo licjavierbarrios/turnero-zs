@@ -134,42 +134,43 @@ export function AddPatientDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col max-h-[90vh]">
+      <DialogContent className="flex flex-col max-h-[90vh] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Cargar Nuevo Paciente</DialogTitle>
           <DialogDescription>
             Copie los datos del paciente desde el HSI
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-4">
-          <div className="space-y-2">
-            <Label htmlFor="patient_name">Nombre Completo *</Label>
-            <Input
-              id="patient_name"
-              value={patientName}
-              onChange={(e) => setPatientName(e.target.value)}
-              placeholder="Ej: Juan Pérez"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="patient_dni">DNI *</Label>
-            <Input
-              id="patient_dni"
-              value={patientDni}
-              onChange={(e) => setPatientDni(e.target.value)}
-              placeholder="Ej: 12345678"
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-3 overflow-y-auto flex-1 pr-4">
+          <div className="grid grid-cols-[3fr_1fr] gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="patient_name">Nombre Completo *</Label>
+              <Input
+                id="patient_name"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                placeholder="Ej: Juan Pérez"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="patient_dni">DNI *</Label>
+              <Input
+                id="patient_dni"
+                value={patientDni}
+                onChange={(e) => setPatientDni(e.target.value)}
+                placeholder="Ej: 12345678"
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-3">
             <Label>Servicios y Profesionales *</Label>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Selecciona todos los servicios/profesionales que el paciente necesita
             </p>
-            <div className="border rounded-md p-4 max-h-80 overflow-y-auto space-y-3">
+            <div className="border rounded-md p-3 max-h-52 overflow-y-auto space-y-2">
               {attentionOptions.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   No hay servicios o profesionales disponibles
@@ -270,7 +271,7 @@ export function AddPatientDialog({
 
           {/* Toggle de turno sensible */}
           <div className="border-t pt-4">
-            <div className="flex items-start space-x-2 rounded-md p-3 bg-amber-50 border border-amber-200">
+            <div className="flex items-center space-x-2 rounded-md p-2 bg-amber-50 border border-amber-200">
               <input
                 type="checkbox"
                 id="is_sensitive"
@@ -296,25 +297,21 @@ export function AddPatientDialog({
           </div>
 
           {/* Toggle para estado inicial del paciente */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="text-base font-semibold">Estado Inicial del Paciente</Label>
-                <p className="text-sm text-muted-foreground">
-                  {isHabilitado
-                    ? 'El paciente se cargará como "Disponible" (habilitado) para atención inmediata'
-                    : 'El paciente se cargará como "Pendiente" (requiere habilitación posterior)'}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-sm font-medium ${isHabilitado ? 'text-green-600' : 'text-amber-600'}`}>
-                  {isHabilitado ? '✓ Disponible' : '⟳ Pendiente'}
-                </span>
-                <Switch
-                  checked={isHabilitado}
-                  onCheckedChange={setIsHabilitado}
-                />
-              </div>
+          <div className="border-t pt-3">
+            <div className="flex items-center gap-3">
+              <Label className="text-sm font-semibold flex-shrink-0">Estado Inicial:</Label>
+              <span className={`text-sm font-medium flex-shrink-0 ${isHabilitado ? 'text-green-600' : 'text-amber-600'}`}>
+                {isHabilitado ? '✓ Disponible' : '⟳ Pendiente'}
+              </span>
+              <span className="text-xs text-muted-foreground flex-1">
+                {isHabilitado
+                  ? '(habilitado para atención inmediata)'
+                  : '(requiere habilitación posterior)'}
+              </span>
+              <Switch
+                checked={isHabilitado}
+                onCheckedChange={setIsHabilitado}
+              />
             </div>
           </div>
         </form>

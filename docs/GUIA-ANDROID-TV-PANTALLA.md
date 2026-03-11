@@ -1,7 +1,7 @@
 # Guía: Usar Android TV como Pantalla Pública en Turnero ZS
 
-**Versión**: 2.0
-**Última actualización**: 2026-03-06
+**Versión**: 3.0
+**Última actualización**: 2026-03-11
 **Aplicación**: Turnero ZS - Sistema de Gestión de Turnos
 
 ---
@@ -23,7 +23,7 @@ Usar un TV inteligente con Android TV como **pantalla pública en tiempo real** 
 ### Software
 
 - Navegador web instalado (Chrome recomendado)
-- Acceso al admin de Turnero ZS para obtener la URL de pantalla
+- Acceso al admin de Turnero ZS para obtener el PIN de pantalla
 
 ---
 
@@ -37,11 +37,11 @@ Usar un TV inteligente con Android TV como **pantalla pública en tiempo real** 
 2. Navegar a **Pantallas** (`/pantallas`)
 3. Crear una nueva pantalla:
    - Nombre: Ej. `Sala de Espera Principal`
-   - Modo: `Todos` (muestra todo) / `Incluir` / `Excluir` (para filtrar servicios o consultorios)
-4. Copiar la **URL de la pantalla** generada
+   - Modo: `Todos` / `Incluir` / `Excluir` (para filtrar servicios o consultorios)
+4. El sistema genera automáticamente un **PIN de 4 dígitos** visible en la tabla
 
-> La URL tiene el formato: `https://turnero-zs.vercel.app/pantalla/[token-uuid]`
-> Esta URL es pública — quien la tenga puede ver la pantalla sin necesidad de login.
+> El PIN aparece en la columna **PIN TV** de la tabla de pantallas (ej: `6399`).
+> También se puede acceder por URL directa si se prefiere.
 
 ---
 
@@ -53,15 +53,26 @@ Usar un TV inteligente con Android TV como **pantalla pública en tiempo real** 
 
 ---
 
-### Paso 3: Abrir la Pantalla en el TV
+### Paso 3: Abrir la Pantalla en el TV — Método PIN (recomendado)
 
 1. Abrí **Chrome** en el TV
-2. Ingresá la URL copiada en el Paso 1:
-   `https://turnero-zs.vercel.app/pantalla/[token-uuid]`
-3. La pantalla de turnos se abrirá directamente — **no requiere login**
-4. Presioná **F11** o el botón de pantalla completa del navegador
+2. Ingresá la URL de acceso:
+   `https://turnero-zs.vercel.app/tv`
+3. Aparece un teclado numérico en pantalla — ingresá el **PIN de 4 dígitos** con el control remoto
+4. Al completar los 4 dígitos, redirige automáticamente a la pantalla correspondiente
+5. Presioná el botón de pantalla completa del navegador
 
-> El nombre de la pantalla configurada aparece en el encabezado como referencia.
+> Esta URL es fija y corta — se puede configurar como página de inicio del navegador para
+> que al encender el TV solo haya que tipear el PIN.
+
+---
+
+### Paso 3 alternativo: Acceso por URL directa
+
+Si se prefiere, también se puede ingresar la URL completa:
+`https://turnero-zs.vercel.app/pantalla/[token-uuid]`
+
+El token se puede copiar desde el botón en la tabla de `/pantallas`.
 
 ---
 
@@ -79,7 +90,9 @@ Una vez abierta la pantalla, podés ajustar:
 - **Ícono de volumen**: activa/desactiva el sonido
 - **Control de volumen TTS**: deslizador 0-100%
 - **Velocidad de pronunciación**: 0.5x – 2x
-- Cuando se llama a un paciente, se anuncia en voz: *"Paciente [nombre], [servicio/consultorio]"*
+- El audio usa Google Translate TTS con pronunciación correcta en español
+- Cuando se llama a un paciente, se anuncia: *"[Nombre] a [servicio/consultorio]"*
+- Turnos sensibles: se anuncia solo *"Paciente [número] a [destino]"* (sin nombre)
 
 ---
 
@@ -90,8 +103,8 @@ Una vez abierta la pantalla, podés ajustar:
 Para que el TV muestre **solo la pantalla de turnos**:
 
 1. Instalá una app de Kiosk desde Google Play (ej: **Kiosk Mode Lockdown**)
-2. Configurá la URL:
-   `https://turnero-zs.vercel.app/pantalla/[token-uuid]`
+2. Configurá la URL de inicio:
+   `https://turnero-zs.vercel.app/tv`
 3. El TV mostrará solo Turnero ZS — nadie puede cambiar de app ni salir
 
 Beneficios:
@@ -162,6 +175,10 @@ O usá un **Smart Plug** con temporizador programado al horario de atención.
 | Atendido | Verde | Si |
 | Cancelado | — | No |
 
+### Turnos Sensibles
+
+Los turnos marcados como sensibles (servicio o profesional de salud sensible) muestran **solo el número de orden** en pantalla pública, sin nombre ni médico. El TTS anuncia "Paciente 001 a Consultorio X" sin identificar al paciente.
+
 ---
 
 ## Controles
@@ -182,13 +199,15 @@ O usá un **Smart Plug** con temporizador programado al horario de atención.
 
 ## Seguridad
 
-**La URL del token es publica** — quien la tenga puede ver la pantalla.
-Tratala como una URL interna: no la publiques en redes sociales.
+**El PIN de pantalla** permite acceso a la pantalla pública desde cualquier dispositivo.
+Tratalo como una URL interna: no lo publiques fuera del personal autorizado.
+
+**La URL del token también es pública** — quien la tenga puede ver la pantalla sin PIN.
 
 Buenas practicas:
 - Usar Ethernet en lugar de WiFi (mas estable y seguro)
 - Modo Kiosk para evitar accesos no autorizados al TV
-- Si la URL se compromete: borrar la pantalla y crear una nueva en `/pantallas` (genera token nuevo)
+- Si se compromete el acceso: borrar la pantalla y crear una nueva en `/pantallas` (genera PIN y token nuevos)
 
 **La pantalla solo muestra**: nombre del paciente, numero de orden, servicio/consultorio.
 **No muestra**: DNI, telefono, historia clinica ni datos sensibles.
@@ -199,18 +218,24 @@ Buenas practicas:
 
 ### "No carga la pagina"
 1. Verificar internet: abrir YouTube en el TV
-2. Confirmar que la URL del token sea correcta (copiarla de nuevo desde `/pantallas`)
+2. Confirmar que la URL `https://turnero-zs.vercel.app/tv` sea correcta
 3. Limpiar cache: `Ctrl + Shift + Del`
 4. Reiniciar el TV
+
+### "PIN incorrecto"
+1. Verificar el PIN en `/pantallas` del admin (columna PIN TV)
+2. Asegurarse de que la pantalla esté activa (no desactivada)
+3. Si se olvidó el PIN: el admin lo ve en cualquier momento desde `/pantallas`
 
 ### "La pagina se ve muy pequena"
 1. `Ctrl + +` para hacer zoom
 2. O desde el menu del navegador: Zoom > aumentar
 
 ### "El audio no funciona"
-1. Verificar que el volumen del TV no este silenciado
-2. Aumentar el deslizador de TTS en pantalla
-3. Reiniciar el navegador
+1. Activar el audio desde la pantalla: click en el botón de activar audio (primera vez)
+2. Verificar que el volumen del TV no este silenciado
+3. Aumentar el deslizador de TTS en pantalla
+4. Reiniciar el navegador
 
 ### "Se congela o lentifica"
 1. Recargar: `F5` o `Ctrl + R`
@@ -261,10 +286,11 @@ Buenas practicas:
 
 ## Checklist de Puesta en Marcha
 
-- [ ] Pantalla creada en `/pantallas` y URL copiada
+- [ ] Pantalla creada en `/pantallas` y PIN anotado
 - [ ] TV conectado a internet (preferentemente Ethernet)
-- [ ] Chrome instalado y URL cargada
-- [ ] Pantalla completa activada (F11)
+- [ ] Chrome instalado y configurado con `https://turnero-zs.vercel.app/tv` como página de inicio
+- [ ] PIN ingresado en el TV y pantalla visible
+- [ ] Audio activado con el botón de la pantalla (requiere click/interacción una vez)
 - [ ] Audio probado con un llamado de prueba
 - [ ] Modo Kiosk configurado (si aplica)
 - [ ] TV en ubicacion definitiva
@@ -275,4 +301,6 @@ Buenas practicas:
 
 - `IMPLEMENTACION-ACTUAL.md` — Sistema de cola (`daily_queue`)
 - Gestion de pantallas: `/pantallas` (solo admin)
-- Codigo fuente: `app/(public)/pantalla/[slug]/page.tsx`
+- Acceso TV por PIN: `https://turnero-zs.vercel.app/tv`
+- Código fuente pantalla: `app/(public)/pantalla/[slug]/page.tsx`
+- Código fuente PIN TV: `app/(public)/tv/page.tsx`
