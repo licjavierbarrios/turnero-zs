@@ -21,6 +21,7 @@ type Service = {
   description: string | null
   duration_minutes: number
   is_active: boolean
+  is_sensitive: boolean
   created_at: string
   updated_at: string
   institution?: {
@@ -64,7 +65,8 @@ export default function ServiciosPage() {
       institution_id: institutionId,
       description: '',
       duration_minutes: 15,
-      is_active: true
+      is_active: true,
+      is_sensitive: false
     },
     selectFields: `
       *,

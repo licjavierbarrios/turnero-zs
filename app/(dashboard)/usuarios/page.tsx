@@ -49,6 +49,7 @@ type StaffRow = {
     professionalType: string | null
     speciality: string | null
     licenseNumber: string | null
+    isSensitive: boolean
   }
   userService?: {
     id: string
@@ -69,6 +70,7 @@ type FormState = {
   professionalType: string
   speciality: string
   licenseNumber: string
+  isSensitive: boolean
   // servicio
   serviceId: string
 }
@@ -109,6 +111,7 @@ const EMPTY_FORM: FormState = {
   professionalType: '',
   speciality: '',
   licenseNumber: '',
+  isSensitive: false,
   serviceId: '',
 }
 
@@ -193,7 +196,7 @@ export default function UsuariosPage() {
 
         supabase
           .from('professional')
-          .select('id, user_id, professional_type, speciality, license_number')
+          .select('id, user_id, professional_type, speciality, license_number, is_sensitive')
           .eq('institution_id', institutionId),
 
         supabase
@@ -241,6 +244,7 @@ export default function UsuariosPage() {
                 professionalType: prof.professional_type,
                 speciality: prof.speciality,
                 licenseNumber: prof.license_number,
+                isSensitive: prof.is_sensitive ?? false,
               }
             : undefined,
           userService: us
@@ -315,6 +319,7 @@ export default function UsuariosPage() {
       professionalType: row.professional?.professionalType || '',
       speciality: row.professional?.speciality || '',
       licenseNumber: row.professional?.licenseNumber || '',
+      isSensitive: row.professional?.isSensitive ?? false,
       serviceId: row.userService?.serviceId || '',
     })
     setError(null)
@@ -494,6 +499,7 @@ export default function UsuariosPage() {
         professional_type: f.professionalType,
         speciality: f.speciality || null,
         license_number: f.licenseNumber || null,
+        is_sensitive: f.isSensitive,
         is_active: true,
       })
       if (error) throw error
@@ -532,6 +538,7 @@ export default function UsuariosPage() {
           professional_type: f.professionalType,
           speciality: f.speciality || null,
           license_number: f.licenseNumber || null,
+          is_sensitive: f.isSensitive,
           first_name: f.firstName,
           last_name: f.lastName,
           email: f.email,
@@ -789,25 +796,25 @@ export default function UsuariosPage() {
               </Alert>
             )}
 
-            {/* Nombre y Apellido */}
+            {/* Apellido y Nombre — orden argentino: apellido primero */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="firstName">Nombre *</Label>
-                <Input
-                  id="firstName"
-                  value={form.firstName}
-                  onChange={(e) => setField('firstName', e.target.value)}
-                  placeholder="Nombre"
-                  required
-                />
-              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="lastName">Apellido *</Label>
                 <Input
                   id="lastName"
                   value={form.lastName}
                   onChange={(e) => setField('lastName', e.target.value)}
-                  placeholder="Apellido"
+                  placeholder="ej: Morales"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName">Nombre *</Label>
+                <Input
+                  id="firstName"
+                  value={form.firstName}
+                  onChange={(e) => setField('firstName', e.target.value)}
+                  placeholder="ej: Carolina"
                   required
                 />
               </div>
@@ -892,7 +899,7 @@ export default function UsuariosPage() {
                 </div>
                 {showPassword && form.password && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                    Contraseña visible — recordá comunicársela al usuario
+                    Contraseña generada: <strong>{form.password}</strong> (DNI + 2 primeras letras del apellido). Anotala antes de guardar.
                   </p>
                 )}
               </div>
@@ -971,6 +978,24 @@ export default function UsuariosPage() {
                     onChange={(e) => setField('licenseNumber', e.target.value)}
                     placeholder="Ej: MP 12345"
                   />
+                </div>
+
+                <div className="flex items-start space-x-2 border rounded-md p-3 bg-amber-50 border-amber-200">
+                  <input
+                    type="checkbox"
+                    id="prof_is_sensitive"
+                    checked={form.isSensitive}
+                    onChange={(e) => setField('isSensitive', e.target.checked)}
+                    className="rounded border-gray-300 mt-0.5"
+                  />
+                  <div>
+                    <Label htmlFor="prof_is_sensitive" className="font-medium cursor-pointer">
+                      Profesional sensible
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Los turnos de este profesional mostrarán solo el número en pantalla pública (sin nombre ni servicio)
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

@@ -23,6 +23,7 @@ export interface QueueItem {
   queue_session_name: string | null
   call_count: number
   re_queued_at: string | null
+  is_sensitive: boolean
 }
 
 export type QueueAction = QueueItem['status'] | 'rellamar' | 'siguiente'
@@ -45,12 +46,14 @@ export interface QueueSession {
 export interface Service {
   id: string
   name: string
+  is_sensitive: boolean
 }
 
 export interface Professional {
   id: string
   name: string
   speciality: string | null
+  is_sensitive: boolean
 }
 
 export interface Room {
@@ -65,6 +68,7 @@ export interface ProfessionalAssignment {
   professional_name: string
   speciality: string | null
   room_name: string
+  is_sensitive: boolean
 }
 
 export interface AttentionOption {
@@ -74,6 +78,7 @@ export interface AttentionOption {
   service_id: string
   professional_id: string | null
   room_id: string | null
+  is_sensitive: boolean
 }
 
 export interface StatusConfig {

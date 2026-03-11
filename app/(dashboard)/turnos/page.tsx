@@ -137,7 +137,7 @@ export default function QueuePage() {
       // Obtener todos los servicios de la institución (para el formulario de carga)
       const { data: servicesData, error: servicesError } = await supabase
         .from('service')
-        .select('id, name')
+        .select('id, name, is_sensitive')
         .eq('institution_id', context.institution_id)
         .eq('is_active', true)
         .order('name')
@@ -167,7 +167,8 @@ export default function QueuePage() {
             id,
             first_name,
             last_name,
-            speciality
+            speciality,
+            is_sensitive
           ),
           room:room_id (
             id,
@@ -215,6 +216,7 @@ export default function QueuePage() {
           queue_session_id,
           call_count,
           re_queued_at,
+          is_sensitive,
           service:service_id (
             name
           ),
@@ -302,6 +304,7 @@ export default function QueuePage() {
                 queue_session_id,
                 call_count,
                 re_queued_at,
+                is_sensitive,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
                 room:room_id (name),
@@ -357,6 +360,7 @@ export default function QueuePage() {
                 queue_session_id,
                 call_count,
                 re_queued_at,
+                is_sensitive,
                 service:service_id (name),
                 professional:professional_id (first_name, last_name),
                 room:room_id (name),
@@ -458,8 +462,9 @@ export default function QueuePage() {
     selectedOptions: string[]
     initialStatus: 'pendiente' | 'disponible'
     sessionId: string | null
+    isSensitive: boolean
   }) => {
-    const { patientName, patientDni, selectedOptions, initialStatus, sessionId } = data
+    const { patientName, patientDni, selectedOptions, initialStatus, sessionId, isSensitive } = data
 
     try {
       const context = getInstitutionContext()
@@ -520,6 +525,7 @@ export default function QueuePage() {
           room_name: assignment?.room_name || null,
           queue_session_id: sessionId || null,
           queue_session_name: session?.name || null,
+          is_sensitive: isSensitive,
           ...statusData,
           created_at: now,
           called_at: null,
@@ -562,6 +568,7 @@ export default function QueuePage() {
           institution_id: context.institution_id,
           queue_date: today,
           status: initialStatus,
+          is_sensitive: isSensitive,
           created_by: userId
         }
 

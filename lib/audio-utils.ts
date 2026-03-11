@@ -1,34 +1,15 @@
-// Global AudioContext instance (created after user interaction)
-let globalAudioContext: AudioContext | null = null
-
 // Precargar el audio de notificación
 let notificationAudio: HTMLAudioElement | null = null
 
 /**
- * Inicializa el AudioContext global y precarga el audio (debe llamarse después de interacción del usuario)
+ * Precarga el audio de notificación (debe llamarse después de interacción del usuario)
  */
 export function initAudioContext(): void {
   if (typeof window === 'undefined') return
 
-  // Inicializar AudioContext si no existe
-  if (!globalAudioContext) {
-    try {
-      globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-
-      // Asegurar que el contexto esté en estado 'running'
-      if (globalAudioContext.state === 'suspended') {
-        globalAudioContext.resume()
-      }
-    } catch (error) {
-      console.warn('No se pudo inicializar AudioContext:', error)
-    }
-  }
-
-  // Precargar el audio de notificación desde API endpoint
   if (!notificationAudio) {
     notificationAudio = new Audio('/api/audio?file=dingdong.mp3')
     notificationAudio.preload = 'auto'
-    // No esperar a que cargue, solo precargarlo en background
     notificationAudio.load()
   }
 }

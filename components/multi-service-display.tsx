@@ -25,6 +25,7 @@ interface PublicAppointment {
   queue_date: string
   room_name?: string
   scheduled_at?: string
+  is_sensitive?: boolean
 }
 
 interface MultiServiceDisplayProps {

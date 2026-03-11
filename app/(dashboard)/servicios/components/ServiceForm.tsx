@@ -13,6 +13,7 @@ type Service = {
   description: string | null
   duration_minutes: number
   is_active: boolean
+  is_sensitive: boolean
   created_at: string
   updated_at: string
 }
@@ -121,6 +122,24 @@ export function ServiceForm({
             className="rounded border-gray-300"
           />
           <Label htmlFor="service_is_active">Servicio activo</Label>
+        </div>
+
+        <div className="flex items-center space-x-2 border rounded-md p-3 bg-amber-50 border-amber-200">
+          <input
+            type="checkbox"
+            id="service_is_sensitive"
+            checked={formData.is_sensitive || false}
+            onChange={(e) => updateFormField('is_sensitive', e.target.checked as any)}
+            className="rounded border-gray-300"
+          />
+          <div>
+            <Label htmlFor="service_is_sensitive" className="font-medium cursor-pointer">
+              Servicio sensible
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Los turnos de este servicio mostrarán solo el número en pantalla pública (sin nombre ni médico)
+            </p>
+          </div>
         </div>
       </div>
     </>

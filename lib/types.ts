@@ -73,6 +73,7 @@ export interface Service {
   description?: string;
   duration_minutes: number;
   is_active: boolean;
+  is_sensitive: boolean;
   created_at: string;
   updated_at: string;
   // Relaciones
@@ -89,6 +90,7 @@ export interface Professional {
   email?: string;
   phone?: string;
   is_active: boolean;
+  is_sensitive: boolean;
   created_at: string;
   updated_at: string;
   // Relaciones
@@ -247,6 +249,7 @@ export interface ServiceFormData {
   description?: string;
   duration_minutes: number;
   is_active: boolean;
+  is_sensitive: boolean;
 }
 
 export interface ProfessionalFormData {
@@ -258,6 +261,7 @@ export interface ProfessionalFormData {
   email?: string;
   phone?: string;
   is_active: boolean;
+  is_sensitive: boolean;
 }
 
 export interface PatientFormData {

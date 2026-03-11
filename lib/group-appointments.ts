@@ -12,6 +12,7 @@ interface RawAppointment {
   room_name?: string
   scheduled_at?: string // Opcional - daily_queue no siempre lo usa
   status: string
+  is_sensitive?: boolean
 }
 
 /**
@@ -40,7 +41,8 @@ export function groupAppointmentsByService(
       professional_last_name: apt.professional_last_name,
       room_name: apt.room_name,
       scheduled_at: apt.scheduled_at,
-      status: apt.status
+      status: apt.status,
+      is_sensitive: apt.is_sensitive ?? false
     })
 
     return acc

@@ -13,6 +13,7 @@ type Service = {
   description: string | null
   duration_minutes: number
   is_active: boolean
+  is_sensitive: boolean
   created_at: string
   updated_at: string
 }
@@ -83,14 +84,19 @@ export function ServiceTableRow({
         )}
       </TableCell>
       <TableCell>
-        <Badge
-          className={service.is_active
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
-          }
-        >
-          {service.is_active ? 'Activo' : 'Inactivo'}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge
+            className={service.is_active
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+            }
+          >
+            {service.is_active ? 'Activo' : 'Inactivo'}
+          </Badge>
+          {service.is_sensitive && (
+            <Badge className="bg-amber-100 text-amber-800">Sensible</Badge>
+          )}
+        </div>
       </TableCell>
       <TableCell>
         {formatDate(service.created_at)}

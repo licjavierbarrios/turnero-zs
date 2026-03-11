@@ -40,6 +40,7 @@ interface AddPatientDialogProps {
     selectedOptions: string[]
     initialStatus: 'pendiente' | 'disponible'
     sessionId: string | null
+    isSensitive: boolean
   }) => Promise<void>
 }
 
@@ -79,6 +80,14 @@ export function AddPatientDialog({
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [isHabilitado, setIsHabilitado] = useState(false)
   const [selectedSessionId, setSelectedSessionId] = useState<string>('NONE')
+  const [isSensitiveManual, setIsSensitiveManual] = useState(false)
+
+  // Determinar si alguna opción seleccionada es sensible (forzado)
+  const forcedSensitive = attentionOptions
+    .filter(o => selectedOptions.includes(o.id))
+    .some(o => o.is_sensitive)
+
+  const isSensitive = forcedSensitive || isSensitiveManual
 
   // Determinar sesiones relevantes para los servicios seleccionados
   const selectedServiceIds = attentionOptions
@@ -101,6 +110,7 @@ export function AddPatientDialog({
       selectedOptions,
       initialStatus: isHabilitado ? 'disponible' : 'pendiente',
       sessionId: selectedSessionId !== 'NONE' ? selectedSessionId : null,
+      isSensitive,
     })
 
     // Limpiar formulario
@@ -109,6 +119,7 @@ export function AddPatientDialog({
     setSelectedOptions([])
     setIsHabilitado(false)
     setSelectedSessionId('NONE')
+    setIsSensitiveManual(false)
   }
 
   const handleCancel = () => {
@@ -117,6 +128,7 @@ export function AddPatientDialog({
     setSelectedOptions([])
     setIsHabilitado(false)
     setSelectedSessionId('NONE')
+    setIsSensitiveManual(false)
     onOpenChange(false)
   }
 
@@ -255,6 +267,33 @@ export function AddPatientDialog({
               </Select>
             </div>
           )}
+
+          {/* Toggle de turno sensible */}
+          <div className="border-t pt-4">
+            <div className="flex items-start space-x-2 rounded-md p-3 bg-amber-50 border border-amber-200">
+              <input
+                type="checkbox"
+                id="is_sensitive"
+                checked={isSensitive}
+                disabled={forcedSensitive}
+                onChange={(e) => setIsSensitiveManual(e.target.checked)}
+                className="rounded border-gray-300 mt-0.5"
+              />
+              <div>
+                <label
+                  htmlFor="is_sensitive"
+                  className={`text-sm font-medium cursor-pointer ${forcedSensitive ? 'text-amber-700' : ''}`}
+                >
+                  Turno sensible
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {forcedSensitive
+                    ? 'Activado automáticamente por el servicio o profesional seleccionado'
+                    : 'Solo muestra el número de orden en pantalla pública (sin nombre ni médico)'}
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Toggle para estado inicial del paciente */}
           <div className="border-t pt-4">

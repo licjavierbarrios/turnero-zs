@@ -14,6 +14,7 @@ export interface ServiceAppointment {
   room_name?: string
   scheduled_at?: string // Opcional ya que daily_queue usa order_number
   status: string
+  is_sensitive?: boolean
 }
 
 interface ServiceCardProps {
@@ -72,13 +73,21 @@ export function ServiceCard({ serviceName, appointments, compact = false, announ
               )}
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-gray-900 font-semibold text-lg">
-                <UserIcon className="h-4 w-4" />
-                {currentCall.patient_name}
-              </div>
-              <div className="text-gray-600 text-sm">
-                Nº {String(currentCall.order_number).padStart(3, '0')}
-              </div>
+              {currentCall.is_sensitive ? (
+                <div className="text-gray-900 font-bold text-2xl">
+                  {String(currentCall.order_number).padStart(3, '0')}
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 text-gray-900 font-semibold text-lg">
+                    <UserIcon className="h-4 w-4" />
+                    {currentCall.patient_name}
+                  </div>
+                  <div className="text-gray-600 text-sm">
+                    Nº {String(currentCall.order_number).padStart(3, '0')}
+                  </div>
+                </>
+              )}
               {currentCall.room_name && (
                 <div className="flex items-center gap-2 text-gray-700 text-sm">
                   <MapPinIcon className="h-3 w-3" />
@@ -130,9 +139,11 @@ export function ServiceCard({ serviceName, appointments, compact = false, announ
                   <span className="text-gray-500 font-semibold">
                     {String(apt.order_number).padStart(3, '0')}
                   </span>
-                  <span className="text-gray-700 flex-1">
-                    {apt.patient_name}
-                  </span>
+                  {!apt.is_sensitive && (
+                    <span className="text-gray-700 flex-1">
+                      {apt.patient_name}
+                    </span>
+                  )}
                 </div>
               ))}
               {waiting.length > (compact ? 2 : 3) && (

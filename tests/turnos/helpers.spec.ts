@@ -40,6 +40,7 @@ describe('Turnos Helpers', () => {
           queue_session_name: null,
           call_count: 0,
           re_queued_at: null,
+          is_sensitive: false,
         },
         {
           id: '2',
@@ -62,6 +63,7 @@ describe('Turnos Helpers', () => {
           queue_session_name: null,
           call_count: 0,
           re_queued_at: null,
+          is_sensitive: false,
         }
       ]
       const result = getNextOrderNumber(queue)
@@ -91,6 +93,7 @@ describe('Turnos Helpers', () => {
           queue_session_name: null,
           call_count: 0,
           re_queued_at: null,
+          is_sensitive: false,
         }
       ]
       const result = getNextOrderNumber(queue)

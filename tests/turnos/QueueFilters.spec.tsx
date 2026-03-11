@@ -6,13 +6,13 @@ import type { Service, Professional, Room } from '@/lib/turnos/types'
 
 describe('QueueFilters', () => {
   const mockServices: Service[] = [
-    { id: 's1', name: 'Cardiología' },
-    { id: 's2', name: 'Pediatría' }
+    { id: 's1', name: 'Cardiología', is_sensitive: false },
+    { id: 's2', name: 'Pediatría', is_sensitive: false }
   ]
 
   const mockProfessionals: Professional[] = [
-    { id: 'p1', name: 'Dr. Juan García', speciality: 'Cardiología' },
-    { id: 'p2', name: 'Dra. María López', speciality: 'Pediatría' }
+    { id: 'p1', name: 'Dr. Juan García', speciality: 'Cardiología', is_sensitive: false },
+    { id: 'p2', name: 'Dra. María López', speciality: 'Pediatría', is_sensitive: false }
   ]
 
   const mockRooms: Room[] = [

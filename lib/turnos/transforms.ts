@@ -44,7 +44,8 @@ export function transformQueueItem(raw: any): QueueItem {
     queue_session_id: raw.queue_session_id || null,
     queue_session_name: raw.queue_session?.name || null,
     call_count: raw.call_count ?? 0,
-    re_queued_at: raw.re_queued_at || null
+    re_queued_at: raw.re_queued_at || null,
+    is_sensitive: raw.is_sensitive ?? false
   }
 }
 
@@ -78,7 +79,8 @@ export function transformProfessionalAssignments(rawData: any[]): ProfessionalAs
         room_id: a.room_id,
         professional_name: `${prof.first_name} ${prof.last_name}`,
         speciality: prof.speciality,
-        room_name: (a.room as any).name
+        room_name: (a.room as any).name,
+        is_sensitive: prof.is_sensitive ?? false
       }
     })
 }
@@ -103,7 +105,8 @@ export function transformUserServices(rawData: any[]): Service[] {
     .filter((us: any) => us.service)
     .map((us: any) => ({
       id: (us.service as any).id,
-      name: (us.service as any).name
+      name: (us.service as any).name,
+      is_sensitive: (us.service as any).is_sensitive ?? false
     }))
 }
 
@@ -160,7 +163,8 @@ export function buildAttentionOptions(
     label: s.name,
     service_id: s.id,
     professional_id: null,
-    room_id: null
+    room_id: null,
+    is_sensitive: s.is_sensitive ?? false
   }))
 
   const professionalOptions: AttentionOption[] = assignments.map((a: ProfessionalAssignment) => ({
@@ -171,7 +175,8 @@ export function buildAttentionOptions(
       : `${a.professional_name} (${a.room_name})`,
     service_id: '', // Los profesionales no tienen service_id directo
     professional_id: a.professional_id,
-    room_id: a.room_id
+    room_id: a.room_id,
+    is_sensitive: a.is_sensitive ?? false
   }))
 
   return [...serviceOptions, ...professionalOptions]
@@ -199,7 +204,8 @@ export function extractUniqueProfessionals(queue: QueueItem[]): Professional[] {
       uniqueProfessionals.push({
         id: item.professional_id,
         name: item.professional_name || 'Sin nombre',
-        speciality: null
+        speciality: null,
+        is_sensitive: false
       })
     }
   })

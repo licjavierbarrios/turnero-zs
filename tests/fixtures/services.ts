@@ -15,6 +15,7 @@ export const createService = (overrides?: Partial<Service>): Service => ({
   description: 'Consulta de medicina general',
   duration_minutes: 30,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
   ...overrides,
@@ -60,6 +61,7 @@ export const mockMedicineGeneral: Service = {
   description: 'Consulta de medicina general',
   duration_minutes: 30,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-05T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -71,6 +73,7 @@ export const mockPediatrics: Service = {
   description: 'Consulta pediátrica',
   duration_minutes: 25,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-05T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -82,6 +85,7 @@ export const mockCardiology: Service = {
   description: 'Consulta cardiológica',
   duration_minutes: 45,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-05T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -93,6 +97,7 @@ export const mockDermatology: Service = {
   description: 'Consulta dermatológica',
   duration_minutes: 20,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-05T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -107,6 +112,7 @@ export const mockServiceInactive: Service = {
   description: 'Servicio ya no disponible',
   duration_minutes: 30,
   is_active: false,
+  is_sensitive: false,
   created_at: '2025-02-01T08:00:00Z',
   updated_at: '2025-10-20T14:00:00Z',
 }
@@ -121,6 +127,7 @@ export const mockServiceShort: Service = {
   description: 'Consulta rápida de seguimiento',
   duration_minutes: 10,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-03-01T08:00:00Z',
   updated_at: '2025-10-18T14:00:00Z',
 }
@@ -135,6 +142,7 @@ export const mockServiceLong: Service = {
   description: 'Evaluación completa y detallada',
   duration_minutes: 90,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-03-01T08:00:00Z',
   updated_at: '2025-10-18T14:00:00Z',
 }
@@ -148,6 +156,7 @@ export const mockServiceMinimal: Service = {
   name: 'Servicio X',
   duration_minutes: 30,
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-10-22T00:00:00Z',
   updated_at: '2025-10-22T00:00:00Z',
 }

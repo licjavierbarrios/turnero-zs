@@ -94,18 +94,36 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
     utterance.pitch = pitch
     utterance.volume = volume
 
+    // Seleccionar voz en español si está disponible
+    const voices = window.speechSynthesis.getVoices()
+    const esVoice = voices.find(v => v.lang.startsWith('es'))
+    if (esVoice) utterance.voice = esVoice
+
     utterance.onstart = () => setSpeaking(true)
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = (event) => {
-      // Silenciar error "not-allowed" que es común cuando TTS no fue iniciado por usuario
-      if (event.error !== 'not-allowed') {
-        console.error('Error en TTS (Web Speech):', event)
+      // 'not-allowed': sin gesto de usuario. 'interrupted': cancel() previo esperado.
+      if (event.error !== 'not-allowed' && event.error !== 'interrupted') {
+        console.error('Error en TTS (Web Speech):', event.error)
       }
       setSpeaking(false)
     }
 
     utteranceRef.current = utterance
-    window.speechSynthesis.speak(utterance)
+
+    // Fix Chrome/Brave: cancel() + speak() inmediato puede fallar.
+    // Esperar un tick antes de hablar.
+    setTimeout(() => {
+      // Verificar que las voces estén cargadas; si no, reintentar cuando estén listas
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.onvoiceschanged = null
+          window.speechSynthesis.speak(utterance)
+        }
+      } else {
+        window.speechSynthesis.speak(utterance)
+      }
+    }, 100)
   }, [enabled, lang, rate, pitch, volume])
 
   const speakWithServerTTS = useCallback((text: string) => {

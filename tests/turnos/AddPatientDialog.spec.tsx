@@ -12,7 +12,8 @@ describe('AddPatientDialog', () => {
       label: 'Cardiología',
       service_id: 's1',
       professional_id: null,
-      room_id: null
+      room_id: null,
+      is_sensitive: false
     },
     {
       id: 'opt2',
@@ -20,7 +21,8 @@ describe('AddPatientDialog', () => {
       label: 'Pediatría',
       service_id: 's2',
       professional_id: null,
-      room_id: null
+      room_id: null,
+      is_sensitive: false
     },
     {
       id: 'opt3',
@@ -28,7 +30,8 @@ describe('AddPatientDialog', () => {
       label: 'Dr. Juan García - Consultorio A',
       service_id: 's3',
       professional_id: 'prof1',
-      room_id: 'room1'
+      room_id: 'room1',
+      is_sensitive: false
     }
   ]
 

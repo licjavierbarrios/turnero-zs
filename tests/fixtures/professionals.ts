@@ -18,6 +18,7 @@ export const createProfessional = (overrides?: Partial<Professional>): Professio
   email: 'juan.perez@hospital.com',
   phone: '+54 11 1234-5678',
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
   ...overrides,
@@ -73,6 +74,7 @@ export const mockDoctorGeneral: Professional = {
   email: 'juan.perez@hospital.com',
   phone: '+54 11 1234-5678',
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-08T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -87,6 +89,7 @@ export const mockPediatrician: Professional = {
   email: 'maria.garcia@hospital.com',
   phone: '+54 11 2345-6789',
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-08T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -101,6 +104,7 @@ export const mockCardiologist: Professional = {
   email: 'carlos.martinez@hospital.com',
   phone: '+54 11 3456-7890',
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-08T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -115,6 +119,7 @@ export const mockDermatologist: Professional = {
   email: 'ana.lopez@hospital.com',
   phone: '+54 11 4567-8901',
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-01-08T08:00:00Z',
   updated_at: '2025-10-15T10:30:00Z',
 }
@@ -132,6 +137,7 @@ export const mockProfessionalInactive: Professional = {
   email: 'roberto.rodriguez@hospital.com',
   phone: '+54 11 5678-9012',
   is_active: false,
+  is_sensitive: false,
   created_at: '2025-02-01T08:00:00Z',
   updated_at: '2025-10-20T14:00:00Z',
 }
@@ -145,6 +151,7 @@ export const mockProfessionalMinimal: Professional = {
   first_name: 'Nuevo',
   last_name: 'Profesional',
   is_active: true,
+  is_sensitive: false,
   created_at: '2025-10-22T00:00:00Z',
   updated_at: '2025-10-22T00:00:00Z',
 }

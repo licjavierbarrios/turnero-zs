@@ -63,13 +63,21 @@ export function ListLayout({ services, announcingAppointmentId }: ListLayoutProp
                       )}
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-gray-900 font-bold text-xl">
-                        <UserIcon className="h-5 w-5" />
-                        {currentCall.patient_name}
-                      </div>
-                      <div className="text-gray-600 text-lg">
-                        Nº {String(currentCall.order_number).padStart(3, '0')}
-                      </div>
+                      {currentCall.is_sensitive ? (
+                        <div className="text-gray-900 font-bold text-3xl">
+                          {String(currentCall.order_number).padStart(3, '0')}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 text-gray-900 font-bold text-xl">
+                            <UserIcon className="h-5 w-5" />
+                            {currentCall.patient_name}
+                          </div>
+                          <div className="text-gray-600 text-lg">
+                            Nº {String(currentCall.order_number).padStart(3, '0')}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -95,9 +103,11 @@ export function ListLayout({ services, announcingAppointmentId }: ListLayoutProp
                           <span className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white text-sm font-bold rounded-full">
                             {String(apt.order_number).padStart(3, '0')}
                           </span>
-                          <span className="text-gray-900 font-medium">
-                            {apt.patient_name}
-                          </span>
+                          {!apt.is_sensitive && (
+                            <span className="text-gray-900 font-medium">
+                              {apt.patient_name}
+                            </span>
+                          )}
                         </div>
                       ))}
                       {waiting.length > 5 && (
