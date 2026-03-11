@@ -127,7 +127,25 @@ export default function QueuePage() {
         // No es error fatal, continuamos sin asignaciones de profesional
       }
 
-      const assignedProfessionals = userProfessionalsData ? transformUserProfessionals(userProfessionalsData) : []
+      let assignedProfessionals = userProfessionalsData ? transformUserProfessionals(userProfessionalsData) : []
+
+      // Si el usuario ES un profesional (rol 'profesional'), agregar su propio registro
+      // para que pueda ver sus propios pacientes en la cola
+      if (context.user_role === 'profesional' && assignedProfessionals.length === 0) {
+        const { data: ownProfessional } = await supabase
+          .from('professional')
+          .select('id, first_name, last_name, speciality')
+          .eq('user_id', authUser.id)
+          .single()
+
+        if (ownProfessional) {
+          assignedProfessionals = [{
+            professional_id: ownProfessional.id,
+            professional_name: `${ownProfessional.first_name} ${ownProfessional.last_name}`,
+            speciality: ownProfessional.speciality || null
+          }]
+        }
+      }
       setUserProfessionals(assignedProfessionals)
 
       // Fecha seleccionada (hoy por defecto, puede ser futura)

@@ -80,52 +80,6 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
     }
   }, [])
 
-  const speakWithWebSpeech = useCallback((text: string) => {
-    if (!hasWebSpeechRef.current || !enabled) {
-      return
-    }
-
-    // Cancelar cualquier speech anterior
-    window.speechSynthesis.cancel()
-
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = lang
-    utterance.rate = rate
-    utterance.pitch = pitch
-    utterance.volume = volume
-
-    // Seleccionar voz en español si está disponible
-    const voices = window.speechSynthesis.getVoices()
-    const esVoice = voices.find(v => v.lang.startsWith('es'))
-    if (esVoice) utterance.voice = esVoice
-
-    utterance.onstart = () => setSpeaking(true)
-    utterance.onend = () => setSpeaking(false)
-    utterance.onerror = (event) => {
-      // 'not-allowed': sin gesto de usuario. 'interrupted': cancel() previo esperado.
-      if (event.error !== 'not-allowed' && event.error !== 'interrupted') {
-        console.error('Error en TTS (Web Speech):', event.error)
-      }
-      setSpeaking(false)
-    }
-
-    utteranceRef.current = utterance
-
-    // Fix Chrome/Brave: cancel() + speak() inmediato puede fallar.
-    // Esperar un tick antes de hablar.
-    setTimeout(() => {
-      // Verificar que las voces estén cargadas; si no, reintentar cuando estén listas
-      if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = () => {
-          window.speechSynthesis.onvoiceschanged = null
-          window.speechSynthesis.speak(utterance)
-        }
-      } else {
-        window.speechSynthesis.speak(utterance)
-      }
-    }, 100)
-  }, [enabled, lang, rate, pitch, volume])
-
   const speakWithServerTTS = useCallback((text: string) => {
     if (!enabled) {
       return
@@ -164,18 +118,72 @@ export function useSpeech(options: UseSpeechOptions = {}): UseSpeechReturn {
     })
   }, [enabled, lang, volume])
 
+  const speakWithWebSpeech = useCallback((text: string) => {
+    if (!hasWebSpeechRef.current || !enabled) {
+      return
+    }
+
+    // Si no hay voz en español disponible, usar TTS del servidor (mejor pronunciación)
+    const voices = window.speechSynthesis.getVoices()
+    const esVoice = voices.find(v => v.lang.startsWith('es'))
+    if (!esVoice && voices.length > 0) {
+      speakWithServerTTS(text)
+      return
+    }
+
+    // Cancelar cualquier speech anterior
+    window.speechSynthesis.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = lang
+    utterance.rate = rate
+    utterance.pitch = pitch
+    utterance.volume = volume
+
+    if (esVoice) utterance.voice = esVoice
+
+    utterance.onstart = () => setSpeaking(true)
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = (event) => {
+      // 'not-allowed': sin gesto de usuario. 'interrupted': cancel() previo esperado.
+      if (event.error !== 'not-allowed' && event.error !== 'interrupted') {
+        console.error('Error en TTS (Web Speech):', event.error)
+      }
+      setSpeaking(false)
+    }
+
+    utteranceRef.current = utterance
+
+    // Fix Chrome/Brave: cancel() + speak() inmediato puede fallar.
+    // Esperar un tick antes de hablar.
+    setTimeout(() => {
+      // Verificar que las voces estén cargadas; si no, reintentar cuando estén listas
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.onvoiceschanged = null
+          // Re-verificar: si tampoco hay voz española, usar servidor
+          const v = window.speechSynthesis.getVoices()
+          if (!v.find(voice => voice.lang.startsWith('es'))) {
+            speakWithServerTTS(text)
+            return
+          }
+          window.speechSynthesis.speak(utterance)
+        }
+      } else {
+        window.speechSynthesis.speak(utterance)
+      }
+    }, 100)
+  }, [enabled, lang, rate, pitch, volume, speakWithServerTTS])
+
   const speak = useCallback((text: string) => {
     if (!supported || !enabled) {
       return
     }
 
-    // Usar Web Speech API si está disponible, si no usar servidor
-    if (hasWebSpeechRef.current) {
-      speakWithWebSpeech(text)
-    } else {
-      speakWithServerTTS(text)
-    }
-  }, [supported, enabled, speakWithWebSpeech, speakWithServerTTS])
+    // Preferir siempre TTS del servidor (Google Translate): mejor pronunciación en español.
+    // Web Speech API como fallback solo si el servidor no está disponible.
+    speakWithServerTTS(text)
+  }, [supported, enabled, speakWithServerTTS])
 
   const cancel = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
