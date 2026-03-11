@@ -37,6 +37,7 @@ type Screen = {
   name: string
   mode: ScreenMode
   is_active: boolean
+  pin: string
   created_at: string
 }
 
@@ -192,6 +193,7 @@ export default function PantallasPage() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Modo</TableHead>
+                  <TableHead>PIN TV</TableHead>
                   <TableHead>URL</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -204,6 +206,13 @@ export default function PantallasPage() {
                       <Badge variant={modeBadgeVariant[screen.mode]}>
                         {modeLabels[screen.mode]}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xl font-bold tracking-widest text-blue-600">
+                          {screen.pin}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <code className="text-xs text-muted-foreground">
