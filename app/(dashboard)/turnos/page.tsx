@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Plus, RefreshCw, CalendarIcon } from 'lucide-react'
+import { Plus, RefreshCw, CalendarIcon, ChevronDown, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useRequirePermission } from '@/hooks/use-permissions'
 import { StatusLegend } from '@/components/turnos/StatusLegend'
 import { QueueStats } from '@/components/turnos/QueueStats'
 import { PatientCard } from '@/components/turnos/PatientCard'
+import { QueueList } from '@/components/turnos/QueueList'
 import { AddPatientDialog, type QueueSessionOption } from '@/components/turnos/AddPatientDialog'
 import { QueueFilters } from '@/components/turnos/QueueFilters'
 import { statusConfig } from '@/lib/turnos/config'
@@ -838,19 +839,12 @@ export default function QueuePage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-2">
-          {filteredQueue.map((item: any) => (
-            <PatientCard
-              key={item.id}
-              item={item}
-              isOptimistic={item.id.startsWith('temp-')}
-              callingId={callingId}
-              onUpdateStatus={updateStatus}
-              currentUserId={currentUserId}
-              createdBy={item.created_by}
-            />
-          ))}
-        </div>
+        <QueueList
+          filteredQueue={filteredQueue}
+          callingId={callingId}
+          updateStatus={updateStatus}
+          currentUserId={currentUserId}
+        />
       )}
     </div>
   )
