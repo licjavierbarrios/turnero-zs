@@ -41,13 +41,14 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Solo verificar si hay sesión activa — sin queries a la DB
+  // Solo verificar si hay sesión activa — getSession() lee la cookie sin llamada HTTP
+  // (getUser() hace una llamada de red que puede causar MIDDLEWARE_INVOCATION_TIMEOUT en Edge)
   let user = null
   try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
+    const { data } = await supabase.auth.getSession()
+    user = data.session?.user ?? null
   } catch {
-    // Si Supabase Auth no responde, fail-closed en rutas protegidas
+    // Si falla la lectura de sesión, fail-closed en rutas protegidas
   }
 
   const currentPath = request.nextUrl.pathname
