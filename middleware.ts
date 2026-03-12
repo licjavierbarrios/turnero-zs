@@ -1,8 +1,7 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getClientCountry, getClientIP } from './lib/headers'
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // ============================================================================
@@ -14,44 +13,12 @@ export async function middleware(request: NextRequest) {
     console.log(`[API] ${request.method} ${path} | Country: ${country} | IP: ${ip}`)
   }
 
-  let response = NextResponse.next({
-    request: { headers: request.headers },
-  })
-
-  // Refrescar sesión de Supabase (única operación permitida en Edge middleware)
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
-        },
-      },
-    }
+  // Verificar sesión leyendo la cookie directamente — sin Supabase, sin red.
+  // La cookie de Supabase Auth sigue el patrón: sb-[project-ref]-auth-token
+  // Esto es suficiente para middleware (el rol y validación real ocurren en cada página).
+  const hasSession = request.cookies.getAll().some(
+    c => c.name.includes('auth-token') && c.value.length > 0
   )
-
-  // Solo verificar si hay sesión activa — getSession() lee la cookie sin llamada HTTP
-  // (getUser() hace una llamada de red que puede causar MIDDLEWARE_INVOCATION_TIMEOUT en Edge)
-  let user = null
-  try {
-    const { data } = await supabase.auth.getSession()
-    user = data.session?.user ?? null
-  } catch {
-    // Si falla la lectura de sesión, fail-closed en rutas protegidas
-  }
-
-  const currentPath = request.nextUrl.pathname
 
   // ============================================================================
   // RUTAS PROTEGIDAS — solo verificar autenticación, el rol lo chequea la página
@@ -72,12 +39,12 @@ export async function middleware(request: NextRequest) {
     '/sesiones',
   ]
 
-  const isProtected = protectedPrefixes.some(prefix => currentPath.startsWith(prefix))
+  const isProtected = protectedPrefixes.some(prefix => path.startsWith(prefix))
 
-  if (isProtected && !user) {
+  if (isProtected && !hasSession) {
     const redirectUrl = new URL('/', request.url)
-    if (currentPath !== '/') {
-      redirectUrl.searchParams.set('redirectTo', currentPath)
+    if (path !== '/') {
+      redirectUrl.searchParams.set('redirectTo', path)
     }
     return NextResponse.redirect(redirectUrl)
   }
@@ -85,11 +52,11 @@ export async function middleware(request: NextRequest) {
   // ============================================================================
   // RUTA RAÍZ / — redirigir si ya está autenticado
   // ============================================================================
-  if (currentPath === '/' && user) {
+  if (path === '/' && hasSession) {
     return NextResponse.redirect(new URL('/institutions/select', request.url))
   }
 
-  return response
+  return NextResponse.next()
 }
 
 export const config = {
