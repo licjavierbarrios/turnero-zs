@@ -22,6 +22,7 @@ interface Institution {
   id: string
   name: string
   type: 'caps' | 'hospital_seccional' | 'hospital_distrital' | 'hospital_regional'
+  slug: string
   zone_name: string
   address: string
   user_role: string

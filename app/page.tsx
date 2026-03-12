@@ -13,6 +13,7 @@ interface Institution {
   id: string
   name: string
   type: string
+  slug: string
   zone_name: string
   address: string
   user_role: string
