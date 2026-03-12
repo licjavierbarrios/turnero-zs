@@ -93,19 +93,22 @@ export default function InstitutionSelectPage() {
     }
   }, [router])
 
+  const clearSessionAndRedirect = useCallback(async () => {
+    try { await supabase.auth.signOut() } catch { /* ignorar errores al cerrar sesión */ }
+    localStorage.removeItem('institution_context')
+    sessionStorage.removeItem('user_data')
+    sessionStorage.removeItem('user_institutions')
+    router.push('/')
+  }, [router])
+
   const loadUserData = useCallback(async () => {
     try {
       // Verificar sesión de Supabase
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
-      if (authError) {
-        setError(`Error de autenticación: ${authError.message}`)
-        setLoading(false)
-        return
-      }
-
-      if (!authUser) {
-        router.push('/')
+      if (authError || !authUser) {
+        // Sesión inválida o expirada — limpiar y redirigir al login
+        await clearSessionAndRedirect()
         return
       }
 
@@ -126,11 +129,11 @@ export default function InstitutionSelectPage() {
 
       // Cargar instituciones del usuario desde sus membresías
       await loadUserInstitutions(authUser.id)
-    } catch (error: any) {
-      setError(`Error inesperado: ${error.message}`)
-      setLoading(false)
+    } catch {
+      // Error inesperado (ej: cookie corrupta, proyecto Supabase suspendido) — limpiar y redirigir
+      await clearSessionAndRedirect()
     }
-  }, [router, loadUserInstitutions])
+  }, [router, loadUserInstitutions, clearSessionAndRedirect])
 
   useEffect(() => {
     // Intentar cargar datos del sessionStorage primero (precargados en login)

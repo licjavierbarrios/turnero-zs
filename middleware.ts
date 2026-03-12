@@ -13,11 +13,10 @@ export function middleware(request: NextRequest) {
     console.log(`[API] ${request.method} ${path} | Country: ${country} | IP: ${ip}`)
   }
 
-  // Verificar sesión leyendo la cookie directamente — sin Supabase, sin red.
-  // La cookie de Supabase Auth sigue el patrón: sb-[project-ref]-auth-token
-  // Esto es suficiente para middleware (el rol y validación real ocurren en cada página).
+  // Verificar sesión leyendo la cookie del proyecto activo directamente — sin Supabase, sin red.
+  // Filtramos por el project-ref activo para evitar falsos positivos con cookies de proyectos viejos.
   const hasSession = request.cookies.getAll().some(
-    c => c.name.includes('auth-token') && c.value.length > 0
+    c => c.name.startsWith('sb-qfoptekozsyxesuqzwxz') && c.value.length > 0
   )
 
   // ============================================================================
