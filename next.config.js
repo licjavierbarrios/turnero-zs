@@ -20,6 +20,7 @@ const securityHeaders = [
       "font-src 'self'",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
       "media-src 'self'",
+      "frame-src https://vercel.live https://*.vercel.live",
       "frame-ancestors 'none'",
     ].join('; '),
   },
