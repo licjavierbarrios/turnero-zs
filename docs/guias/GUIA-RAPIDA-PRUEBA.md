@@ -191,9 +191,20 @@ Las TVs de sala de espera **no necesitan usuario ni login**. Cada pantalla tiene
 1. Logueado como admin, ir a `/pantallas`
 2. Click en **Nueva pantalla**
 3. Poner un nombre descriptivo (ej: `Admisión`, `Laboratorio`, `Sala de espera general`)
-4. Guardar
-5. Click en el ícono de **copiar URL** — se copia algo como `https://sistema.com/pantalla/xxxxxxxx-xxxx-...`
-6. Abrir esa URL en la TV y dejar el navegador abierto
+4. Guardar — el sistema genera automáticamente un **PIN de 4 dígitos**
+
+**Configurar el TV (método recomendado — por PIN):**
+
+5. En `/pantallas` aparece un card azul con la **URL de acceso por PIN** de la institución:
+   `https://turnero-zs.vercel.app/tv/[slug-institución]`
+   Ej: `https://turnero-zs.vercel.app/tv/cps-b-evita`
+6. Abrir esa URL en el TV y configurarla como página de inicio del navegador
+7. Al encender el TV, tipear el **PIN de 4 dígitos** con el control remoto → redirige automáticamente a la pantalla
+
+**Alternativa — URL directa:**
+
+5. Click en el ícono de **copiar URL** — se copia `https://sistema.com/pantalla/xxxxxxxx-xxxx-...`
+6. Abrir esa URL directamente en el TV (no requiere PIN)
 
 **Configurar qué turnos muestra (opcional):**
 
@@ -226,7 +237,8 @@ Las TVs de sala de espera **no necesitan usuario ni login**. Cada pantalla tiene
 | Asignar consultorio del día | `/asignaciones` | administrativo |
 | Cargar pacientes / llamar turnos | `/turnos` | administrativo |
 | Crear y configurar pantallas de TV | `/pantallas` | admin |
-| Pantalla pública (URL única por pantalla) | `/pantalla/[uuid-pantalla]` | TV (sin login) |
+| Acceso TV por PIN (recomendado) | `/tv/[slug-institución]` | TV (sin login) |
+| Pantalla pública (URL directa por pantalla) | `/pantalla/[uuid-pantalla]` | TV (sin login) |
 | Pantalla pública (toda la institución) | `/pantalla/[slug-institución]` | TV (sin login) |
 | Reportes | `/reportes` | admin / administrativo |
 

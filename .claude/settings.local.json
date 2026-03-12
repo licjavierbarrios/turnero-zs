@@ -2,14 +2,22 @@
   "permissions": {
     "allow": [
       "Bash(npx:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(sed:*)",
+      "Bash(powershell:*)",
+      "Bash(node:*)",
+      "Bash(npm run:*)",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__apply_migration",
+      "Bash(cd \"E:/PROGRAMACION/turnero-zs/docs\" && mv architecture.md database.md INFRAESTRUCTURA-TESTING.md INDICE-TESTING.md TESTING-STRATEGY-V2.md QUICK_START_TESTING.md RLS-POLICIES-ANALYSIS.md IMPLEMENTATION-SUMMARY-FIREWALL.md SECURITY-API-ADMIN-USERS.md FORBIDDEN_PAGE.md _archivo/)",
+      "Bash(cd \"E:/PROGRAMACION/turnero-zs/docs\" && mkdir -p tecnico seguridad operaciones proyecto && mv IMPLEMENTACION-ACTUAL.md PERMISSIONS.md RLS-QUICK-REFERENCE.md PANTALLA-MULTI-SERVICIO.md TTS-INTEGRACION.md SISTEMA-SUPER-ADMIN.md tecnico/ && mv AUDITORIA-SEGURIDAD-OWASP.md VERCEL-FIREWALL-CONFIG.md seguridad/ && mv DEPLOYMENT.md CHECKLIST_APLICAR_MIGRACIONES.md operaciones/ && mv sprints.md vision.md proyecto/)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "filesystem",
     "supabase",
     "shadcn",
     "vercel"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }
