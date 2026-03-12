@@ -117,6 +117,7 @@ export default function LoginPage() {
           institution_id: institution.id,
           institution_name: institution.name,
           institution_type: institution.type,
+          institution_slug: institution.slug,
           zone_name: institution.zone_name,
           user_role: institution.user_role
         }

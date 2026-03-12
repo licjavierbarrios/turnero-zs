@@ -42,6 +42,7 @@ export async function GET(request: Request) {
           id,
           name,
           type,
+          slug,
           address,
           zone:zone_id (
             id,
@@ -82,6 +83,7 @@ export async function GET(request: Request) {
         id: m.institution.id,
         name: m.institution.name,
         type: m.institution.type,
+        slug: m.institution.slug,
         zone_name: m.institution.zone?.name || 'Sin zona',
         address: m.institution.address || 'Sin dirección',
         user_role: m.role

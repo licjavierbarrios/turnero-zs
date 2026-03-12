@@ -1,7 +1,7 @@
 # Guía: Usar Android TV como Pantalla Pública en Turnero ZS
 
-**Versión**: 3.0
-**Última actualización**: 2026-03-11
+**Versión**: 3.1
+**Última actualización**: 2026-03-12
 **Aplicación**: Turnero ZS - Sistema de Gestión de Turnos
 
 ---
@@ -56,14 +56,19 @@ Usar un TV inteligente con Android TV como **pantalla pública en tiempo real** 
 ### Paso 3: Abrir la Pantalla en el TV — Método PIN (recomendado)
 
 1. Abrí **Chrome** en el TV
-2. Ingresá la URL de acceso:
-   `https://turnero-zs.vercel.app/tv`
-3. Aparece un teclado numérico en pantalla — ingresá el **PIN de 4 dígitos** con el control remoto
+2. Ingresá la URL de acceso de tu institución:
+   `https://turnero-zs.vercel.app/tv/[slug-institución]`
+   Ejemplo para CPS B° EVITA:
+   `https://turnero-zs.vercel.app/tv/cps-b-evita`
+3. La página muestra el nombre de la institución y un teclado numérico — ingresá el **PIN de 4 dígitos** con el control remoto
 4. Al completar los 4 dígitos, redirige automáticamente a la pantalla correspondiente
 5. Presioná el botón de pantalla completa del navegador
 
 > Esta URL es fija y corta — se puede configurar como página de inicio del navegador para
 > que al encender el TV solo haya que tipear el PIN.
+
+> El slug de tu institución se encuentra en `/super-admin/instituciones` (columna Slug) o al final
+> de la URL cuando la administrás.
 
 ---
 
@@ -103,8 +108,8 @@ Una vez abierta la pantalla, podés ajustar:
 Para que el TV muestre **solo la pantalla de turnos**:
 
 1. Instalá una app de Kiosk desde Google Play (ej: **Kiosk Mode Lockdown**)
-2. Configurá la URL de inicio:
-   `https://turnero-zs.vercel.app/tv`
+2. Configurá la URL de inicio de tu institución:
+   `https://turnero-zs.vercel.app/tv/cps-b-evita`
 3. El TV mostrará solo Turnero ZS — nadie puede cambiar de app ni salir
 
 Beneficios:
@@ -218,9 +223,10 @@ Buenas practicas:
 
 ### "No carga la pagina"
 1. Verificar internet: abrir YouTube en el TV
-2. Confirmar que la URL `https://turnero-zs.vercel.app/tv` sea correcta
-3. Limpiar cache: `Ctrl + Shift + Del`
-4. Reiniciar el TV
+2. Confirmar que la URL incluya el slug correcto: `https://turnero-zs.vercel.app/tv/[slug-institución]`
+3. Verificar el slug en `/super-admin/instituciones`
+4. Limpiar cache: `Ctrl + Shift + Del`
+5. Reiniciar el TV
 
 ### "PIN incorrecto"
 1. Verificar el PIN en `/pantallas` del admin (columna PIN TV)
@@ -288,7 +294,7 @@ Buenas practicas:
 
 - [ ] Pantalla creada en `/pantallas` y PIN anotado
 - [ ] TV conectado a internet (preferentemente Ethernet)
-- [ ] Chrome instalado y configurado con `https://turnero-zs.vercel.app/tv` como página de inicio
+- [ ] Chrome instalado y configurado con `https://turnero-zs.vercel.app/tv/[slug-institución]` como página de inicio
 - [ ] PIN ingresado en el TV y pantalla visible
 - [ ] Audio activado con el botón de la pantalla (requiere click/interacción una vez)
 - [ ] Audio probado con un llamado de prueba
@@ -301,6 +307,6 @@ Buenas practicas:
 
 - `IMPLEMENTACION-ACTUAL.md` — Sistema de cola (`daily_queue`)
 - Gestion de pantallas: `/pantallas` (solo admin)
-- Acceso TV por PIN: `https://turnero-zs.vercel.app/tv`
+- Acceso TV por PIN: `https://turnero-zs.vercel.app/tv/[slug-institución]`
 - Código fuente pantalla: `app/(public)/pantalla/[slug]/page.tsx`
-- Código fuente PIN TV: `app/(public)/tv/page.tsx`
+- Código fuente PIN TV (por institución): `app/(public)/tv/[slug]/page.tsx`

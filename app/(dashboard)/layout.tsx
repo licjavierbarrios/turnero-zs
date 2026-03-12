@@ -37,12 +37,13 @@ const navigation = [
     icon: ClockIcon,
     roles: ['admin', 'administrativo', 'profesional', 'servicio']
   },
-  {
-    name: 'Agenda',
-    href: '/agenda',
-    icon: CalendarIcon,
-    roles: ['admin', 'administrativo', 'profesional']
-  },
+  // TODO: IMPLEMENTACIÓN FUTURA — sistema de turnos programados (slot_template/appointment)
+  // {
+  //   name: 'Agenda',
+  //   href: '/agenda',
+  //   icon: CalendarIcon,
+  //   roles: ['admin', 'administrativo', 'profesional']
+  // },
   {
     name: 'Asignaciones',
     href: '/asignaciones',

@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useInstitutionContext } from '@/hooks/useInstitutionContext'
 import { useRequirePermission } from '@/hooks/use-permissions'
 import { ScreenConfigDialog } from './components/ScreenConfigDialog'
-import { Monitor, Plus, Trash2, Settings2, Copy, Check, AlertCircle } from 'lucide-react'
+import { Monitor, Plus, Trash2, Settings2, Copy, Check, AlertCircle, Tv } from 'lucide-react'
 
 type ScreenMode = 'all' | 'exclude' | 'include'
 
@@ -79,6 +79,7 @@ export default function PantallasPage() {
 
   // Copy feedback
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [copiedTvUrl, setCopiedTvUrl] = useState(false)
 
   const fetchScreens = useCallback(async () => {
     setLoading(true)
@@ -170,6 +171,45 @@ export default function PantallasPage() {
           Nueva pantalla
         </Button>
       </div>
+
+      {/* URL de acceso TV para esta institución */}
+      {context?.institution_slug && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Tv className="h-5 w-5 text-blue-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">URL de acceso por PIN para esta institución</p>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    Configurá esta URL como página de inicio en cada TV. Al encender, solo hay que tipear el PIN.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="text-sm font-mono bg-white border border-blue-200 rounded px-3 py-1.5 text-blue-800">
+                  {typeof window !== 'undefined' ? window.location.origin : 'https://turnero-zs.vercel.app'}/tv/{context.institution_slug}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 hover:bg-blue-100"
+                  onClick={() => {
+                    const url = `${window.location.origin}/tv/${context.institution_slug}`
+                    navigator.clipboard.writeText(url).then(() => {
+                      setCopiedTvUrl(true)
+                      setTimeout(() => setCopiedTvUrl(false), 2000)
+                    })
+                  }}
+                  title="Copiar URL del TV"
+                >
+                  {copiedTvUrl ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
