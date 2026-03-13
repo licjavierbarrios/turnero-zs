@@ -510,6 +510,13 @@ export default function PantallaPublicaPage({
       )
       .subscribe((status) => {
         setConnectionStatus(status === 'SUBSCRIBED' ? 'connected' : 'connecting')
+        // Anunciar presencia del TV en el canal — el admin lo ve en /pantallas
+        if (status === 'SUBSCRIBED') {
+          channel.track({
+            screenId: slug,
+            connectedAt: new Date().toISOString(),
+          })
+        }
       })
 
     channelRef.current = channel

@@ -12,16 +12,16 @@ export default function TVSlugPage() {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [institutionId, setInstitutionId] = useState<string | null>(null)
   const [institutionName, setInstitutionName] = useState<string>('')
   const [resolving, setResolving] = useState(true)
+  const [institutionFound, setInstitutionFound] = useState(false)
 
-  // Resolver slug → institution_id al montar
+  // Resolver slug → nombre de institución al montar
   useEffect(() => {
     const resolveInstitution = async () => {
       const { data, error: instError } = await supabase
         .from('institution')
-        .select('id, name')
+        .select('name')
         .eq('slug', slug)
         .single()
 
@@ -31,8 +31,8 @@ export default function TVSlugPage() {
         return
       }
 
-      setInstitutionId(data.id)
       setInstitutionName(data.name)
+      setInstitutionFound(true)
       setResolving(false)
     }
 
@@ -40,27 +40,31 @@ export default function TVSlugPage() {
   }, [slug])
 
   const confirmPin = async (fullPin: string) => {
-    if (!institutionId) return
     setLoading(true)
     setError('')
 
-    const { data, error: dbError } = await supabase
-      .from('screen')
-      .select('id')
-      .eq('pin', fullPin)
-      .eq('institution_id', institutionId)
-      .eq('is_active', true)
-      .single()
+    try {
+      const res = await fetch('/api/screen-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: fullPin, slug }),
+      })
 
-    setLoading(false)
+      const data = await res.json()
 
-    if (dbError || !data) {
-      setError('PIN incorrecto. Verificá el número con el administrador.')
+      if (!res.ok) {
+        setError('PIN incorrecto. Verificá el número con el administrador.')
+        setPin('')
+        return
+      }
+
+      router.push(`/pantalla/${data.screenId}`)
+    } catch {
+      setError('Error de conexión. Intentá de nuevo.')
       setPin('')
-      return
+    } finally {
+      setLoading(false)
     }
-
-    router.push(`/pantalla/${data.id}`)
   }
 
   const handleDigit = (digit: string) => {
@@ -102,13 +106,13 @@ export default function TVSlugPage() {
           Sistema de Turnos
         </h1>
         <p className="text-gray-400 text-lg mt-2">
-          {institutionId
+          {institutionFound
             ? 'Ingresá el PIN de esta pantalla'
             : 'Institución no encontrada'}
         </p>
       </div>
 
-      {institutionId && (
+      {institutionFound && (
         <>
           {/* Display del PIN */}
           <div className="flex gap-4">
@@ -173,7 +177,7 @@ export default function TVSlugPage() {
       )}
 
       {/* Error de institución */}
-      {!institutionId && error && (
+      {!institutionFound && error && (
         <p className="text-red-400 text-base text-center max-w-xs">{error}</p>
       )}
     </div>

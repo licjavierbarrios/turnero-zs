@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useInstitutionContext } from '@/hooks/useInstitutionContext'
 import { useRequirePermission } from '@/hooks/use-permissions'
 import { ScreenConfigDialog } from './components/ScreenConfigDialog'
-import { Monitor, Plus, Trash2, Settings2, Copy, Check, AlertCircle, Tv } from 'lucide-react'
+import { Monitor, Plus, Trash2, Settings2, Copy, Check, AlertCircle, Tv, Wifi } from 'lucide-react'
 
 type ScreenMode = 'all' | 'exclude' | 'include'
 
@@ -81,6 +81,9 @@ export default function PantallasPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [copiedTvUrl, setCopiedTvUrl] = useState(false)
 
+  // Presence: qué pantallas están conectadas ahora mismo
+  const [onlineScreenIds, setOnlineScreenIds] = useState<Set<string>>(new Set())
+
   const fetchScreens = useCallback(async () => {
     setLoading(true)
     try {
@@ -104,6 +107,30 @@ export default function PantallasPage() {
       fetchScreens()
     }
   }, [fetchScreens, permissionLoading, hasAccess])
+
+  // Suscribirse a Presence del canal de la institución para ver TVs conectados
+  useEffect(() => {
+    if (!institutionId) return
+
+    const channel = supabase.channel(`public-display-${institutionId}`)
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState<{ screenId: string }>()
+        const ids = new Set(
+          Object.values(state)
+            .flat()
+            .map(p => p.screenId)
+            .filter(Boolean)
+        )
+        setOnlineScreenIds(ids)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [institutionId])
 
   const handleCreate = async () => {
     if (!newName.trim()) return
@@ -232,6 +259,7 @@ export default function PantallasPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
+                  <TableHead>Estado</TableHead>
                   <TableHead>Modo</TableHead>
                   <TableHead>PIN TV</TableHead>
                   <TableHead>URL</TableHead>
@@ -242,6 +270,19 @@ export default function PantallasPage() {
                 {screens.map(screen => (
                   <TableRow key={screen.id}>
                     <TableCell className="font-medium">{screen.name}</TableCell>
+                    <TableCell>
+                      {onlineScreenIds.has(screen.id) ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700">
+                          <Wifi className="h-3.5 w-3.5" />
+                          Conectado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className="h-2 w-2 rounded-full bg-gray-300 inline-block" />
+                          Desconectado
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={modeBadgeVariant[screen.mode]}>
                         {modeLabels[screen.mode]}

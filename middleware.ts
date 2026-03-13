@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { jwtVerify, decodeJwt } from 'jose'
 import { getClientCountry, getClientIP } from './lib/headers'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // ============================================================================
@@ -13,15 +14,42 @@ export function middleware(request: NextRequest) {
     console.log(`[API] ${request.method} ${path} | Country: ${country} | IP: ${ip}`)
   }
 
-  // Verificar sesión leyendo la cookie del proyecto activo directamente — sin Supabase, sin red.
-  // Filtramos por el project-ref activo para evitar falsos positivos con cookies de proyectos viejos.
+  // ============================================================================
+  // PANTALLAS TV — validar cookie de sesión JWT (sin llamadas HTTP, solo crypto)
+  // ============================================================================
+  if (path.startsWith('/pantalla/')) {
+    const token = request.cookies.get('screen_auth')?.value
+
+    if (!token) {
+      // Sin cookie → redirigir a raíz (no sabemos a qué TV pertenece)
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    try {
+      const secret = new TextEncoder().encode(process.env.SCREEN_SESSION_SECRET!)
+      await jwtVerify(token, secret)
+      // JWT válido → continuar
+      return NextResponse.next()
+    } catch {
+      // JWT expirado o inválido → intentar leer tvPath del payload para redirigir al PIN
+      try {
+        const payload = decodeJwt(token)
+        const tvPath = payload.tvPath as string | undefined
+        return NextResponse.redirect(new URL(tvPath || '/', request.url))
+      } catch {
+        return NextResponse.redirect(new URL('/', request.url))
+      }
+    }
+  }
+
+  // ============================================================================
+  // RUTAS DE DASHBOARD — verificar sesión Supabase
+  // Leer la cookie directamente sin llamadas HTTP para evitar timeout en Edge.
+  // ============================================================================
   const hasSession = request.cookies.getAll().some(
     c => c.name.startsWith('sb-qfoptekozsyxesuqzwxz') && c.value.length > 0
   )
 
-  // ============================================================================
-  // RUTAS PROTEGIDAS — solo verificar autenticación, el rol lo chequea la página
-  // ============================================================================
   const protectedPrefixes = [
     '/super-admin',
     '/dashboard',
@@ -61,6 +89,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/',
+    '/pantalla/:path*',
     '/super-admin/:path*',
     '/dashboard/:path*',
     '/turnos/:path*',
