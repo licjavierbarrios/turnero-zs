@@ -4,18 +4,17 @@ Guía práctica para personal administrativo, profesionales y personal de servic
 
 ---
 
-## 👥 Para Quién es Esta Guía
+## Para Quién es Esta Guía
 
 | Rol | Tareas principales |
 |-----|-------------------|
 | **Administrativo** | Asignar consultorios, cargar pacientes en la cola, llamar turnos |
 | **Profesional / Servicio** | Ver y gestionar la cola de su servicio o consultorio |
-| **Pantalla** | Operar la pantalla pública de llamados |
 | **Admin** | Configuración general del sistema |
 
 ---
 
-## 🔐 Inicio de Sesión
+## Inicio de Sesión
 
 1. Abrir el navegador e ir a la URL del sistema
 2. Ingresar email y contraseña proporcionados por el administrador
@@ -25,7 +24,7 @@ Guía práctica para personal administrativo, profesionales y personal de servic
 
 ---
 
-## 📋 Conceptos Clave
+## Conceptos Clave
 
 ### Dos tipos de turno
 
@@ -43,31 +42,31 @@ El sistema maneja dos tipos de turno, con flujos diferentes:
 - Para pacientes que requieren atención de un médico, psicólogo, nutricionista, etc.
 - Requiere que el profesional tenga **consultorio asignado** para ese día
 - Por normativa del Ministerio de Salud Pública, todo paciente que pide turno con un profesional **también debe tener turno en Enfermería** (para registro en el HSI)
-- Ejemplo: Juan Pérez solicita turno con el Dr. García → se le carga turno en **Enfermería** + turno con **Dr. García**
+- Ejemplo: Juan Pérez solicita turno con la Dra. Morales → se le carga turno en **Enfermería** + turno con **Dra. Morales**
 
 ### Estados de un turno
 
 ```
 PENDIENTE  →  DISPONIBLE  →  LLAMADO  →  ATENDIDO
-                                  ↓
-                               CANCELADO
+                                 ↓
+                              CANCELADO
 ```
 
 | Estado | Color | Significado | ¿Aparece en pantalla? |
 |--------|-------|-------------|----------------------|
 | **Pendiente** | Gris | Cargado, pero aún no visible para llamar | No |
-| **Disponible** | Verde | Listo para ser llamado | Sí |
+| **Disponible** | Azul | Listo para ser llamado | Sí |
 | **Llamado** | Violeta (pulsa) | Paciente siendo llamado activamente | Sí (animado) |
-| **Atendido** | Azul | Ya fue atendido | No |
+| **Atendido** | Verde | Ya fue atendido | No |
 | **Cancelado** | Rojo | Turno cancelado | No |
 
 ---
 
-## 🌅 Inicio del Día — Administrativo
+## Inicio del Día — Administrativo
 
 Antes de recibir pacientes, los administrativos deben completar este paso obligatorio:
 
-### Paso 1: Asignar profesionales a consultorios
+### Asignar profesionales a consultorios
 
 > ⚠️ Sin este paso, **no se pueden cargar turnos para profesionales**.
 
@@ -85,11 +84,11 @@ Dr. García     → Consultorio 1   → 08:00 a 12:00
 Lic. Romero    → Consultorio 2   → 09:00 a 13:00
 ```
 
-> 💡 Si un profesional atiende en dos turnos (mañana y tarde en distintos consultorios), se carga como dos asignaciones separadas. Los administrativos de tarde cargan las asignaciones de tarde.
+> Si un profesional atiende en dos turnos (mañana y tarde en distintos consultorios), se carga como dos asignaciones separadas. Los administrativos de tarde cargan las asignaciones de tarde.
 
 ---
 
-## 👤 Cargar un Paciente en la Cola
+## Cargar un Paciente en la Cola
 
 Una vez realizadas las asignaciones, se pueden cargar pacientes.
 
@@ -122,40 +121,53 @@ Una vez realizadas las asignaciones, se pueden cargar pacientes.
    - Estado según corresponda
    - Guardar
 
-> 💡 Ambos turnos se pueden cargar al mismo tiempo. El médico verificará en el HSI si el paciente pasó por Enfermería.
+> Ambos turnos se pueden cargar al mismo tiempo. El médico verificará en el HSI si el paciente pasó por Enfermería.
 
 > ⚠️ Si el profesional **no aparece en la lista**, es porque no tiene consultorio asignado. Ir primero a `/asignaciones`.
 
 ---
 
-## 📞 Llamar un Turno
+## Llamar un Turno
 
-### Cambiar estado a Disponible
+### Paso 1 — Cambiar estado a Disponible
 
-Cuando el paciente está en la sala de espera y listo para ser llamado:
+Cuando el paciente llegó a la sala de espera y está listo para ser llamado:
 
-1. Buscar el turno en la lista
+1. Buscar el turno en la lista (estará en **Pendiente**)
 2. Click en **Marcar Disponible**
-3. El turno aparece en la pantalla pública
+3. El turno aparece ahora en la pantalla pública de sala de espera
 
-### Llamar al Paciente
+### Paso 2 — Llamar al Paciente
 
 Cuando el servicio o profesional está listo para atender:
 
 1. Buscar el turno en estado **Disponible**
 2. Click en **Llamar**
-3. El turno aparece en la pantalla pública con animación y sonido
-4. La pantalla muestra:
-   - Para servicios: `Paciente: Pedro Páez → Vacunación`
-   - Para profesionales: `Paciente: Juan Pérez → Dr. García - Consultorio 1`
+3. La pantalla pública anuncia al paciente con sonido y voz:
+   - Para servicios: *"Pedro Páez a Vacunación"*
+   - Para profesionales: *"Juan Pérez a Consultorio 1"*
 
-### Marcar como Atendido
+### Botones disponibles cuando un turno está en "Llamado"
 
-Cuando el paciente fue atendido:
+Una vez llamado un paciente, aparecen tres botones:
 
-1. Buscar el turno en estado **Llamado**
-2. Click en **Atendido**
-3. El turno desaparece de la pantalla pública
+| Botón | Cuándo usarlo |
+|-------|--------------|
+| **Llamar de nuevo** | El paciente no escuchó o no se presentó — re-anuncia por la pantalla (con sonido y voz). Puede usarse las veces que sea necesario. |
+| **Siguiente** | El paciente no está en la sala de espera — lo devuelve al final de la cola (vuelve a "Disponible"). Útil si salió un momento y hay que esperar. |
+| **Atendido** | El paciente fue efectivamente atendido. El turno desaparece de la pantalla. |
+
+### Cuándo marcar "Atendido" manualmente
+
+El sistema **marca automáticamente como atendido** al paciente anterior cuando se llama al siguiente del **mismo servicio o profesional**. En la práctica:
+
+- Si llamaste a Elba Olima (Enfermería) y luego llamás a Anakin Skywalker (Enfermería) → Elba queda marcada como atendida automáticamente.
+- Si llamaste a Juan Pérez (Dra. Morales) y luego llamás a Ana García (Dra. Morales) → Juan queda marcado como atendido automáticamente.
+
+**Tenés que marcar "Atendido" manualmente cuando:**
+- Fue el último paciente del servicio o profesional en el día
+- Querés cerrar el turno antes de llamar al siguiente (por ejemplo, si hay una pausa larga entre pacientes)
+- El paciente de un servicio distinto quedó en "Llamado" y no tiene siguiente en su misma cola
 
 ### Cancelar un Turno
 
@@ -166,25 +178,44 @@ Si el paciente no se presenta o cancela:
 
 ---
 
-## 🖥️ Pantalla Pública
+## Pantalla Pública (TV de Sala de Espera)
 
-### Configurar (hacer una sola vez por dispositivo)
+### Configurar (hacer una vez por dispositivo)
 
-1. En la TV o PC de sala de espera, abrir el navegador
-2. Ir a `/pantalla/[nombre-institucion]`
-3. Dejar el navegador abierto todo el día — **no cerrar ni recargar**
-4. La pantalla se actualiza automáticamente en tiempo real
+La pantalla pública **no requiere usuario ni contraseña**. Hay dos formas de abrirla:
+
+**Método recomendado — por PIN:**
+
+1. En el TV o PC de sala de espera, abrir el navegador y entrar a:
+   `https://turnero-zs.vercel.app/tv/[slug-institución]`
+   Ej: `https://turnero-zs.vercel.app/tv/cps-b-evita`
+2. Tipear el **PIN de 4 dígitos** de la pantalla correspondiente (lo tiene el administrador)
+3. El sistema redirige automáticamente a la pantalla configurada
+4. Guardar esa URL como página de inicio del navegador del TV
+
+**Alternativa — URL directa:**
+
+El administrador puede copiar la URL directa de cada pantalla desde `/pantallas`. Esa URL abre la pantalla sin necesidad de PIN.
+
+> Dejar el navegador abierto todo el día — **no cerrar ni recargar**. La pantalla se actualiza automáticamente en tiempo real.
 
 ### Qué muestra
 
-- Turnos en estado **Llamado**: nombre del paciente, destino (servicio o profesional + consultorio), con animación pulsante
+- Turnos en estado **Llamado**: nombre del paciente, destino (servicio o consultorio + profesional), con animación pulsante y anuncio por voz
 - Turnos en estado **Disponible**: cola de espera visible
-- Hora actual
-- Nombre de la institución
+- Hora actual y nombre de la institución
+
+### Controles de audio en la pantalla
+
+En la esquina superior derecha de la pantalla hay un ícono de volumen (🔊):
+- **Activado**: suena el ding dong y se anuncia el nombre del paciente por voz
+- **Desactivado** (🔇): silencia completamente el audio (ni ding dong ni voz)
+
+Si hay múltiples llamados seguidos, el sistema los anuncia en orden, uno por uno, sin superponerse.
 
 ### Cambiar la vista
 
-La pantalla tiene diferentes modos de visualización. Click en **Cambiar Vista** (esquina superior derecha) para seleccionar:
+Click en el ícono de plantilla (esquina superior derecha) para seleccionar:
 - **Vista Lista**: todos los servicios en lista vertical
 - **Vista Completa**: grilla 2x2
 - **Grilla Grande**: grilla 3x2 (pantallas grandes)
@@ -192,16 +223,15 @@ La pantalla tiene diferentes modos de visualización. Click en **Cambiar Vista**
 
 ---
 
-## 🔄 Ejemplo de Jornada Completa
+## Ejemplo de Jornada Completa
 
 ### 7:00 hs — Inicio turno mañana
 
 ```
 1. Administrativo ingresa al sistema
-2. Va a /asignaciones
-3. Carga:
-   - Dr. García → Consultorio 1 → 08:00 a 12:00
-   - Dra. Morales → Consultorio 3 → 09:00 a 11:00
+2. Va a /asignaciones y carga:
+   - Dr. García     → Consultorio 1 → 08:00 a 12:00
+   - Dra. Morales   → Consultorio 3 → 09:00 a 11:00
 ```
 
 ### 7:30 hs — Llegan primeros pacientes
@@ -223,19 +253,23 @@ Paciente: Juan Pérez — quiere turno con Dr. García
 
 ```
 Laboratorio listo → Llamar a Marcos Juárez
-   Pantalla: "Paciente: Marcos Juárez → Laboratorio"
+   Pantalla anuncia: "Marcos Juárez a Laboratorio"
 
-Marcos atendido → Marcar Atendido
+Marcos atendido → el siguiente en Laboratorio lo marca automáticamente,
+   o se presiona "Atendido" si es el último del día.
 
-Juan pasa por Enfermería → Marcar su turno de Enfermería Atendido
-→ Cambiar su turno con Dr. García a Disponible
-→ Dr. García listo → Llamar a Juan Pérez
-   Pantalla: "Paciente: Juan Pérez → Dr. García - Consultorio 1"
+Enfermería llama a Juan Pérez → pasa por Enfermería
+   → Cambiar turno con Dr. García a Disponible
+   → Cuando Dr. García está listo → Llamar a Juan Pérez
+   Pantalla anuncia: "Juan Pérez a Consultorio 1"
+
+Dr. García llama a Ana García (siguiente paciente)
+   → Juan Pérez queda marcado como Atendido automáticamente
 ```
 
 ---
 
-## ⚠️ Situaciones Comunes
+## Situaciones Comunes
 
 ### El profesional no aparece al cargar un turno
 
@@ -261,33 +295,45 @@ Decirle al paciente que vuelva en el horario del turno tarde para que lo registr
 2. Recargar la página (F5)
 3. Si persiste, avisar al administrador
 
+### La pantalla no anuncia por voz
+
+1. Verificar que el audio esté activado (ícono 🔊 en esquina superior derecha)
+2. Si el ícono está en 🔇, hacer click para activar
+3. Si es la primera vez que se abre la pantalla, puede aparecer un botón "Activar Audio" — hacer click una sola vez
+
 ### Me aparece "sin permisos" o no veo opciones
 
 Contactar al administrador — es posible que tu usuario no tenga el rol correcto asignado.
 
 ---
 
-## 💡 Buenas Prácticas
+## Buenas Prácticas
 
 ### Administrativos
 
 ✅ Llegar con tiempo para cargar las asignaciones de consultorios antes de que lleguen los pacientes
+
 ✅ Pedir siempre el DNI del paciente al cargarlo
-✅ Marcar los turnos como **Atendido** apenas se completan — mantiene la cola limpia
-✅ Si el profesional tiene dos turnos en el día, recordar que los turno tarde los carga el administrativo de tarde
+
+✅ Marcar "Atendido" manualmente al último paciente del día de cada servicio o profesional — el auto-complete solo funciona si hay un siguiente
+
+✅ Si el profesional tiene dos turnos en el día, recordar que las asignaciones de tarde las carga el administrativo de tarde
 
 ❌ No cargar turnos para un profesional sin antes asignarle consultorio
-❌ No dejar turnos en estado **Llamado** sin resolverlos (atendido o cancelado)
+
+❌ No usar "Llamar de nuevo" indefinidamente — si el paciente no aparece luego de 2-3 llamados, usar "Siguiente" o "Cancelar"
 
 ### Todos
 
 ✅ Cerrar sesión al terminar el turno
+
 ✅ Reportar cualquier problema al administrador
+
 ✅ No compartir credenciales de acceso
 
 ---
 
-## 📞 ¿Necesitás Ayuda?
+## ¿Necesitás Ayuda?
 
 1. Consultar esta guía
 2. Consultar al administrador de tu institución

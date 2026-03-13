@@ -25,18 +25,33 @@ interface CallEvent {
 interface PublicScreenTTSProps {
   callEvents: CallEvent[]
   enabled?: boolean
+  soundEnabled?: boolean
   volume?: number
   rate?: number
-  includeServiceName?: boolean // Para layouts multi-servicio
+  includeServiceName?: boolean
+}
+
+interface QueueItem {
+  id: string
+  text: string
 }
 
 /**
- * Componente que maneja el TTS (Text-to-Speech) para la pantalla pública
- * Detecta nuevos llamados y los anuncia por voz
+ * Maneja el TTS para la pantalla pública con cola de anuncios.
+ *
+ * Flujo por anuncio:
+ *   T=0s    → ding dong (si soundEnabled)
+ *   T=3s    → TTS (primer anuncio, si enabled)
+ *   T=8s    → TTS (segundo anuncio, si enabled)
+ *   T=11s   → liberar cola → procesar siguiente si hay
+ *
+ * Si llegan dos llamados simultáneos, el segundo espera a que
+ * el primero termine antes de sonar.
  */
 export function PublicScreenTTS({
   callEvents,
   enabled = true,
+  soundEnabled = true,
   volume = 1.0,
   rate = 0.9,
   includeServiceName = false
@@ -48,19 +63,67 @@ export function PublicScreenTTS({
     enabled
   })
 
+  // Refs que persisten entre renders sin causar re-renders
   const previousCallsRef = useRef<Set<string>>(new Set())
+  const queueRef = useRef<QueueItem[]>([])
+  const isProcessingRef = useRef(false)
+  const timerIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  // Refs siempre frescos para evitar stale closures en los setTimeout
+  const speakRef = useRef(speak)
+  speakRef.current = speak
+  const volumeRef = useRef(volume)
+  volumeRef.current = volume
+  const soundEnabledRef = useRef(soundEnabled)
+  soundEnabledRef.current = soundEnabled
+
+  // processQueue via ref para poder llamarse recursivamente sin closure stale
+  const processQueueRef = useRef<() => void>(() => {})
+
+  processQueueRef.current = () => {
+    if (isProcessingRef.current || queueRef.current.length === 0) return
+
+    const next = queueRef.current.shift()!
+    isProcessingRef.current = true
+
+    // Ding dong respetando el control de sonido
+    if (soundEnabledRef.current) {
+      playNotificationSound(volumeRef.current)
+    }
+
+    const t1 = setTimeout(() => { if (soundEnabledRef.current) speakRef.current(next.text) }, 3000)
+    const t2 = setTimeout(() => { if (soundEnabledRef.current) speakRef.current(next.text) }, 8000)
+    const t3 = setTimeout(() => {
+      isProcessingRef.current = false
+      // Limpiar los IDs de este ciclo (ya disparados)
+      timerIdsRef.current = timerIdsRef.current.filter(
+        id => id !== t1 && id !== t2 && id !== t3
+      )
+      processQueueRef.current()
+    }, 11000)
+
+    timerIdsRef.current.push(t1, t2, t3)
+  }
+
+  // Cancelar todos los timers al desmontar
+  useEffect(() => {
+    return () => {
+      timerIdsRef.current.forEach(clearTimeout)
+      timerIdsRef.current = []
+    }
+  }, [])
 
   useEffect(() => {
     if (!supported || !enabled || callEvents.length === 0) return
 
-    // Obtener el último llamado
-    const latestCall = callEvents[0]
+    let hasNew = false
 
-    // Verificar si es un nuevo llamado que no hemos anunciado
-    if (latestCall && !previousCallsRef.current.has(latestCall.id)) {
-      const patient = latestCall.appointment?.patient
-      const room = latestCall.appointment?.room
-      const service = latestCall.appointment?.service
+    for (const event of callEvents) {
+      if (previousCallsRef.current.has(event.id)) continue
+
+      const patient = event.appointment?.patient
+      const room = event.appointment?.room
+      const service = event.appointment?.service
 
       if (patient && room) {
         const patientName = `${patient.first_name} ${patient.last_name}`
@@ -68,33 +131,22 @@ export function PublicScreenTTS({
         const serviceName = includeServiceName && service ? service.name : undefined
         const callText = generateCallText(patientName, roomName, serviceName)
 
-        // Reproducir sonido de notificación
-        playNotificationSound(volume)
-
-        // PRIMER LLAMADO: Esperar más tiempo después del dingdong
-        // Dingdong dura ~2 segundos + 1 segundo de pausa = 3 segundos
-        setTimeout(() => {
-          speak(callText)
-        }, 3000)
-
-        // SEGUNDO LLAMADO: Esperar que termine el primero + pausa + repetir
-        // Primer llamado ~3s + pausa 2s = 5 segundos después del primero
-        setTimeout(() => {
-          speak(callText)
-        }, 8000)
-
-        // Marcar este llamado como anunciado
-        previousCallsRef.current.add(latestCall.id)
+        queueRef.current.push({ id: event.id, text: callText })
+        previousCallsRef.current.add(event.id)
+        hasNew = true
       }
     }
 
-    // Limpiar llamados antiguos del ref (mantener solo los últimos 10)
-    if (previousCallsRef.current.size > 10) {
-      const callsArray = Array.from(previousCallsRef.current)
-      previousCallsRef.current = new Set(callsArray.slice(-10))
+    if (hasNew) {
+      processQueueRef.current()
     }
-  }, [callEvents, speak, supported, enabled, volume, includeServiceName])
 
-  // No renderiza nada, solo maneja el audio
+    // Evitar crecimiento indefinido del set (mantener últimos 50)
+    if (previousCallsRef.current.size > 50) {
+      const arr = Array.from(previousCallsRef.current)
+      previousCallsRef.current = new Set(arr.slice(-50))
+    }
+  }, [callEvents, supported, enabled, includeServiceName])
+
   return null
 }

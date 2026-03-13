@@ -665,13 +665,33 @@ export default function QueuePage() {
         optimisticUpdates = updates
       }
 
+      // Cuando se llama a un nuevo paciente, auto-completar el anterior del mismo
+      // servicio o profesional que todavía figure como 'llamado'.
+      // Regla: si el administrativo llama al siguiente sin presionar "Atendido",
+      // es porque el paciente anterior ya fue atendido.
+      const targetItem = queue.find(q => q.id === id)
+      const autoCompleteItems = action === 'llamado' && targetItem
+        ? queue.filter(q =>
+            q.id !== id &&
+            q.status === 'llamado' &&
+            (
+              (targetItem.service_id && q.service_id === targetItem.service_id) ||
+              (targetItem.professional_id && q.professional_id === targetItem.professional_id)
+            )
+          )
+        : []
+
       // ═══════════════════════════════════════════════════════════
       // FASE 1 - ACTUALIZACIÓN OPTIMISTA
       // ═══════════════════════════════════════════════════════════
       setQueue(prev => {
-        const updated = prev.map(item =>
-          item.id === id ? { ...item, ...optimisticUpdates } : item
-        )
+        const updated = prev.map(item => {
+          if (item.id === id) return { ...item, ...optimisticUpdates }
+          if (autoCompleteItems.some(i => i.id === item.id)) {
+            return { ...item, status: 'atendido', attended_at: now }
+          }
+          return item
+        })
         // Re-ordenar si fue "siguiente" (cambia posición en la cola)
         if (action === 'siguiente') {
           return updated.sort((a, b) => {
@@ -697,6 +717,16 @@ export default function QueuePage() {
         .eq('id', id)
 
       if (error) throw error
+
+      // Auto-completar los anteriores en DB
+      if (autoCompleteItems.length > 0) {
+        const { error: autoCompleteError } = await supabase
+          .from('daily_queue')
+          .update({ status: 'atendido', attended_at: now })
+          .in('id', autoCompleteItems.map(i => i.id))
+
+        if (autoCompleteError) throw autoCompleteError
+      }
 
       if (action === 'llamado' || action === 'rellamar') {
         setTimeout(() => setCallingId(null), 11000)

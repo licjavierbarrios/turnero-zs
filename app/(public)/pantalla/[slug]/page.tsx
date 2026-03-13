@@ -225,49 +225,41 @@ export default function PantallaPublicaPage({
   }
 
   // Transform data for PublicScreenTTS component
-  // Creates compatible structure from daily_queue data
-  // Using useMemo to prevent infinite re-renders
+  // Includes ALL 'llamado' appointments so the TTS queue can announce each one
   const callEvents = useMemo(() => {
-    if (!currentCall) return []
+    const calledAppointments = appointments.filter(a => a.status === 'llamado')
 
-    // For professional assignments, announce the consultorio/room name
-    // For service assignments, announce the service name
-    const announcementText = currentCall.is_professional_assignment
-      ? (currentCall.room_name || 'Consultorio')
-      : currentCall.service_name
+    return calledAppointments.map(apt => {
+      // For professional assignments, announce the room name
+      // For service assignments, announce the service name
+      const announcementText = apt.is_professional_assignment
+        ? (apt.room_name || 'Consultorio')
+        : apt.service_name
 
-    let firstName: string
-    let lastName: string
+      let firstName: string
+      let lastName: string
 
-    if (currentCall.is_sensitive) {
-      // Turno sensible: anunciar solo "Paciente [número]"
-      firstName = 'Paciente'
-      lastName = String(currentCall.order_number).padStart(3, '0')
-    } else {
-      // Turno normal: anunciar nombre completo
-      const nameParts = currentCall.patient_name.split(' ')
-      firstName = nameParts[0] || ''
-      lastName = nameParts.slice(1).join(' ') || ''
-    }
+      if (apt.is_sensitive) {
+        firstName = 'Paciente'
+        lastName = String(apt.order_number).padStart(3, '0')
+      } else {
+        const nameParts = apt.patient_name.split(' ')
+        firstName = nameParts[0] || ''
+        lastName = nameParts.slice(1).join(' ') || ''
+      }
 
-    return [{
-      id: `${currentCall.id}-${currentCall.call_count}`,
-      appointment_id: currentCall.id,
-      created_at: currentCall.called_at || new Date().toISOString(),
-      appointment: {
-        patient: {
-          first_name: firstName,
-          last_name: lastName
-        },
-        room: {
-          name: '' // daily_queue doesn't have room in this context
-        },
-        service: {
-          name: announcementText
+      return {
+        id: `${apt.id}-${apt.call_count}`,
+        appointment_id: apt.id,
+        created_at: apt.called_at || new Date().toISOString(),
+        appointment: {
+          patient: { first_name: firstName, last_name: lastName },
+          room: { name: '' },
+          service: { name: announcementText }
         }
       }
-    }]
-  }, [currentCall])
+    })
+  }, [appointments])
 
   // Determinar si hay múltiples servicios activos
   const hasMultipleServices = useMemo(() => {
@@ -499,13 +491,11 @@ export default function PantallaPublicaPage({
         },
         (payload: any) => {
 
-          // If status changed to 'llamado', play notification sound and show "Llamando..." state
+          // If status changed to 'llamado', show "Llamando..." state in UI
+          // Note: audio (ding dong + TTS) is handled entirely by PublicScreenTTS to avoid duplicates
           if (payload.eventType === 'UPDATE' &&
               payload.new?.status === 'llamado' &&
               (payload.old?.status !== 'llamado' || payload.new?.call_count !== payload.old?.call_count)) {
-            if (soundEnabled) {
-              playNotificationSound(ttsVolume)
-            }
             // Show "Llamando..." state for 11 seconds (matches TTS duration)
             if (announcingTimerRef.current) clearTimeout(announcingTimerRef.current)
             setAnnouncingAppointmentId(payload.new.id)
@@ -679,6 +669,7 @@ export default function PantallaPublicaPage({
       <PublicScreenTTS
         callEvents={callEvents}
         enabled={ttsEnabled}
+        soundEnabled={soundEnabled}
         volume={ttsVolume}
         rate={ttsRate}
         includeServiceName={true}
